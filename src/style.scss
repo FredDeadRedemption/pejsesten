@@ -1,0 +1,27 @@
+*,
+*::after,
+*::before {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+  background-color: $grey-black;
+}
+
+h1{
+  color: $primary !important;
+}
+
+html,
+body {
+	min-height: 100vh;
+	overflow-x: hidden;
+}
+
+// fix auto-zooming on input fields
+@media (max-width: $breakpoint-mobile) {
+	input,
+	select:focus,
+	textarea {
+		font-size: 16px !important;
+	}
+}
