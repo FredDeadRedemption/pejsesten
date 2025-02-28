@@ -3,7 +3,7 @@
 
 <style lang="scss">
   h1{
-    color: $primary;
+    color: $secondary;
     z-index: 10000;
     p{
       color: blue;
