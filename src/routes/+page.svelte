@@ -1,12 +1,11 @@
-<h1>Welcome to SvelteKit<p>f</p></h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script>
+  let { data } = $props()
+  let { land_enums } = $derived(data)
+</script>
 
-<style lang="scss">
-  h1{
-    color: $secondary;
-    z-index: 10000;
-    p{
-      color: blue;
-    }
-  }
-</style>
+<h1>Welcome to Supabase!</h1>
+<ul>
+  {#each land_enums as le}
+    <li>{le.name}</li>
+  {/each}
+</ul>
