@@ -5,12 +5,38 @@
 	padding: 0;
 	box-sizing: border-box;
   background-color: $grey-black;
+	font-family: $barlow;
 }
 
 html,
 body {
 	min-height: 100vh;
 	overflow-x: hidden;
+}
+
+.button{
+	font-size: 0.8rem;
+	text-decoration: none;
+	&.ghost{
+		border: none;
+		padding: 10px;
+		background-color: transparent;
+		font-weight: 500;
+		&:hover{
+			cursor: pointer;
+			color: $primary !important;
+		}
+	}
+}
+
+::placeholder {
+	color: inherit;
+	opacity: 0.8; /* Firefox */
+}
+
+::-ms-input-placeholder {
+	color: inherit;
+	opacity: 0.8; /* Edge 12 - 18 */
 }
 
 // fix auto-zooming on input fields
