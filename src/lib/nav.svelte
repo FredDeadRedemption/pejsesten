@@ -21,6 +21,9 @@
 
 <style lang="scss">
   #nav{
+    box-shadow: $box-shadow-primary;
+    border-bottom: 1px solid $grey-mid;
+    z-index: 2;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -30,6 +33,8 @@
     background-color: $white;
     width: 100%;
     height: 50px;
+    box-shadow: rgba(0, 0, 0, 0.8) 0px 3px 8px;
+    z-index: 99;
     .home{
       position: absolute;
       left: 25px;

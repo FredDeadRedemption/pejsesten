@@ -4,6 +4,7 @@
   import { onMount } from 'svelte'
 	import Nav from "$lib/nav.svelte";
 	import { page } from '$app/state'
+	import Dock from "$lib/dock.svelte";
 
   let { data, children } = $props()
   let { session, supabase } = $derived(data)
@@ -21,6 +22,29 @@
 
 {#if page.url.pathname !== "/"}
   <Nav session={session} supabase={supabase}> </Nav>
+  <Dock></Dock>
 {/if}
 
-{@render children()}
+{#if session}
+  <main>
+    {@render children()}
+  </main>
+{:else}
+  {@render children()}
+{/if}
+
+<style lang="scss">
+  main{
+    box-shadow: inset 0 10px 10px -10px rgba(0, 0, 0, 0.25);
+    background-color: $grey-light;
+    padding: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 50px;
+    left: 60px;
+    height: calc(100vh - 50px);
+    width: calc(100vw - 50px);
+  }
+</style>
