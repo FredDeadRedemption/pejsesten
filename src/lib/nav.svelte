@@ -15,11 +15,7 @@
 
 <nav id="nav">
   <a class="home button ghost" href="/">HOME</a>
-  {#if session}
-    <button class="signin-out button ghost" onclick={logout}>LOGOUT</button>
-  {:else}
-    <a class="signin-out button ghost" href="/auth">lOGIN</a>
-  {/if}
+  <button class="signin-out button ghost" onclick={logout}>LOGOUT</button>
   <div class="avatar"></div>
 </nav>
 
@@ -44,6 +40,7 @@
       color: $black;
     }
     .avatar{
+      background-color: $grey-black;
       height: 40px;
       width: 40px;
       border-radius: 100px;

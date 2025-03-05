@@ -4,12 +4,12 @@
 	margin: 0;
 	padding: 0;
 	box-sizing: border-box;
-  background-color: $grey-black;
 	font-family: $barlow;
 }
 
 html,
 body {
+	background-color: $grey-black;
 	min-height: 100vh;
 	overflow-x: hidden;
 }
@@ -20,7 +20,7 @@ body {
 	&.ghost{
 		border: none;
 		padding: 10px;
-		background-color: transparent;
+		background-color: inherit;
 		font-weight: 500;
 		&:hover{
 			cursor: pointer;
