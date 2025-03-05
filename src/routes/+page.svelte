@@ -1,5 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { redirect } from '@sveltejs/kit';
 	import { slide } from 'svelte/transition';
 
   let errmsg = $state();
@@ -8,9 +10,13 @@
 <div class="content">
   <form method="POST" action="?/login" use:enhance={() => {
 		return async ({ result }: any) => {
-      if(!result?.data.success){
-        errmsg = result?.data.message;
+      console.log(result);
+      if(result.type = "redirect"){
+        goto(result.location);
       }
+      if(!result?.data?.success){
+        errmsg = result?.data?.message;
+      } 
 		};
 	}}>
     <input name="email" type="email" placeholder="EMAIL" />
