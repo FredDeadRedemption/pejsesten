@@ -21,7 +21,8 @@
 
 <style lang="scss">
   #nav{
-    box-shadow: $box-shadow-primary;
+    position: fixed;
+    box-shadow: 0 10px 10px -10px rgba(0, 0, 0, 0.25);
     border-bottom: 1px solid $grey-mid;
     z-index: 2;
     display: flex;
@@ -33,7 +34,6 @@
     background-color: $white;
     width: 100%;
     height: 50px;
-    box-shadow: rgba(0, 0, 0, 0.8) 0px 3px 8px;
     z-index: 99;
     .home{
       position: absolute;

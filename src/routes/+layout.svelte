@@ -23,9 +23,6 @@
 {#if page.url.pathname !== "/"}
   <Nav session={session} supabase={supabase}> </Nav>
   <Dock></Dock>
-{/if}
-
-{#if session}
   <main>
     {@render children()}
   </main>
@@ -35,16 +32,15 @@
 
 <style lang="scss">
   main{
+    margin-top: 50px;
+    margin-left: 50px;
     box-shadow: inset 0 10px 10px -10px rgba(0, 0, 0, 0.25);
     background-color: $grey-light;
-    padding: 10px;
+    min-width: calc(100vw - 50px);
+    min-height: calc(100vh - 50px);
+    padding: 25px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    position: absolute;
-    top: 50px;
-    left: 60px;
-    height: calc(100vh - 50px);
-    width: calc(100vw - 50px);
   }
 </style>
