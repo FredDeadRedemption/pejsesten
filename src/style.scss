@@ -9,7 +9,10 @@
 
 html,
 body {
-	background-color: $grey-black;
+	background-image: url("/media/gargoyles.jpg");
+	object-fit: cover;
+	background-position: center;
+  background-repeat: no-repeat;
 	min-height: 100vh;
 	overflow-x: hidden;
 }
