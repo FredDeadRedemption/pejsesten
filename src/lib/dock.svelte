@@ -56,7 +56,7 @@
     height: 100vh;
     width: 100vw;
     background-color: rgba($white, 0.45);
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(3px);
   }
   #dock{
     z-index: 2;
