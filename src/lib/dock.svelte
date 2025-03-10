@@ -5,38 +5,55 @@
 
   let expanded = $state(false);
 
-  const expand = () => { expanded = true; console.log("mouse enter")};
+  const expand = () => { expanded = true};
   const compress = () => { expanded = false};
+
+  const nav = [
+    {
+      title: "Play",
+      icon: "gamepad",
+      path: "/game"
+    },
+    {
+      title: "Deck Builder",
+      icon: "cards",
+      path: "/deck-builder"
+    },
+    {
+      title: "Settings",
+      icon: "settings",
+      path: "/settings"
+    },
+  ]
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_mouse_events_have_key_events -->
 <div id="dock" class:expanded={expanded} onmouseover={expand} onmouseleave={compress}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="item" onclick={() => goto("/game")}><span class="icon">{@html getIcon("gamepad")}</span>
+  {#each nav as item}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div class="item" onclick={() => goto(item.path)}><span class="icon">{@html getIcon(item.icon)}</span>
     {#if expanded}
-      <span transition:slide={{ axis: "x", duration: 300 }} class="text">Play</span>
+      <span transition:slide={{ axis: "x", duration: 200 }} class="text">{item.title}</span>
     {/if}
   </div>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div onclick={() => goto("/deck-builder")} class="item"><span class="icon">{@html getIcon("cards")}</span>
-    {#if expanded}
-      <span transition:slide={{ axis: "x", duration: 300 }} class="text">Deck Builder</span>
-    {/if}
-  </div>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="item" onclick={() => goto("/settings")}><span class="icon">{@html getIcon("settings")}</span>
-    {#if expanded}
-      <span transition:slide={{ axis: "x", duration: 300 }} class="text">Settings</span>
-    {/if}
-  </div>
-  </div>
+  {/each}
+</div>
+{#if expanded}
+  <div id="blur" transition:fade={{ duration: 300 }}></div>
+{/if}
 
 <style lang="scss">
-  .expanded{
-    width: 150px !important;
+  #blur{
+    z-index: 1;
+    position: fixed;
+    height: 100vh;
+    width: 100vw;
+    background-color: rgba($white, 0.45);
+    backdrop-filter: blur(5px);
   }
   #dock{
+    z-index: 2;
     transition: 500ms ease all;
     position: fixed;
     width: 50px;
@@ -63,11 +80,12 @@
         cursor: pointer;
       }
       
-      @for $i from 1 through 5 {  // Adjust range as needed
+      @for $i from 1 through 8 {
         &:nth-child(#{$i}) {
           margin-top: calc(45px * $i - 15px);
         }
       }
+
       .text{
         display: flex;
         justify-content: center;
@@ -80,5 +98,8 @@
         bottom: 25px;
       }
     }
+  }
+  .expanded{
+    width: 150px !important;
   }
 </style>
