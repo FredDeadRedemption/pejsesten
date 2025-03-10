@@ -1,19 +1,19 @@
-$white: #ffffff;
-$black: #292929;
-$grey-ultralight: #f5f6f7;
-$grey-light: #f0f2f6;
-$grey-mid: #dddddd;
-$grey-dark: #9e9e9e;
-$grey-ultradark: #676767;
-$grey-black: #343a40;
+// neutral tones
+$white: #f2eae4;
+$black: #222222;
+$grey-ultralight: #dfcebf;
+$grey-light: rgb(198, 183, 170);
+$grey-mid: #b4a598;
+$grey-dark: #9d8b7c;
+$grey-ultradark: #847668;
+$grey-black: #2a221c;
 
 // style colors
-$primary: crimson;
-$primary-hover: rgb(241, 36, 77);
-$secondary: #bb17a2;
+$primary: rgb(220, 90, 20);
+$secondary: #8b9765;
 
 // status colors
-$ok: #36b37e;
+$ok: #5ebe23;
 $warning: #ffab00;
 $danger: #fc2b18;
 $info: #3434d9;
