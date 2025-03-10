@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
-  import {getIcon} from "$lib/icons"
+  import { getIcon } from "$lib/icons"
 	import { fade, slide } from "svelte/transition";
 
   let expanded = $state(false);
@@ -37,7 +37,7 @@
     {#if page.url.pathname == item.path}
       <span class="icon selected">{@html getIcon(item.icon)}</span>
     {:else}
-    <span class="icon">{@html getIcon(item.icon)}</span>
+      <span class="icon">{@html getIcon(item.icon)}</span>
     {/if}
     {#if expanded}
       <span transition:slide={{ axis: "x", duration: 200 }} class="text">{item.title}</span>
