@@ -34,11 +34,7 @@
   {#each nav as item}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div class="item" onclick={() => goto(item.path)}>
-    {#if page.url.pathname == item.path}
-      <span class="icon selected">{@html getIcon(item.icon)}</span>
-    {:else}
       <span class="icon">{@html getIcon(item.icon)}</span>
-    {/if}
     {#if expanded}
       <span transition:slide={{ axis: "x", duration: 200 }} class="text">{item.title}</span>
     {/if}
@@ -97,10 +93,6 @@
         justify-content: center;
         align-items: center;
         white-space: nowrap;
-      }
-
-      .icon.selected{
-        color: $primary;
       }
 
       &:last-child{
