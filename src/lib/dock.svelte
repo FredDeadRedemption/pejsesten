@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
+	import { page } from "$app/state";
   import {getIcon} from "$lib/icons"
 	import { fade, slide } from "svelte/transition";
 
@@ -32,7 +33,12 @@
 <div id="dock" class:expanded={expanded} onmouseover={expand} onmouseleave={compress}>
   {#each nav as item}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="item" onclick={() => goto(item.path)}><span class="icon">{@html getIcon(item.icon)}</span>
+  <div class="item" onclick={() => goto(item.path)}>
+    {#if page.url.pathname == item.path}
+      <span class="icon selected">{@html getIcon(item.icon)}</span>
+    {:else}
+    <span class="icon">{@html getIcon(item.icon)}</span>
+    {/if}
     {#if expanded}
       <span transition:slide={{ axis: "x", duration: 200 }} class="text">{item.title}</span>
     {/if}
@@ -91,6 +97,10 @@
         justify-content: center;
         align-items: center;
         white-space: nowrap;
+      }
+
+      .icon.selected{
+        color: $primary;
       }
 
       &:last-child{
