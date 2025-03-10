@@ -21,6 +21,11 @@
       path: "/deck-builder"
     },
     {
+      title: "Catalog",
+      icon: "catalog",
+      path: "/catalog"
+    },
+    {
       title: "Settings",
       icon: "settings",
       path: "/settings"
