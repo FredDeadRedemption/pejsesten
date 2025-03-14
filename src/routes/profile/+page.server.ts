@@ -11,8 +11,6 @@ export const load: PageServerLoad = async ({ locals: { supabase, session } }) =>
     .eq('user_id', session?.user.id)
     .single()
 
-    console.log("PROFILE: " + profile)
-
   return { session, profile }
 }
 
