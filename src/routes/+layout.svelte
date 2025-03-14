@@ -5,6 +5,7 @@
 	import Nav from "$lib/components/nav.svelte";
 	import { page } from '$app/state'
 	import Dock from "$lib/components/dock.svelte";
+	import ProgressBar from "$lib/components/progressBar.svelte";
 
   let { data, children } = $props()
   let { session, supabase } = $derived(data)
@@ -21,6 +22,7 @@
 </script>
 
 {#if page.url.pathname !== "/"}
+  <ProgressBar></ProgressBar>
   <Nav session={session} supabase={supabase}> </Nav>
   <Dock></Dock>
   <main>
