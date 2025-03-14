@@ -2,9 +2,9 @@
   import "../style.scss"
   import { invalidate } from '$app/navigation'
   import { onMount } from 'svelte'
-	import Nav from "$lib/nav.svelte";
+	import Nav from "$lib/components/nav.svelte";
 	import { page } from '$app/state'
-	import Dock from "$lib/dock.svelte";
+	import Dock from "$lib/components/dock.svelte";
 
   let { data, children } = $props()
   let { session, supabase } = $derived(data)
