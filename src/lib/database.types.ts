@@ -15,18 +15,21 @@ export type Database = {
           base_defence: number | null
           id: number
           land_type: number | null
+          name: string
         }
         Insert: {
           base_damage?: number | null
           base_defence?: number | null
           id?: number
           land_type?: number | null
+          name?: string
         }
         Update: {
           base_damage?: number | null
           base_defence?: number | null
           id?: number
           land_type?: number | null
+          name?: string
         }
         Relationships: [
           {
@@ -56,30 +59,27 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
-          first_name: string | null
           id: number
-          last_name: string | null
           profile_picture: string | null
           updated_at: string | null
           user_id: string | null
+          username: string | null
         }
         Insert: {
           created_at?: string | null
-          first_name?: string | null
           id?: never
-          last_name?: string | null
           profile_picture?: string | null
           updated_at?: string | null
           user_id?: string | null
+          username?: string | null
         }
         Update: {
           created_at?: string | null
-          first_name?: string | null
           id?: never
-          last_name?: string | null
           profile_picture?: string | null
           updated_at?: string | null
           user_id?: string | null
+          username?: string | null
         }
         Relationships: []
       }
