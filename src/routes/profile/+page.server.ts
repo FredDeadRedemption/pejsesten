@@ -17,36 +17,28 @@ export const load: PageServerLoad = async ({ locals: { supabase, session } }) =>
 export const actions: Actions = {
   update: async ({ request, locals: { supabase, safeGetSession } }) => {
     const formData = await request.formData()
-    const fullName = formData.get('fullName') as string
     const username = formData.get('username') as string
-    const website = formData.get('website') as string
-    const avatarUrl = formData.get('avatarUrl') as string
 
     const { session } = await safeGetSession()
 
-    const { error } = await supabase.from('profiles').upsert({
-      id: session?.user.id,
-      full_name: fullName,
-      username,
-      website,
-      avatar_url: avatarUrl,
-      updated_at: new Date(),
-    })
+    const { error } = await supabase.from('profiles')
+      .update({
+        username,
+        updated_at: new Date()
+      })
+      .eq('user_id', session?.user.id); 
 
     if (error) {
+      console.log("faiiled")
       return fail(500, {
-        fullName,
-        username,
-        website,
-        avatarUrl,
+        username
       })
     }
 
+    console.log("updated username")
+
     return {
-      fullName,
-      username,
-      website,
-      avatarUrl,
+      username
     }
   }
 }

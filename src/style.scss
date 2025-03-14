@@ -30,6 +30,19 @@ li{
 .button{
 	font-size: 0.8rem;
 	text-decoration: none;
+	&.primary{
+		padding: 10px;
+		border: none;
+		border-radius: 2px;
+		width: 200px;
+		transition: 250ms ease all;
+    background-color: $primary;
+    color: $white;
+    &:hover{
+			cursor: pointer;
+      background-color: $black;
+    }
+	}
 	&.ghost{
 		border: none;
 		padding: 10px;
