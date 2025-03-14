@@ -4,4 +4,4 @@
    let { profile } = $derived(data)
 </script>
 
-<div>{profile?.first_name}</div>
+<div>{profile?.username}</div>

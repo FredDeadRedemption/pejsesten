@@ -2,15 +2,16 @@ import { fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async ({ locals: { supabase, session } }) => {
-  console.log(session?.user.id)
+  const { error } = await supabase.rpc('create_profile_if_not_exists');
+    error ? console.error('Error creating profile:', error) : console.log('Profile checked/created successfully');
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select(`first_name, last_name`)
+    .select(`username`)
     .eq('user_id', session?.user.id)
     .single()
 
-    console.log(profile)
+    console.log("PROFILE: " + profile)
 
   return { session, profile }
 }
@@ -49,12 +50,5 @@ export const actions: Actions = {
       website,
       avatarUrl,
     }
-  },
-  signout: async ({ locals: { supabase, safeGetSession } }) => {
-    const { session } = await safeGetSession()
-    if (session) {
-      await supabase.auth.signOut()
-      redirect(303, '/')
-    }
-  },
+  }
 }
