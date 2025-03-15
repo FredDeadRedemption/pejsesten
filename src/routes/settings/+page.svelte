@@ -107,6 +107,10 @@
     background-color: $primary
   }
 
+  input:checked + .slider.schrodinger {
+    background-color: rgba($color: $primary, $alpha: 0.5);
+  }
+
   input:checked + .slider:before {
     transform: translateX(21px);
   }
