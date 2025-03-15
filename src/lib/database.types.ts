@@ -19,6 +19,7 @@ export type Database = {
           earth_cost: number | null
           holy_cost: number | null
           id: number
+          image_url: string
           name: string
           race_type: number | null
         }
@@ -31,6 +32,7 @@ export type Database = {
           earth_cost?: number | null
           holy_cost?: number | null
           id?: number
+          image_url?: string
           name?: string
           race_type?: number | null
         }
@@ -43,6 +45,7 @@ export type Database = {
           earth_cost?: number | null
           holy_cost?: number | null
           id?: number
+          image_url?: string
           name?: string
           race_type?: number | null
         }

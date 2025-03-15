@@ -14,8 +14,20 @@
   {/each}
 </ul>
 <h1>Cards:</h1>
-<ul>
+<div class="card-wrapper">
   {#each cards as card}
     <Card card={card}></Card>
   {/each}
-</ul>
+</div>
+ 
+<style lang="scss">
+  .card-wrapper{
+    padding: 10px;
+    background-color: $grey-mid;
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+</style>

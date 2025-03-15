@@ -47,6 +47,8 @@
     flex-direction: column;
     width: 160px;
     height: 230px;
+    min-width: 160px;
+    min-height: 230px;
     box-shadow: $box-shadow-primary;
     border-radius: 5px;
     overflow: hidden;
@@ -65,10 +67,12 @@
     }
     .costs{
       display: flex;
+      align-items: center;
       gap: 3px;
       width: 100%;
+      height: 18px;
       background-color: $grey-light;
-      padding: 3px;
+      padding-left: 3px;
       .cost{
         width: 12px;
         height: 12px;
@@ -96,8 +100,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 20px;
-        width: 20px;
+        height: 18px;
+        width: 18px;
       }
       .attack{
         background-color: gold;

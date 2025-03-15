@@ -36,7 +36,6 @@
   main{
     margin-top: 50px;
     margin-left: 50px;
-    box-shadow: inset 0 10px 10px -10px rgba(0, 0, 0, 0.25);
     background-color: $grey-ultralight;
     min-width: calc(100vw - 50px);
     min-height: calc(100vh - 50px);
