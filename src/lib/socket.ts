@@ -1,6 +1,9 @@
 import { writable } from "svelte/store";
 import { io } from "socket.io-client";
 
+const prodURL = "https://matrixz-gs.up.railway.app/";
+const devURL = "http://localhost:3000/";
+
 const socket = io("https://matrixz-gs.up.railway.app/"); //Prod URL
 //const socket = io("http://http://localhost:3000/"); //Dev URL
 

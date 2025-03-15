@@ -2,7 +2,7 @@
   import { messages, sendMessage } from "$lib/socket";
   import { onMount } from "svelte";
 
-  let message = "";
+  let message = $state("");
 </script>
 
 <main>
@@ -12,9 +12,9 @@
     type="text"
     bind:value={message}
     placeholder="Type a message"
-    on:keydown={(e) => e.key === 'Enter' && sendMessage(message)}
+    onkeydown={(e) => e.key === 'Enter' && sendMessage(message)}
   />
-  <button on:click={() => { sendMessage(message); message = ""; }}>
+  <button onclick={() => { sendMessage(message); message = ""; }}>
     Send
   </button>
 
@@ -28,7 +28,7 @@
 <style lang="scss">
   main {
     text-align: center;
-    padding: 2rem;
+    margin-top: 2rem;
   }
   input {
     padding: 0.5rem;
