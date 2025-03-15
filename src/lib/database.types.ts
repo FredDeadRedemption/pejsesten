@@ -19,7 +19,6 @@ export type Database = {
           earth_cost: number | null
           holy_cost: number | null
           id: number
-          land_type: number | null
           name: string
           race_type: number | null
         }
@@ -32,7 +31,6 @@ export type Database = {
           earth_cost?: number | null
           holy_cost?: number | null
           id?: number
-          land_type?: number | null
           name?: string
           race_type?: number | null
         }
@@ -45,18 +43,10 @@ export type Database = {
           earth_cost?: number | null
           holy_cost?: number | null
           id?: number
-          land_type?: number | null
           name?: string
           race_type?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "cards_land_type_fkey"
-            columns: ["land_type"]
-            isOneToOne: false
-            referencedRelation: "land_enums"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "cards_race_type_fkey"
             columns: ["race_type"]
@@ -80,6 +70,32 @@ export type Database = {
           name?: string | null
         }
         Relationships: []
+      }
+      lands: {
+        Row: {
+          id: number
+          land_type: number | null
+          name: string | null
+        }
+        Insert: {
+          id?: number
+          land_type?: number | null
+          name?: string | null
+        }
+        Update: {
+          id?: number
+          land_type?: number | null
+          name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lands_land_type_fkey"
+            columns: ["land_type"]
+            isOneToOne: false
+            referencedRelation: "land_enums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
