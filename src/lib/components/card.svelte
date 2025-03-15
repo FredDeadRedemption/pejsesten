@@ -21,8 +21,9 @@
 </script>
 
 <div id="card">
-  <div class="img">
-    {card.name}
+  <div class="img-name-wrap">
+    <img src={card.image_url} alt="">
+    <span class="name">{card.name}</span>
   </div>
   <div class="costs">
     {#each costs as c}
@@ -56,14 +57,25 @@
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    .img{
+    .img-name-wrap{
       width: 100%;
-      min-height: 80px;
+      height: 80px;
       background-color: $grey-black;
       color: $white;
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow: hidden;
+      img{
+        z-index: 1;
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+      }
+      .name{
+        position: absolute;
+        z-index: 2;
+      }
     }
     .costs{
       display: flex;
