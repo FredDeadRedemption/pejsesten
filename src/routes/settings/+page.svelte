@@ -114,9 +114,4 @@
   input:checked + .slider.schrodinger:before {
     transform: translateX(10.5px); /* Move only 10px to the right */
   }
-
-  .labels {
-    font-size: 16px;
-    font-weight: bold;
-  }
 </style>
