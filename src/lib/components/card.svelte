@@ -73,6 +73,12 @@
         object-fit: cover;
       }
       .name{
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        padding: 2px 5px 2px 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
         position: absolute;
         z-index: 2;
       }
