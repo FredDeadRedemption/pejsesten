@@ -44,6 +44,7 @@
 
 <style lang="scss">
   #card{
+    //scale: 0.6; // game scale
     display: flex;
     flex-direction: column;
     width: 160px;

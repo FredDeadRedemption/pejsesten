@@ -3,7 +3,7 @@ import type { Actions } from './$types'
 import { fail } from '@sveltejs/kit';
 
 export const actions: Actions = {
-  createCard: async ({ request, locals: { supabase } }) => {
+  createCard: async ({ request, locals: { supabase }}) => {
     const formData = await request.formData();
 
     console.log("YEEEHAW")
@@ -83,5 +83,15 @@ export const actions: Actions = {
       console.error('Error creating card:', error);
       return fail(500, { error: 'Failed to create card. Please try again.' });
     }
+  },
+  deleteCard: async({ request, locals: { supabase }}) => {
+    const formData = await request.formData();
+
+    const name = formData.get('name') as string;
+
+    const { error } = await supabase
+      .from("cards")
+      .delete()
+      .eq("name", name)
   }
 };

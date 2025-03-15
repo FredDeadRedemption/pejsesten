@@ -18,5 +18,16 @@
   <label for="image">Image:</label>
   <input type="file" id="image" name="image" accept="image/*" />
 
-  <button type="submit">Create Card</button>
+  <button type="submit" class="button primary">Create Card</button>
 </form>
+
+<form method="POST" action="?/deleteCard" use:enhance>
+  <label for="name">Name:</label>
+  <input type="text" id="name" name="name" required />
+
+  <button type="submit" class="button primary">Delete Card</button>
+</form>
+
+<style lang="scss">
+
+</style>
