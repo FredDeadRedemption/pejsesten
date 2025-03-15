@@ -13,9 +13,27 @@
 <h1>Cards:</h1>
 <ul>
   {#each cards as card}
-    <li>CARD NAME: {card.name}</li>
-    <li>BASE DAMAGE: {card.base_damage}</li>
-    <li>BASE DEFENCE: {card.base_defence}</li>
+    <li>NAME: {card.name}</li>
+    <li>ATTACK: {card.attack}</li>
+    <li>DEFENCE: {card.defence}</li>
+    {#if card.death_cost}
+      <li>COST: {card.death_cost} death</li>
+    {/if}
+    {#if card.dream_cost}
+      <li>COST: {card.dream_cost} dream</li>
+    {/if}
+    {#if card.holy_cost}
+      <li>COST: {card.holy_cost} holy</li>
+    {/if}
+    {#if card.earth_cost}
+      <li>COST: {card.earth_cost} earth</li>
+    {/if}
+    {#if card.race_type}
+      <li>RACE: {card.race_type}</li>
+    {:else}
+      <li>RACE: any</li>
+    {/if}
     <li>LAND TYPE: {card.land_type}</li>
+    <li>DESCRIPTION: {card.description}</li>
   {/each}
 </ul>

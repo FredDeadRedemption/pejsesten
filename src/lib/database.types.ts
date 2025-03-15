@@ -11,25 +11,43 @@ export type Database = {
     Tables: {
       cards: {
         Row: {
-          base_damage: number | null
-          base_defence: number | null
+          attack: number
+          death_cost: number | null
+          defence: number
+          description: string | null
+          dream_cost: number | null
+          earth_cost: number | null
+          holy_cost: number | null
           id: number
           land_type: number | null
           name: string
+          race_type: number | null
         }
         Insert: {
-          base_damage?: number | null
-          base_defence?: number | null
+          attack: number
+          death_cost?: number | null
+          defence: number
+          description?: string | null
+          dream_cost?: number | null
+          earth_cost?: number | null
+          holy_cost?: number | null
           id?: number
           land_type?: number | null
           name?: string
+          race_type?: number | null
         }
         Update: {
-          base_damage?: number | null
-          base_defence?: number | null
+          attack?: number
+          death_cost?: number | null
+          defence?: number
+          description?: string | null
+          dream_cost?: number | null
+          earth_cost?: number | null
+          holy_cost?: number | null
           id?: number
           land_type?: number | null
           name?: string
+          race_type?: number | null
         }
         Relationships: [
           {
@@ -37,6 +55,13 @@ export type Database = {
             columns: ["land_type"]
             isOneToOne: false
             referencedRelation: "land_enums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cards_race_type_fkey"
+            columns: ["race_type"]
+            isOneToOne: false
+            referencedRelation: "race_enums"
             referencedColumns: ["id"]
           },
         ]
@@ -59,27 +84,39 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
-          id: number
           profile_picture: string | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
           username: string | null
         }
         Insert: {
           created_at?: string | null
-          id?: never
           profile_picture?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
           username?: string | null
         }
         Update: {
           created_at?: string | null
-          id?: never
           profile_picture?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      race_enums: {
+        Row: {
+          id: number
+          name: string | null
+        }
+        Insert: {
+          id?: number
+          name?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string | null
         }
         Relationships: []
       }
