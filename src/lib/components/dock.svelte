@@ -57,7 +57,7 @@
 
 <style lang="scss">
   #blur{
-    z-index: 1;
+    z-index: 10;
     position: fixed;
     height: 100vh;
     width: 100vw;
@@ -65,7 +65,7 @@
     backdrop-filter: blur(3px);
   }
   #dock{
-    z-index: 2;
+    z-index: 20;
     transition: 500ms ease all;
     position: fixed;
     width: 50px;
