@@ -6,6 +6,7 @@
   let errmsg = $state();
 </script>
 
+<div id="bg"></div>
 <div class="content">
   <form method="POST" action="?/login" use:enhance={() => {
     return async ({ result }: any) => {
@@ -32,6 +33,15 @@
 </div>
 
 <style lang="scss">
+  #bg{
+    background-image: url("/media/gargoyles.jpg");
+    object-fit: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    min-width: 100vw;
+    overflow-x: hidden;
+  }
   .status{
     margin-top: 25px;
     color: $warning;

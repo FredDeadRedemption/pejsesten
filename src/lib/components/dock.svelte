@@ -26,6 +26,11 @@
       path: "/catalog"
     },
     {
+      title: "Creator",
+      icon: "creator",
+      path: "/creator"
+    },
+    {
       title: "Settings",
       icon: "settings",
       path: "/settings"
