@@ -40,7 +40,7 @@
     background-color: $grey-ultralight;
     min-width: calc(100vw - 50px);
     min-height: calc(100vh - 50px);
-    padding: 25px;
+    padding: 30px;
     overflow: hidden;
     display: flex;
     flex-direction: column;

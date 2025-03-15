@@ -3,26 +3,108 @@
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { card } = $props<{ card: Card }>();
+
+  const costColors: Record<string, string> = {
+    earth_cost: "#28b84a", // Earth
+    dream_cost: "#f39c12", // Dream
+    death_cost: "#3498db", // Death
+    holy_cost: "#e74c3c", // Holy
+  };
+
+  let costs: string[] = [];
+  for (const [costType, color] of Object.entries(costColors)) {
+    const value = card[costType as keyof Card]; 
+    if (typeof value === "number") {
+      costs.push(...Array(value).fill(color));
+    }
+  }
 </script>
 
-<li>NAME: {card.name}</li>
-<li>ATTACK: {card.attack}</li>
-<li>DEFENCE: {card.defence}</li>
-{#if card.death_cost}
-  <li>COST: {card.death_cost} death</li>
-{/if}
-{#if card.dream_cost}
-  <li>COST: {card.dream_cost} dream</li>
-{/if}
-{#if card.holy_cost}
-  <li>COST: {card.holy_cost} holy</li>
-{/if}
-{#if card.earth_cost}
-  <li>COST: {card.earth_cost} earth</li>
-{/if}
-{#if card.race_type}
-  <li>RACE: {card.race_type}</li>
-{:else}
-  <li>RACE: any</li>
-{/if}
-<li>DESCRIPTION: {card.description}</li>
+<div id="card">
+  <div class="img">
+    {card.name}
+  </div>
+  <div class="costs">
+    {#each costs as c}
+      <div class="cost" style="background-color: {c};"></div>
+    {/each}
+  </div>
+  <div class="description">{card.description}</div>
+  <div class="bottom">
+    <div class="attack">{card.attack}</div>
+    {#if card.race_type}
+      <div class="race">{card.race_type}</div>
+    {:else}
+      <div class="race">any</div>
+    {/if}
+    <div class="defence">{card.defence}</div>
+  </div>
+</div>
+
+<style lang="scss">
+  #card{
+    display: flex;
+    flex-direction: column;
+    width: 160px;
+    height: 230px;
+    box-shadow: $box-shadow-primary;
+    border-radius: 5px;
+    overflow: hidden;
+    user-select: none; // Prevents selection
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    .img{
+      width: 100%;
+      min-height: 80px;
+      background-color: $grey-black;
+      color: $white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .costs{
+      display: flex;
+      gap: 3px;
+      width: 100%;
+      background-color: $grey-light;
+      padding: 3px;
+      .cost{
+        width: 12px;
+        height: 12px;
+        border-radius: 100px;
+      } 
+    }
+    .description{
+      text-align: center;
+      background-color: $grey-mid;
+      font-size: 0.8rem;
+      padding: 5px;
+      flex-grow: 1;
+    }
+    .bottom{  
+      display: flex;
+      justify-content: space-between;
+      background-color: $grey-light;
+      width: 100%;
+      .race{
+        display: flex;
+        align-items: center;
+        font-size: 0.8rem;
+      }
+      .attack, .defence{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 20px;
+        width: 20px;
+      }
+      .attack{
+        background-color: gold;
+      }
+      .defence{
+        background-color: $primary;
+      }
+    }
+  }
+</style>
