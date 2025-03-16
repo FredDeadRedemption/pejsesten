@@ -1,22 +1,23 @@
 import { writable } from "svelte/store";
 import { io } from "socket.io-client";
 
-const prodURL = "https://matrixz-gs.up.railway.app/";
-const devURL = "http://localhost:3000/";
+// Initialize the socket with a given URL
+function createSocket(url: string) {
+  const socket = io(url);
 
-const socket = io("https://matrixz-gs.up.railway.app/"); //Prod URL
-//const socket = io("http://http://localhost:3000/"); //Dev URL
+  const messages = writable<string[]>([]);
 
-const messages = writable<string[]>([]);
+  // Listen for messages
+  socket.on("message", (data) => {
+    messages.update((msgs) => [...msgs, data]);
+  });
 
-// Listen for messages
-socket.on("message", (data: string) => {
-  messages.update((msgs) => [...msgs, data]);
-});
+  // Function to send a message
+  function sendMessage(message: string) {
+    socket.emit("message", message);
+  }
 
-// Function to send a message
-function sendMessage(message: string) {
-  socket.emit("message", message);
+  return { socket, messages, sendMessage };
 }
 
-export { messages, sendMessage };
+export default createSocket;

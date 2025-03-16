@@ -1,5 +1,10 @@
 <script>
+  import { setSocketURL } from "$lib/socketStore";
     let toggleState = $state(false); // Initial state is off
+
+    $effect(()=>{
+      setSocketURL(toggleState);
+    })
 
   // Derived value for the toggle label
   const toggleLabel = $derived(toggleState ? 'Production' : 'Development');
@@ -21,7 +26,7 @@
     <p>Activate the <strong>'Unga Bunga'</strong> protocol</p> 
     <div class="toggle-switch">
       <label class="switch">
-        <input type="checkbox" />
+        <input type="checkbox" checked/>
         <span class="slider"></span>
       </label>
     </div>
