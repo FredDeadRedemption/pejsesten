@@ -45,6 +45,20 @@ li{
       background-color: $black;
     }
 	}
+	&.secondary{
+		padding: 10px;
+		border: none;
+		border-radius: 2px;
+		width: 200px;
+		transition: 250ms ease all;
+    border: 1px solid $grey-mid;
+    background-color: transparent;
+    &:hover{
+      background-color: $grey-mid;
+      color: $white;
+    }
+	}
+	
 	&.ghost{
 		border: none;
 		padding: 10px;
