@@ -133,5 +133,6 @@ export const actions: Actions = {
     if (deleteCardError) {
       console.error("Error deleting card:", deleteCardError);
     }
+    return { success: true };
   }
 }
