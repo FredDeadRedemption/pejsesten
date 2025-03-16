@@ -12,6 +12,10 @@ export const actions: Actions = {
     const name = formData.get('name') as string;
     const attack = parseInt(formData.get('attack') as string);
     const defence = parseInt(formData.get('defence') as string);
+    const holy_cost = parseInt(formData.get('holyCost') as string);
+    const death_cost = parseInt(formData.get('deathCost') as string);
+    const dream_cost = parseInt(formData.get('dreamCost') as string);
+    const earth_cost = parseInt(formData.get('earthCost') as string);
     const description = formData.get('description') as string;
     const imageFile = formData.get('image') as File;
 
@@ -68,6 +72,10 @@ export const actions: Actions = {
           name, 
           attack, 
           defence, 
+          holy_cost,
+          death_cost,
+          dream_cost,
+          earth_cost,
           description, 
           image_url: imageUrl 
         }])

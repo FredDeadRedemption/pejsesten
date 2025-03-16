@@ -23,25 +23,25 @@
 
     <div class="grp-side-by-side">
       <div class="grp">
-        <label for="holy_cost">Holy cost</label>
-        <input type="number" id="holy_cost" name="holy_cost" required />
+        <label for="holyCost">Holy cost</label>
+        <input type="number" id="holyCost" name="holyCost" />
       </div>
 
       <div class="grp">
-        <label for="death_cost">Death cost</label>
-        <input type="number" id="death_cost" name="death_cost" required />
+        <label for="deathCost">Death cost</label>
+        <input type="number" id="deathCost" name="deathCost"/>
       </div>
     </div>
 
     <div class="grp-side-by-side">
       <div class="grp">
-        <label for="dream_cost">Dream Cost</label>
-        <input type="number" id="dream_cost" name="dream_cost" required />
+        <label for="dreamCost">Dream Cost</label>
+        <input type="number" id="dreamCost" name="dreamCost" />
       </div>
 
       <div class="grp">
-        <label for="earth_cost">Earth Cost</label>
-        <input type="number" id="earth_cost" name="earth_cost" required />
+        <label for="earthCost">Earth Cost</label>
+        <input type="number" id="earthCost" name="earthCost" />
       </div>
     </div>
 
@@ -87,25 +87,25 @@
 
     <div class="grp-side-by-side">
       <div class="grp">
-        <label for="holy_cost">Holy cost</label>
-        <input type="number" id="holy_cost" name="holy_cost" required />
+        <label for="holyCost">Holy cost</label>
+        <input type="number" id="holyCost" name="holyCost" />
       </div>
 
       <div class="grp">
-        <label for="death_cost">Death cost</label>
-        <input type="number" id="death_cost" name="death_cost" required />
+        <label for="deathCost">Death cost</label>
+        <input type="number" id="deathCost" name="deathCost" />
       </div>
     </div>
 
     <div class="grp-side-by-side">
       <div class="grp">
-        <label for="dream_cost">Dream Cost</label>
-        <input type="number" id="dream_cost" name="dream_cost" required />
+        <label for="dreamCost">Dream Cost</label>
+        <input type="number" id="dreamCost" name="dreamCost"/>
       </div>
 
       <div class="grp">
-        <label for="earth_cost">Earth Cost</label>
-        <input type="number" id="earth_cost" name="earth_cost" required />
+        <label for="earthCost">Earth Cost</label>
+        <input type="number" id="earthCost" name="earthCost"/>
       </div>
     </div>
 
