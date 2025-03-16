@@ -1,22 +1,14 @@
 <script>
-  import { setSocketURL } from "$lib/socketStore";
-    let toggleState = $state(false); // Initial state is off
-
-    $effect(()=>{
-      setSocketURL(toggleState);
-    })
-
-  // Derived value for the toggle label
-  const toggleLabel = $derived(toggleState ? 'Production' : 'Development');
+  import { toggleState, toggleLabel } from "$lib/socket/toggleStore";
 </script>
 
 <main>
   <h1>Settings</h1>
   <div class="wrap">
-    <p>Session server runs on <strong>{toggleLabel}</strong></p> 
+    <p>Session server runs on <strong>{$toggleLabel}</strong></p> 
     <div class="toggle-switch">
       <label class="switch">
-        <input type="checkbox" bind:checked={toggleState} />
+        <input type="checkbox" bind:checked={$toggleState} />
         <span class="slider"></span>
       </label>
     </div>

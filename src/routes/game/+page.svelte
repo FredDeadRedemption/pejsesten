@@ -1,34 +1,49 @@
 <script lang="ts">
-  import { messages, sendMessage } from "$lib/socket";
-  import { onMount } from "svelte";
+  import { socket } from "$lib/socket/socketStore";
+  import { toggleLabel } from "$lib/socket/toggleStore";
 
-  let message = $state("");
+  let message: string = $state("");
+
+  let messages = $derived($socket.messages)
 </script>
 
 <main>
   <h1>Socket.IO Chat</h1>
-
-  <input
+  <p>Runnin on <strong>{$toggleLabel}</strong> change in <a href="/settings">settings</a></p>
+  <div>
+    <input
     type="text"
     bind:value={message}
     placeholder="Type a message"
-    onkeydown={(e) => e.key === 'Enter' && sendMessage(message)}
+    onkeydown={(e) => e.key === 'Enter' && $socket.sendMessage(message)}
   />
-  <button onclick={() => { sendMessage(message); message = ""; }}>
+  <button onclick={() => { $socket.sendMessage(message); message = ""; }}>
     Send
   </button>
+  </div>
 
   <ul>
     {#each $messages as msg}
-      <li>{msg}</li>
+      <li class="msg">{msg}</li>
     {/each}
   </ul>
 </main>
 
 <style lang="scss">
+  a{
+    color: $primary;
+  }
+  .msg{
+    width: 500px;
+  }
   main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
     text-align: center;
     margin-top: 2rem;
+    gap: 10px;
   }
   input {
     padding: 0.5rem;

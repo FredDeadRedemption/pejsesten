@@ -2,7 +2,7 @@ import { writable } from "svelte/store";
 import { io } from "socket.io-client";
 
 // Initialize the socket with a given URL
-function createSocket(url: string) {
+const createSocket = (url: string) => {
   const socket = io(url);
 
   const messages = writable<string[]>([]);
@@ -13,7 +13,7 @@ function createSocket(url: string) {
   });
 
   // Function to send a message
-  function sendMessage(message: string) {
+  const sendMessage = (message: string) => {
     socket.emit("message", message);
   }
 
