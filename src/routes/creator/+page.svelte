@@ -21,26 +21,24 @@
       </div>
     </div>
 
-    <div class="grp-side-by-side">
+    <div class="grp-side-by-side-four">
       <div class="grp">
-        <label for="holyCost">Holy cost</label>
+        <label for="holyCost">Holy</label>
         <input type="number" id="holyCost" name="holyCost" />
       </div>
 
       <div class="grp">
-        <label for="deathCost">Death cost</label>
+        <label for="deathCost">Death</label>
         <input type="number" id="deathCost" name="deathCost"/>
       </div>
-    </div>
 
-    <div class="grp-side-by-side">
       <div class="grp">
-        <label for="dreamCost">Dream Cost</label>
+        <label for="dreamCost">Dream</label>
         <input type="number" id="dreamCost" name="dreamCost" />
       </div>
 
       <div class="grp">
-        <label for="earthCost">Earth Cost</label>
+        <label for="earthCost">Earth</label>
         <input type="number" id="earthCost" name="earthCost" />
       </div>
     </div>
@@ -73,39 +71,25 @@
       <input type="text" id="name" name="name" required />
     </div>
 
-    <div class="grp-side-by-side">
+    <div class="grp-side-by-side-four">
       <div class="grp">
-        <label for="attack">Attack</label>
-        <input type="number" id="attack" name="attack" required />
-      </div>
-  
-      <div class="grp">
-        <label for="defence">Defence</label>
-        <input type="number" id="defence" name="defence" required />
-      </div>
-    </div>
-
-    <div class="grp-side-by-side">
-      <div class="grp">
-        <label for="holyCost">Holy cost</label>
+        <label for="holyCost">Holy</label>
         <input type="number" id="holyCost" name="holyCost" />
       </div>
 
       <div class="grp">
-        <label for="deathCost">Death cost</label>
-        <input type="number" id="deathCost" name="deathCost" />
-      </div>
-    </div>
-
-    <div class="grp-side-by-side">
-      <div class="grp">
-        <label for="dreamCost">Dream Cost</label>
-        <input type="number" id="dreamCost" name="dreamCost"/>
+        <label for="deathCost">Death</label>
+        <input type="number" id="deathCost" name="deathCost"/>
       </div>
 
       <div class="grp">
-        <label for="earthCost">Earth Cost</label>
-        <input type="number" id="earthCost" name="earthCost"/>
+        <label for="dreamCost">Dream</label>
+        <input type="number" id="dreamCost" name="dreamCost" />
+      </div>
+
+      <div class="grp">
+        <label for="earthCost">Earth</label>
+        <input type="number" id="earthCost" name="earthCost" />
       </div>
     </div>
 
@@ -130,7 +114,6 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     justify-content: center;
-    align-items: center;
     gap: 25px;
   }
   #create, #delete, #update{
@@ -141,6 +124,7 @@
     flex-direction: column;
     gap: 15px;
     input, textarea{
+      text-align: center;
       background-color: $grey-mid;
       border: none;
       padding: 10px;
@@ -153,6 +137,7 @@
       width: 100%;
     }
     textarea{
+      resize: none;
       height: 70px;
     }
   }
@@ -165,11 +150,24 @@
     flex-direction: column;
   }
   .grp-side-by-side{
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
+  }
+  .grp-side-by-side-four{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 15px;
+    input{
+      width: 100%;
+    }
   }
   label{
     align-self: center;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none; /* WebKit browsers */
+    margin: 0; /* Optional: Remove margin */
   }
 </style>
