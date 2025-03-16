@@ -123,27 +123,23 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
-    input, textarea{
-      text-align: center;
-      background-color: $grey-mid;
-      border: none;
-      padding: 10px;
-      border-radius: 4px;
-      &:focus{
-        outline: none;
-      }
-    }
     button{
       width: 100%;
     }
-    textarea{
-      resize: none;
-      height: 70px;
+  }
+  input, textarea{
+    text-align: center;
+    background-color: $grey-mid;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    &:focus{
+      outline: none;
     }
   }
-  .basics{
-    display: grid;
-    grid-template-rows: 1fr 1fr 1r
+  textarea{
+    resize: none;
+    height: 70px;
   }
   .grp{
     display: flex;
