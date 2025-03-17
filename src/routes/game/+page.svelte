@@ -1,16 +1,29 @@
 <script lang="ts">
-  import { queueUp, socketLabel } from "$lib/socket/socket";
+  import { queueUp, invalidateSocket, connectSocket } from "$lib/socket/socket";
 
-  let { profile } = $props();
+  let { data } = $props()
+  let { profile } = $derived(data)
+    
+  let dev = $state(false)
 
-  let message: string = $state("");
+  let url = $derived(dev ? "http://localhost:3000/" : "https://matrixz-gs.up.railway.app/");
+
+  $effect(()=>{
+    console.log("url changed invalidating socket " + url) 
+    invalidateSocket();
+  })
 </script>
 
 <main>
   <h1>Socket.IO Chat</h1>
-  <p>Runnin on <strong>{socketLabel}</strong> change in <a href="/settings">settings</a></p>
+  <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong> change in <a href="/settings">settings</a></p>
 
-  <button class="button primary" onclick={() => { queueUp("mista yehaw") }}>
+  <input type="checkbox" name="url" id="" bind:checked={dev}>
+
+  <button class="button primary" onclick={() => { 
+    connectSocket(url);
+    queueUp(profile?.username || "Out-of-Towner") 
+    }}>
     QueueUp
   </button>
 </main>
