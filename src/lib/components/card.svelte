@@ -22,7 +22,7 @@
 
 <div id="card">
   <div class="img-name-wrap">
-    <img src={card.image_url} alt="">
+    <img src={card.image_url} alt="" draggable="false">
     <span class="name">{card.name}</span>
   </div>
   <div class="costs">
