@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 
 // Initialize the socket with a given URL
 const createSocket = (url: string) => {
+  console.log("CREATING SOCKET")
   const socket = io(url);
 
   const messages = writable<string[]>([]);

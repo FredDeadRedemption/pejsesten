@@ -1,18 +1,5 @@
-import { fail, redirect } from '@sveltejs/kit'
-import type { Actions, PageServerLoad } from './$types'
-
-export const load: PageServerLoad = async ({ locals: { supabase, session } }) => {
-  const { error } = await supabase.rpc('create_profile_if_not_exists');
-    error ? console.error('Error creating profile:', error) : console.log('Profile checked/created successfully');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select(`username`)
-    .eq('user_id', session?.user.id)
-    .single()
-
-  return { session, profile }
-}
+import { fail } from '@sveltejs/kit'
+import type { Actions } from './$types'
 
 export const actions: Actions = {
   update: async ({ request, locals: { supabase, safeGetSession } }) => {
