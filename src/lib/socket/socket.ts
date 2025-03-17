@@ -17,7 +17,12 @@ const createSocket = (url: string) => {
     socket.emit("message", message);
   }
 
-  return { socket, messages, sendMessage };
+  // Queue up
+  const queueUp = (userName: string) => {
+    socket.emit("queueUp", userName);
+  }
+
+  return { socket, messages, sendMessage, queueUp };
 }
 
 export default createSocket;

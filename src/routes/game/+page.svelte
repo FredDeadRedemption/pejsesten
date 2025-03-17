@@ -2,6 +2,8 @@
   import { socket } from "$lib/socket/socketStore";
   import { toggleLabel } from "$lib/socket/toggleStore";
 
+  let { profile } = $props();
+
   let message: string = $state("");
 
   let messages = $derived($socket.messages)
@@ -22,6 +24,9 @@
   </button>
   </div>
 
+  <button onclick={() => { $socket.queueUp("mista yehaw") }}>
+    QueueUp
+  </button>
   <ul>
     {#each $messages as msg}
       <li class="msg">{msg}</li>
