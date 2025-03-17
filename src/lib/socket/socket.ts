@@ -1,7 +1,11 @@
+import { goto } from '$app/navigation';
 import { redirect } from '@sveltejs/kit';
 import { io, type Socket } from 'socket.io-client';
+import { writable } from 'svelte/store';
 
 let socket: Socket | null = null;
+
+export const queueHasPartner = writable(false);
 
 // Function to invalidate (disconnect) the socket
 export const invalidateSocket = () => {
@@ -31,8 +35,13 @@ export const connectSocket = (url: string) => {
     // Register global event listeners
     socket.on('queueAccept', () => {
       console.log('Queue accepted! Redirecting to game...');
+      queueHasPartner.set(true);
       // Handle redirection logic here (e.g., using SvelteKit's `goto` or window.location)
     });
+
+    socket.on("startGame", () => {
+      goto("/yeehaw")
+    })
   } else {
     console.log('Socket already connected:', socket.id);
   }
@@ -47,3 +56,12 @@ export const queueUp = (userName: string) => {
     console.error('Socket not connected. Please connect first.');
   }
 };
+
+export const readyUp = () => {
+  if (socket) {
+    console.log('Readying up');
+    socket.emit('readyUp');
+  } else {
+    console.error('Socket not connected. Please connect first.');
+  }
+}

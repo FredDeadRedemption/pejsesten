@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { queueUp, invalidateSocket, connectSocket } from "$lib/socket/socket";
+  import { queueUp, invalidateSocket, connectSocket, queueHasPartner, readyUp } from "$lib/socket/socket";
 
   let { data } = $props()
   let { profile } = $derived(data)
@@ -20,12 +20,20 @@
   <p>{profile?.username}</p>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
 
-  <button class="button primary" onclick={() => { 
-    connectSocket(url);
-    queueUp(profile?.username || "Out-of-Towner") 
-    }}>
-    QueueUp
-  </button>
+  {#if $queueHasPartner}
+    <button class="button primary" onclick={() => { 
+      readyUp();
+      }}>
+      ReadyUp
+    </button>
+  {:else}
+    <button class="button primary" onclick={() => { 
+      connectSocket(url);
+      queueUp(profile?.username || "Out-of-Towner") 
+      }}>
+      QueueUp
+    </button>
+  {/if}
 </main>
 
 <style lang="scss">
