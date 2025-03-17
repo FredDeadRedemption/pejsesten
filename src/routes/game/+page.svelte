@@ -1,30 +1,27 @@
 <script lang="ts">
-  import { socket } from "$lib/socket/socketStore";
-  import { toggleLabel } from "$lib/socket/toggleStore";
+  import { sendMessage, queueUp, messages, socketLabel } from "$lib/socket/socket";
 
   let { profile } = $props();
 
   let message: string = $state("");
-
-  let messages = $derived($socket.messages)
 </script>
 
 <main>
   <h1>Socket.IO Chat</h1>
-  <p>Runnin on <strong>{$toggleLabel}</strong> change in <a href="/settings">settings</a></p>
+  <p>Runnin on <strong>{socketLabel}</strong> change in <a href="/settings">settings</a></p>
   <div>
     <input
     type="text"
-    bind:value={message}
+    bind:value={$messages}
     placeholder="Type a message"
-    onkeydown={(e) => e.key === 'Enter' && $socket.sendMessage(message)}
+    onkeydown={(e) => e.key === 'Enter' && sendMessage(message)}
   />
-  <button onclick={() => { $socket.sendMessage(message); message = ""; }}>
+  <button onclick={() => { sendMessage(message); message = ""; }}>
     Send
   </button>
   </div>
 
-  <button onclick={() => { $socket.queueUp("mista yehaw") }}>
+  <button onclick={() => { queueUp("mista yehaw") }}>
     QueueUp
   </button>
   <ul>
