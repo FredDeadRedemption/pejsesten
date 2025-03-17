@@ -1,5 +1,7 @@
+import { goto } from '$app/navigation';
 import { redirect } from '@sveltejs/kit';
 import { io, type Socket } from 'socket.io-client';
+import { writable } from 'svelte/store';
 
 let socket: Socket | null = null;
 
@@ -11,6 +13,8 @@ export const invalidateSocket = () => {
     socket = null;
   }
 };
+
+export const gameAvailable = writable<boolean>(false);
 
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
@@ -30,9 +34,17 @@ export const connectSocket = (url: string) => {
 
     // Register global event listeners
     socket.on('queueAccept', () => {
-      console.log('Queue accepted! Redirecting to game...');
+      console.log('Game availabile!');
+      gameAvailable.set(true);
       // Handle redirection logic here (e.g., using SvelteKit's `goto` or window.location)
     });
+
+    socket.on('gameStart', (gameId : number) => {
+      console.log(gameId)
+      console.log("gameID")
+      goto(`/game/${gameId}`);
+    })
+
   } else {
     console.log('Socket already connected:', socket.id);
   }
@@ -43,6 +55,15 @@ export const queueUp = (userName: string) => {
   if (socket) {
     console.log('Queuing up:', userName);
     socket.emit('queueUp', userName);
+  } else {
+    console.error('Socket not connected. Please connect first.');
+  }
+};
+
+// Function to accept queue
+export const acceptQueue = (answer: boolean) => {
+  if (socket) {
+    socket.emit('acceptQueue', answer);
   } else {
     console.error('Socket not connected. Please connect first.');
   }
