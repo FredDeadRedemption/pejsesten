@@ -2,6 +2,18 @@
   let { data } = $props()
   let { profile } = $derived(data)
 
+  import { invalidate } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import { page } from '$app/state';
+
+  let refresh = page.url.searchParams.get('refresh') === 'true';
+
+  // Invalidate data if the query parameter is present
+  onMount(async () => {
+    if (refresh) {
+      await invalidate('app:data'); // Re-run load functions
+    }
+  });
 </script>
 
 <h1>dashboard</h1>

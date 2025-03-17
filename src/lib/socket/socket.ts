@@ -5,6 +5,8 @@ import { writable } from 'svelte/store';
 
 let socket: Socket | null = null;
 
+export const queueHasPartner = writable(false);
+
 // Function to invalidate (disconnect) the socket
 export const invalidateSocket = () => {
   if (socket) {

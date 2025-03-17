@@ -26,7 +26,7 @@ export const actions: Actions = {
       console.error(error)
       return { success: false, message: error.message};
     } else {
-      redirect(303, '/dashboard')
+      redirect(303, '/dashboard?refresh=true')
     }
   },
 }
