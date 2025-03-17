@@ -1,7 +1,7 @@
 <script>
 	import { goto } from "$app/navigation";
 
-  let { supabase, session } = $props();
+  let { supabase } = $props();
   
   const logout = async () => {
     const { error } = await supabase.auth.signOut()

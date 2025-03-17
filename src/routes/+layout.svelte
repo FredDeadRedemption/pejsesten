@@ -23,7 +23,7 @@
 
 {#if page.url.pathname !== "/"}
   <ProgressBar></ProgressBar>
-  <Nav session={session} supabase={supabase}> </Nav>
+  <Nav supabase={supabase}> </Nav>
   <Dock></Dock>
   <main>
     {@render children()}
