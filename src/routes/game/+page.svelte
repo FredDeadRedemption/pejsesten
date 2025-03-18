@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { queueUp, invalidateSocket, connectSocket, acceptQueue, gameAvailable } from "$lib/socket/socket";
+  import { queueUp, invalidateSocket, connectSocket } from "$lib/socket/socket";
 
   let { data } = $props()
   let { profile } = $derived(data)
@@ -26,12 +26,6 @@
     }}>
       QueueUp
   </button>
-  
-  {#if $gameAvailable}
-    <button class="button primary" onclick={() => {acceptQueue(true)}}> Yes </button>
-    <button class="button primary" onclick={() => {acceptQueue(false)}}> NO </button>
-  {/if}
-
 </main>
 
 <style lang="scss">

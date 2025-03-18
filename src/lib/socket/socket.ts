@@ -34,14 +34,7 @@ export const connectSocket = (url: string) => {
       invalidateSocket(); // Disconnect and reset the socket on error
     });
 
-    // Register global event listeners
-    socket.on('queueAccept', () => {
-      console.log('Game availabile!');
-      gameAvailable.set(true);
-      // Handle redirection logic here (e.g., using SvelteKit's `goto` or window.location)
-    });
-
-    socket.on('gameStart', (gameId : number) => {
+    socket.on('gameStart', (gameId : string) => {
       console.log(gameId)
       console.log("gameID")
       goto(`/game/${gameId}`);
@@ -57,15 +50,6 @@ export const queueUp = (userName: string) => {
   if (socket) {
     console.log('Queuing up:', userName);
     socket.emit('queueUp', userName);
-  } else {
-    console.error('Socket not connected. Please connect first.');
-  }
-};
-
-// Function to accept queue
-export const acceptQueue = (answer: boolean) => {
-  if (socket) {
-    socket.emit('acceptQueue', answer);
   } else {
     console.error('Socket not connected. Please connect first.');
   }
