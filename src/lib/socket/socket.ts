@@ -34,7 +34,7 @@ export const connectSocket = (url: string) => {
       invalidateSocket(); // Disconnect and reset the socket on error
     });
 
-    socket.on('gameStart', (gameId : string) => {
+    socket.on('startGame', (gameId : string) => {
       console.log(gameId)
       console.log("gameID")
       goto(`/game/${gameId}`);
