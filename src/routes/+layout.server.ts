@@ -8,7 +8,7 @@ export const load: LayoutServerLoad = async ({ locals: { supabase, safeGetSessio
     console.error('Error creating profile:', error);
   } else {
     console.log('Profile checked/created successfully');
-  }
+ }
 
   // Fetch the profile data
   const { data: profile } = await supabase
