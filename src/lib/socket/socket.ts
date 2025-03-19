@@ -63,3 +63,12 @@ export const leaveQueue = () => {
     console.error('Socket not connected. Please connect first.');
   }
 };
+
+export const endTurn = () => {
+  if (socket) {
+    console.log('endTurn:');
+    socket.emit('endTurn');
+  } else {
+    console.error('Socket not connected. Please connect first.');
+  }
+};
