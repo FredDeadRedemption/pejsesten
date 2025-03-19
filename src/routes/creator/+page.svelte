@@ -13,21 +13,24 @@
   let cardToUpdate : Card | null = $state(null); 
 
 
+
   const handleImgUpdate = (event : Event) => {
     const target = event.target as HTMLInputElement;
 
     const img = target.files?.[0];
 
     if (img) {
-      // const reader = new FileReader();
+      const reader = new FileReader();
 
-      // reader.readAsDataURL(img);
-      // reader.onload = (e) => {
-      //   if(cardToUpdate)
-      //   cardToUpdate?.image_url = e.target?.result;
-      // }
-      console.log(img);
-      // cardToUpdate?.image_url = img;
+      reader.onload = (e) => {
+        if(cardToUpdate) {
+          cardToUpdate.image_url = e.target?.result as string;
+          console.log(cardToUpdate.image_url)
+        }
+      }
+      reader.readAsDataURL(img);
+
+      // console.log(img);
     }
   } 
 
@@ -188,12 +191,18 @@
     <div class="grp">
       <label for="image">Image</label>
       <input type="file" id="image" name="image" accept="image/*" onchange={handleImgUpdate} />
+      {console.log(cardToUpdate.image_url)}
       <img src={cardToUpdate.image_url} alt="" draggable="false">
     </div>
     <button type="submit" class="button primary">Update Card</button>
   </form>
   {/if}
   </div>
+  {#if cardToUpdate}
+
+  <img src={cardToUpdate.image_url} alt="" draggable="false">
+  {/if}
+
 </main>
 
 
