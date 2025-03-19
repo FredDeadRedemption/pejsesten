@@ -18,7 +18,7 @@
 	const onMouseUp = () => {
 		moving = false;
 	};
-	// 	$: console.log(moving);
+	// Sjovt libary til det samme: https://gsap.com/docs/v3/Plugins/Draggable/
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->

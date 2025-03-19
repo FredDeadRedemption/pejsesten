@@ -2,6 +2,27 @@
 import type { Actions } from './$types'
 import { fail } from '@sveltejs/kit';
 
+
+import type { PageServerLoad } from '../catalog/$types'
+import type { Database } from '$lib/database.types'; 
+type LandEnum = Database['public']['Tables']['land_enums']['Row'];
+type Card = Database['public']['Tables']['cards']['Row'];
+
+export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+  const { data: land_enums } = await supabase.from('land_enums').select('*');
+
+  const { data: cards } = await supabase.from("cards").select("*");
+
+  const typedLandEnums = land_enums as LandEnum[] | null;
+  const typedCards = cards as Card[] | null;
+
+  return { land_enums: typedLandEnums ?? [], cards: typedCards ?? [] }
+}
+
+
+
+
+
 export const actions: Actions = {
   createCard: async ({ request, locals: { supabase }}) => {
     const formData = await request.formData();
@@ -134,5 +155,23 @@ export const actions: Actions = {
       console.error("Error deleting card:", deleteCardError);
     }
     return { success: true };
+  },
+
+
+  updateCard: async ({ request, locals: { supabase }}) => {
+    const formData = await request.formData();
+
+    console.log("YEEEHAW")
+
+    // Extract form data
+    const name = formData.get('name') as string;
+    const attack = parseInt(formData.get('attack') as string);
+    const defence = parseInt(formData.get('defence') as string);
+    const holy_cost = parseInt(formData.get('holyCost') as string);
+    const death_cost = parseInt(formData.get('deathCost') as string);
+    const dream_cost = parseInt(formData.get('dreamCost') as string);
+    const earth_cost = parseInt(formData.get('earthCost') as string);
+    const description = formData.get('description') as string;
+    const imageFile = formData.get('image') as File;
   }
 }

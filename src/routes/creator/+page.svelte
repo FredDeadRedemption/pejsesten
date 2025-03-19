@@ -1,8 +1,40 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  
+  import type { Database } from '$lib/database.types'; 
+
+
+  let { data } = $props()
+  let { land_enums, cards} = $derived(data)
+
+
+  type Card = Database['public']['Tables']['cards']['Row'];
+
+  let cardToUpdate : Card | null = $state(null); 
+
+
+  const handleImgUpdate = (event : Event) => {
+    const target = event.target as HTMLInputElement;
+
+    const img = target.files?.[0];
+
+    if (img) {
+      // const reader = new FileReader();
+
+      // reader.readAsDataURL(img);
+      // reader.onload = (e) => {
+      //   if(cardToUpdate)
+      //   cardToUpdate?.image_url = e.target?.result;
+      // }
+      console.log(img);
+      // cardToUpdate?.image_url = img;
+    }
+  } 
+
 </script>
 
 <main>
+  <!-- CREATE FORM -->
   <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data">
     <div class="grp">
       <label for="name">Name</label>
@@ -56,56 +88,112 @@
     <button type="submit" class="button primary">Create Card</button>
   </form>
 
+
+  <!-- DELETE FORM -->
   <form id="delete" method="POST" action="?/deleteCard" use:enhance>
     <div class="grp">
       <label for="name">Name</label>
-      <input type="text" id="name" name="name" required />
+      <select name="name">
+        <option value="" disabled selected>Select an option</option>
+        <!-- Land -->
+        <!-- <optgroup label="Land"> TODO: Should be land
+          {#each cards as card}
+            <option value={card.name}>{card.name}</option>
+          {/each}
+        </optgroup> -->
+
+        <!-- Creatures -->
+        <optgroup label="Creatures">
+          {#each cards as card}
+            <option value={card.name}>{card.name}</option>
+          {/each}
+        </optgroup>
+        
+        <!-- Incantations -->
+        <!-- <optgroup label="Land"> TODO: Should be incantations(spells)
+          {#each cards as card}
+            <option value={card.name}>{card.name}</option>
+          {/each}
+        </optgroup> -->
+      </select>
     </div>
 
     <button type="submit" class="button primary">Delete Card</button>
   </form>
 
-  <form id="update" method="POST" action="?/updateCard" use:enhance enctype="multipart/form-data">
+
+  <!-- UPDATE FORM -->
+  <div id="update">
+  <!-- <form action=}> -->
+    <select name="name" bind:value={cardToUpdate}>
+      <option value="" disabled selected>Select an option</option>
+      <!-- Land -->
+      <!-- <optgroup label="Land"> TODO: Should be land
+        {#each cards as card}
+          <option value={card.name}>{card.name}</option>
+        {/each}
+      </optgroup> -->
+
+      <!-- Creatures -->
+      <optgroup label="Creatures">
+        {#each cards as card}
+          <option value={card}>{card.name}</option>
+        {/each}
+      </optgroup>
+      
+      <!-- Incantations -->
+      <!-- <optgroup label="Land"> TODO: Should be incantations(spells)
+        {#each cards as card}
+          <option value={card.name}>{card.name}</option>
+        {/each}
+      </optgroup> -->
+    </select>
+    <!-- <button onclick={()=>console.log(cardToUpdate)}>yo</button> -->
+  <!-- </form> -->
+
+  {#if cardToUpdate}
+  <form  method="POST" action="?/updateCard" use:enhance enctype="multipart/form-data">
     <div class="grp">
       <label for="name">Name</label>
-      <input type="text" id="name" name="name" required />
+      <input type="text" id="name" name="name" required bind:value={cardToUpdate.name}/>
     </div>
 
     <div class="grp-side-by-side-four">
       <div class="grp">
         <label for="holyCost">Holy</label>
-        <input type="number" id="holyCost" name="holyCost" />
+        <input type="number" id="holyCost" name="holyCost" bind:value={cardToUpdate.holy_cost}/>
       </div>
 
       <div class="grp">
         <label for="deathCost">Death</label>
-        <input type="number" id="deathCost" name="deathCost"/>
+        <input type="number" id="deathCost" name="deathCost" bind:value={cardToUpdate.death_cost}/>
       </div>
 
       <div class="grp">
         <label for="dreamCost">Dream</label>
-        <input type="number" id="dreamCost" name="dreamCost" />
+        <input type="number" id="dreamCost" name="dreamCost" bind:value={cardToUpdate.dream_cost}/>
       </div>
 
       <div class="grp">
         <label for="earthCost">Earth</label>
-        <input type="number" id="earthCost" name="earthCost" />
+        <input type="number" id="earthCost" name="earthCost" bind:value={cardToUpdate.earth_cost}/>
       </div>
     </div>
 
     <div class="grp">
       <label for="description">Description</label>
-      <textarea id="description" name="description"></textarea>
+      <textarea id="description" name="description" bind:value={cardToUpdate.description}></textarea>
     </div>
 
     <div class="grp">
       <label for="image">Image</label>
-      <input type="file" id="image" name="image" accept="image/*" />
+      <input type="file" id="image" name="image" accept="image/*" onchange={handleImgUpdate} />
+      <img src={cardToUpdate.image_url} alt="" draggable="false">
     </div>
-
-    <button class="button secondary">Load Card</button>
     <button type="submit" class="button primary">Update Card</button>
   </form>
+  {/if}
+  </div>
 </main>
 
 
@@ -165,5 +253,11 @@
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none; /* WebKit browsers */
     margin: 0; /* Optional: Remove margin */
+  }
+  img {
+    z-index: 1;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
   }
 </style>
