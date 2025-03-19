@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { queueUp, invalidateSocket, connectSocket, acceptQueue, gameAvailable } from "$lib/socket/socket";
+  import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
 
   let { data } = $props()
   let { profile } = $derived(data)
@@ -12,6 +12,8 @@
     console.log("url changed invalidating socket " + url) 
     invalidateSocket();
   })
+
+  let queuedUp = $state(false);
 </script>
 
 <main>
@@ -22,16 +24,11 @@
 
   <button class="button primary" onclick={() => { 
     connectSocket(url);
-    queueUp(profile?.username || "Out-of-Towner") 
+    queuedUp ? leaveQueue() : queueUp(profile?.username || "Out-of-Towner");
+    queuedUp = !queuedUp;
     }}>
-      QueueUp
+      {queuedUp ? "Leave Queue" : "Join Queue"}
   </button>
-  
-  {#if $gameAvailable}
-    <button class="button primary" onclick={() => {acceptQueue(true)}}> Yes </button>
-    <button class="button primary" onclick={() => {acceptQueue(false)}}> NO </button>
-  {/if}
-
 </main>
 
 <style lang="scss">
