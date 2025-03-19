@@ -54,3 +54,12 @@ export const queueUp = (userName: string) => {
     console.error('Socket not connected. Please connect first.');
   }
 };
+
+export const leaveQueue = () => {
+  if (socket) {
+    console.log('leaving queueu:');
+    socket.emit('leaveQueue');
+  } else {
+    console.error('Socket not connected. Please connect first.');
+  }
+};
