@@ -3,6 +3,9 @@
 
   import { page } from "$app/state";
 	import { browser } from "$app/environment";
+
+  import { yourTurn } from "$lib/socket/socket";
+
   let gameId = $state(page.params.gameId);
 
   function enterFullscreen() {
@@ -16,12 +19,14 @@
 
 <div id="fullscreen-div">
   <!-- svelte-ignore a11y_consider_explicit_label -->
-  <button class="button primary" onclick={()=>{
+  <button disabled={ !$yourTurn } class="button primary" onclick={()=>{
     endTurn();
   }}>END TURN</button>
   <h1>Game ID: {gameId}</h1>
 </div>
 <button onclick={()=> {enterFullscreen()}}>Go Fullscreen</button>
+
+<div>Your turn: { $yourTurn }</div>
 
 <style lang="scss">
   #fullscreen-div {

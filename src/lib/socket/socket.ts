@@ -1,5 +1,4 @@
 import { goto } from '$app/navigation';
-import { redirect } from '@sveltejs/kit';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
 
@@ -17,6 +16,7 @@ export const invalidateSocket = () => {
 };
 
 export const gameAvailable = writable<boolean>(false);
+export const yourTurn = writable<boolean>(false);
 
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
@@ -35,10 +35,14 @@ export const connectSocket = (url: string) => {
     });
 
     socket.on('startGame', (gameId : string) => {
-      console.log(gameId)
-      console.log("gameID")
+      console.log(gameId);
+      console.log("gameID");
       goto(`/game/${gameId}`);
-    })
+    });
+
+    socket.on('startTurn', (currentTurn) => {
+      yourTurn.set(currentTurn);
+    });
 
   } else {
     console.log('Socket already connected:', socket.id);
@@ -72,3 +76,5 @@ export const endTurn = () => {
     console.error('Socket not connected. Please connect first.');
   }
 };
+
+

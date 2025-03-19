@@ -38,12 +38,12 @@ li{
 		border-radius: 2px;
 		width: 200px;
 		transition: 250ms ease all;
-    background-color: $primary;
-    color: $white;
-    &:hover{
+		background-color: $primary;
+		color: $white;
+		&:hover{
 			cursor: pointer;
-      background-color: $black;
-    }
+			background-color: $black;
+		}
 	}
 	&.secondary{
 		padding: 10px;
@@ -51,12 +51,12 @@ li{
 		border-radius: 2px;
 		width: 200px;
 		transition: 250ms ease all;
-    border: 1px solid $grey-mid;
-    background-color: transparent;
-    &:hover{
-      background-color: $grey-mid;
-      color: $white;
-    }
+		border: 1px solid $grey-mid;
+		background-color: transparent;
+		&:hover{
+			background-color: $grey-mid;
+			color: $white;
+		}
 	}
 	
 	&.ghost{
@@ -67,6 +67,18 @@ li{
 		&:hover{
 			cursor: pointer;
 			color: $primary !important;
+		}
+	}
+	&:disabled {
+		color: $primary;
+		background-color: white;
+		border: $primary;
+		cursor: default;
+		pointer-events: none;
+		opacity: 0.6;
+		&:hover {
+			background-color: white; // Ensures no hover effect
+			color: $primary;
 		}
 	}
 }
