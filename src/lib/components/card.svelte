@@ -1,21 +1,24 @@
 <script lang="ts">
   import type { Database } from '$lib/database.types'; 
+	import { getIcon } from '$lib/icons';
+	import { get } from 'svelte/store';
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { card } = $props<{ card: Card }>();
 
-  const costColors: Record<string, string> = {
-    earth_cost: "#28b84a", // Earth
-    dream_cost: "#f39c12", // Holys
-    death_cost: "#3498db", // Dream
-    holy_cost: "#2a2929", // Death
+  const costRecord: Record<string, Record<string, string>> = {
+    earth_cost: { color: "#28b84a" , icon: "skull" }, // Earth
+    dream_cost: { color: "#f39c12", icon: "skull" }, // Holys
+    death_cost: { color: "#3498db", icon: "skull" }, // Dream
+    holy_cost: { color: "#2a2929", icon: "skull" } // Death
   };
 
-  let costs: string[] = [];
-  for (const [costType, color] of Object.entries(costColors)) {
+  let costs: Array<{ color: string, icon: string }> = [];
+
+  for (const [costType, costData] of Object.entries(costRecord)) {
     const value = card[costType as keyof Card]; 
     if (typeof value === "number") {
-      costs.push(...Array(value).fill(color));
+      costs.push(...Array(value).fill(costData));
     }
   }
 </script>
@@ -30,7 +33,9 @@
     </div>
     <div class="costs cool-mesh">
       {#each costs as c}
-        <div class="cost" style="background-color: {c};"></div>
+        <div class="cost" style="background-color: {c.color};">
+         <div>{@html getIcon("fire")}</div>
+        </div>
       {/each}
     </div>
     <div class="description cool-mesh">{card.description}</div>
@@ -125,6 +130,10 @@
         background-color: $grey-light;
         padding: 2px;
         .cost{
+          color: $white;
+          display: flex;
+          justify-content: center;
+          align-items: center;
           width: 14px;
           height: 14px;
           border-radius: 100px;
