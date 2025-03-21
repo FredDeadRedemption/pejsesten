@@ -7,9 +7,9 @@
   let { card } = $props<{ card: Card }>();
 
   const costRecord: Record<string, Record<string, string>> = {
-    earth_cost: { color: "#28b84a" , icon: "skull" }, // Earth
-    dream_cost: { color: "#f39c12", icon: "skull" }, // Holys
-    death_cost: { color: "#3498db", icon: "skull" }, // Dream
+    earth_cost: { color: "#28b84a" , icon: "leaf" }, // Earth
+    dream_cost: { color: "#f39c12", icon: "cross" }, // Holys
+    death_cost: { color: "#af1cb6", icon: "lily" }, // Dream
     holy_cost: { color: "#2a2929", icon: "skull" } // Death
   };
 
@@ -34,7 +34,7 @@
     <div class="costs icey">
       {#each costs as c}
         <div class="cost" style="background-color: {c.color};">
-         <div>{@html getIcon("fire")}</div>
+         <span class="icon">{@html getIcon(c.icon)}</span>
         </div>
       {/each}
     </div>
@@ -124,6 +124,11 @@
           width: 14px;
           height: 14px;
           border-radius: 100px;
+          .icon{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
         } 
       }
       .description{
