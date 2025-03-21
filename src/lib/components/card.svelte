@@ -8,7 +8,7 @@
 
   const costRecord: Record<string, Record<string, string>> = {
     earth_cost: { color: "#28b84a" , icon: "leaf" }, // Earth
-    dream_cost: { color: "#f39c12", icon: "cross" }, // Holys
+    dream_cost: { color: "#f3ca12", icon: "cross" }, // Holys
     death_cost: { color: "#af1cb6", icon: "lily" }, // Dream
     holy_cost: { color: "#2a2929", icon: "skull" } // Death
   };
@@ -136,6 +136,8 @@
         flex-direction: column;
         justify-content: space-between;
         align-items: center;
+        border-bottom-right-radius: 3px;
+        border-bottom-left-radius: 3px;
         width: 97%;
         border-left: 2px solid $black;
         border-right: 2px solid $black;
