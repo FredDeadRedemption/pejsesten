@@ -57,7 +57,7 @@
     &:hover{
       scale: 1.04;
       z-index: 3;
-      border: 1px solid red;
+      cursor: pointer;
     }
   }
   .main{

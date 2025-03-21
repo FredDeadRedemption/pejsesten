@@ -25,36 +25,32 @@
 
 <div id="card">
   <div id="content">
-    <div class="title cool-mesh">
+    <div class="title icey">
       {card.name}
     </div>
     <div class="img-wrap">
       <img src={card.image_url} alt="" draggable="false">
     </div>
-    <div class="costs cool-mesh">
+    <div class="costs icey">
       {#each costs as c}
         <div class="cost" style="background-color: {c.color};">
          <div>{@html getIcon("fire")}</div>
         </div>
       {/each}
     </div>
-    <div class="description cool-mesh">{card.description}</div>
-    <div class="bottom cool-mesh">
-      <div class="attack">{card.attack}</div>
-      {#if card.race_type}
-        <div class="race">{card.race_type}</div>
-      {:else}
-        <div class="race">any</div>
-      {/if}
-      <div class="defence">{card.defence}</div>
+    <div class="description icey-desc">
+      <span class="text">{card.description}</span>
+      <div class="bottom icey">
+        {card.attack} | {card.defence}
+      </div>
     </div>
   </div>
 </div>
 
 <style lang="scss">
   #card{
-    
     //scale: 0.6; // game scale
+    outline: 1px solid red;
     border: 2px solid $black;
     width: 180px;
     height: 250px;
@@ -68,11 +64,12 @@
     -moz-user-select: none;
     -ms-user-select: none;
     padding: 3px;
+    padding-bottom: 6px;
     background-image: url("/media/cards/card-background.jpg");
     background-size: cover;
     background-repeat: no-repeat;
     #content{
-      overflow: hidden;
+      // overflow: hidden;
       background-size: cover;
       background-repeat: no-repeat;
       width: 100%;
@@ -82,6 +79,7 @@
       align-items: center;
 
       .title{
+        text-align: left;
         width: 100%;
         border: 2px solid $black;
         border-radius: 3px;
@@ -107,17 +105,6 @@
           width: 100%;
           object-fit: cover;
         }
-        .name{
-          background-color: rgba(0, 0, 0, 0.5);
-          padding: 2px 5px 2px 5px;
-          max-width: 160px;
-          text-align: center;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          position: absolute;
-          z-index: 2;
-        }
       }
       .costs{
         width: 100%;
@@ -127,7 +114,7 @@
         align-items: center;
         gap: 2px;
         width: 100%;
-        background-color: $grey-light;
+        //background-color: $grey-light;
         padding: 2px;
         .cost{
           color: $white;
@@ -140,29 +127,33 @@
         } 
       }
       .description{
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
         width: 97%;
         border-left: 2px solid $black;
         border-right: 2px solid $black;
-        text-align: center;
+        border-bottom: 2px solid $black;
         font-size: 0.7rem;
-        padding: 5px;
         flex-grow: 1;
+        .text{
+          padding: 5px;
+        }
       }
       .bottom{  
+        font-weight: 800;
+        transform: translateY(8px);
+        width: 40%;
+        justify-self: flex-end;
+        text-align: center;
+        background-color: rgb(200, 186, 186);
         border: 2px solid $black;
         border-radius: 3px;
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        padding:  3px;
         justify-content: space-between;
-        width: 100%;
-        .race{
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.8rem;
-          font-style: oblique;
-        }
         .attack, .defence{
+          padding: 3px;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -178,9 +169,8 @@
   }
   .cool-mesh{
     --s: 40px; /* control the size*/
-    --c1: #fcf7f2;
-    --c2: rgb(242, 242, 233);
-    
+    --c1: #ffffff;
+    --c2: rgb(231, 234, 255);   
     --_g: 
       #0000 calc(-650%/13) calc(50%/13),var(--c1) 0 calc(100%/13),
       #0000 0 calc(150%/13),var(--c1) 0 calc(200%/13),
@@ -191,5 +181,18 @@
       var(--_g0),var(--_g0) var(--s) var(--s),
       var(--_g1),var(--_g1) var(--s) var(--s) var(--c2);
     background-size: calc(2*var(--s)) calc(2*var(--s));
+  }
+  .icey-trans {
+    background: linear-gradient(to right, 
+        rgba(255, 255, 255, 1) 0%, 
+        rgba(225, 240, 255, 0.6) 100%);
+  }
+  .icey {
+    background: linear-gradient(to right, 
+        rgb(255, 226, 226) 0%, 
+        rgba(188, 45, 45, 0.5)100%);
+  }
+  .icey-desc {
+    background: rgba(249, 215, 215, 0.9);
   }
 </style>
