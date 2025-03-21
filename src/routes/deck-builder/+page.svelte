@@ -16,22 +16,16 @@
     )
   );
 
-  type CardAndCount = {
-    card: Card,
-    count: number,
-  }
+  const getCardData = (id: number) => cards.find((card) => card.id === id);
 
-  let deck: CardAndCount[] = $state([]);
-
-  let totalDeckCount = $derived(
-    deck.reduce((total, cardAndCount) => total + cardAndCount.count, 0)
-  );
+  let deck: number[] = $state([]); // contains id's of all cards
+  let deckUniques: number[] = $derived([...new Set(deck)]);; // contains id's of all cards (no duplicates)
 </script>
 
 <div class="main">
   <div class="catalog-search-wrapper">
     <input type="text" name="search" id="" bind:value={searchTerm}>
-    <h1>{totalDeckCount + " / 30"}</h1>
+    <h1>{deck.length + " / 30"}</h1>
     <form action="?/createDeck" method="POST" use:enhance>
       <input style="display: none;" type="text" name="deck" bind:value={deck}>
       <button class="button primary" type="submit">CREATE DECK</button>
@@ -40,17 +34,11 @@
       {#each filteredCards as card}
          <!-- svelte-ignore a11y_consider_explicit_label -->
         <button class="invisible" onclick={()=>{
-          if (!deck){ deck = [] }; // form submission makes deck null? so redefine it
-          if(deck.length >= 30) return;
-          
-          const existingCard = deck.find(c => c.card.id === card.id);
-          if (existingCard && existingCard?.count >= 2) return;
+          if(!deck){ deck = [] }; // form submission makes deck null? so redefine it (TODO: remove later)
+          if(deck.length >= 30) return; // deck cant have more than 30 cards
+          if(deck.filter((c) => c === card.id).length >= 2) return; // deck cant have more than 2 of each
 
-          if (existingCard) {
-            existingCard.count++;
-          } else {
-            deck.push({ card: card, count: 1})
-          }
+          deck.push(card.id)
         }}>
           <Card card={card}></Card>
         </button>
@@ -58,20 +46,14 @@
     </div>
   </div>
   <div class="deck">
-    {#each deck as cardAndCount}
+    {#each deckUniques as id}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div transition:slide={{ axis: "x", duration: 250 }} class="card-in-deck-view" style="background-image: url({cardAndCount.card.image_url});" onclick={()=>{
-      const cardIndex = deck.findIndex((c) => c.card.id === cardAndCount.card.id);
-        if (cardIndex !== -1) {
-          if(deck[cardIndex].count > 1){
-            deck[cardIndex].count--;
-          } else {
-            deck.splice(cardIndex, 1);
-          }
-        }
+    <div transition:slide={{ axis: "x", duration: 250 }} class="card-in-deck-view" style="background-image: url({getCardData(id)?.image_url});" onclick={()=>{
+      const cardIndex = deck.findIndex((c) => c === id);
+      if (cardIndex !== -1) deck.splice(cardIndex, 1);
     }}>
-      <span class="name">{cardAndCount.card.name}</span><span class="count">x {cardAndCount.count}</span>
+      <span class="name">{getCardData(id)?.name}</span><span class="count">x {deck.filter((c) => c === id).length}</span>
     </div>
     {/each}
   </div>
