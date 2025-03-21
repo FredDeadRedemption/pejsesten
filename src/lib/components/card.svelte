@@ -6,9 +6,9 @@
 
   const costColors: Record<string, string> = {
     earth_cost: "#28b84a", // Earth
-    dream_cost: "#f39c12", // Dream
-    death_cost: "#3498db", // Death
-    holy_cost: "#e74c3c", // Holy
+    dream_cost: "#f39c12", // Holys
+    death_cost: "#3498db", // Dream
+    holy_cost: "#2a2929", // Death
   };
 
   let costs: string[] = [];
@@ -21,114 +21,166 @@
 </script>
 
 <div id="card">
-  <div class="img-name-wrap">
-    <img src={card.image_url} alt="" draggable="false">
-    <span class="name">{card.name}</span>
-  </div>
-  <div class="costs">
-    {#each costs as c}
-      <div class="cost" style="background-color: {c};"></div>
-    {/each}
-  </div>
-  <div class="description">{card.description}</div>
-  <div class="bottom">
-    <div class="attack">{card.attack}</div>
-    {#if card.race_type}
-      <div class="race">{card.race_type}</div>
-    {:else}
-      <div class="race">any</div>
-    {/if}
-    <div class="defence">{card.defence}</div>
+  <div id="content">
+    <div class="title cool-mesh">
+      {card.name}
+    </div>
+    <div class="img-wrap">
+      <img src={card.image_url} alt="" draggable="false">
+    </div>
+    <div class="costs cool-mesh">
+      {#each costs as c}
+        <div class="cost" style="background-color: {c};"></div>
+      {/each}
+    </div>
+    <div class="description cool-mesh">{card.description}</div>
+    <div class="bottom cool-mesh">
+      <div class="attack">{card.attack}</div>
+      {#if card.race_type}
+        <div class="race">{card.race_type}</div>
+      {:else}
+        <div class="race">any</div>
+      {/if}
+      <div class="defence">{card.defence}</div>
+    </div>
   </div>
 </div>
 
 <style lang="scss">
   #card{
+    
     //scale: 0.6; // game scale
-    display: flex;
-    flex-direction: column;
-    width: 160px;
-    height: 230px;
+    border: 2px solid $black;
+    width: 180px;
+    height: 250px;
     min-width: 160px;
     min-height: 230px;
     box-shadow: $box-shadow-primary;
-    border-radius: 5px;
+    border-radius: 3px;
     overflow: hidden;
     user-select: none; // Prevents selection
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    .img-name-wrap{
-      width: 100%;
-      height: 80px;
-      background-color: $grey-black;
-      color: $white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    padding: 3px;
+    background-image: url("/media/cards/card-background.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    #content{
       overflow: hidden;
-      img{
-        z-index: 1;
-        height: 100%;
-        width: 100%;
-        object-fit: cover;
-      }
-      .name{
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 2px 5px 2px 5px;
-        max-width: 160px;
-        text-align: center;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: absolute;
-        z-index: 2;
-      }
-    }
-    .costs{
+      background-size: cover;
+      background-repeat: no-repeat;
+      width: 100%;
+      height: 100%;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 3px;
-      width: 100%;
-      height: 18px;
-      background-color: $grey-light;
-      padding-left: 3px;
-      .cost{
-        width: 12px;
-        height: 12px;
-        border-radius: 100px;
-      } 
-    }
-    .description{
-      text-align: center;
-      background-color: $grey-mid;
-      font-size: 0.8rem;
-      padding: 5px;
-      flex-grow: 1;
-    }
-    .bottom{  
-      display: flex;
-      justify-content: space-between;
-      background-color: $grey-light;
-      width: 100%;
-      .race{
-        display: flex;
-        align-items: center;
+
+      .title{
+        width: 100%;
+        border: 2px solid $black;
+        border-radius: 3px;
+        padding: 2px;
+        font-style: oblique;
         font-size: 0.8rem;
       }
-      .attack, .defence{
+    
+      .img-wrap{
+        border-left: 2px solid $black;
+        border-right: 2px solid $black;
+        width: 97%;
+        height: 100px;
+        background-color: $grey-black;
+        color: $white;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 18px;
-        width: 18px;
+        overflow: hidden;
+        img{
+          z-index: 1;
+          height: 100%;
+          width: 100%;
+          object-fit: cover;
+        }
+        .name{
+          background-color: rgba(0, 0, 0, 0.5);
+          padding: 2px 5px 2px 5px;
+          max-width: 160px;
+          text-align: center;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          position: absolute;
+          z-index: 2;
+        }
       }
-      .attack{
-        background-color: gold;
+      .costs{
+        width: 100%;
+        border: 2px solid $black;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        width: 100%;
+        background-color: $grey-light;
+        padding: 2px;
+        .cost{
+          width: 14px;
+          height: 14px;
+          border-radius: 100px;
+        } 
       }
-      .defence{
-        background-color: $primary;
+      .description{
+        width: 97%;
+        border-left: 2px solid $black;
+        border-right: 2px solid $black;
+        text-align: center;
+        font-size: 0.7rem;
+        padding: 5px;
+        flex-grow: 1;
+      }
+      .bottom{  
+        border: 2px solid $black;
+        border-radius: 3px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        justify-content: space-between;
+        width: 100%;
+        .race{
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.8rem;
+          font-style: oblique;
+        }
+        .attack, .defence{
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .attack{
+          background-color: rgba(255, 162, 0, 0.5);
+        }
+        .defence{
+          background-color: rgba(255, 0, 0, 0.5);
+        }
       }
     }
+  }
+  .cool-mesh{
+    --s: 40px; /* control the size*/
+    --c1: #fcf7f2;
+    --c2: rgb(242, 242, 233);
+    
+    --_g: 
+      #0000 calc(-650%/13) calc(50%/13),var(--c1) 0 calc(100%/13),
+      #0000 0 calc(150%/13),var(--c1) 0 calc(200%/13),
+      #0000 0 calc(250%/13),var(--c1) 0 calc(300%/13);
+    --_g0: repeating-linear-gradient( 45deg,var(--_g));
+    --_g1: repeating-linear-gradient(-45deg,var(--_g));
+    background:
+      var(--_g0),var(--_g0) var(--s) var(--s),
+      var(--_g1),var(--_g1) var(--s) var(--s) var(--c2);
+    background-size: calc(2*var(--s)) calc(2*var(--s));
   }
 </style>
