@@ -59,6 +59,32 @@ export type Database = {
           },
         ]
       }
+      decks: {
+        Row: {
+          cards: Json | null
+          id: number
+          owner: string | null
+        }
+        Insert: {
+          cards?: Json | null
+          id?: number
+          owner?: string | null
+        }
+        Update: {
+          cards?: Json | null
+          id?: number
+          owner?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decks_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       land_enums: {
         Row: {
           id: number
