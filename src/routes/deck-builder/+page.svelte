@@ -160,6 +160,7 @@
     }
   }
   .main{
+    margin: 30px;
     display: grid;
     grid-template-columns: 1fr 250px;
     gap: 10px;

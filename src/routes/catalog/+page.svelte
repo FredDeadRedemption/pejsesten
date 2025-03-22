@@ -25,25 +25,29 @@
   };
 </script>
 
-<h3>loaded fra databasen</h3>
-<h1>Land Types:</h1>
-
-<input type="text" name="search" id="" bind:value={searchTerm}>
-<div class="costs">
-  {#each land_enums as c}
-    <div class="cost" style="background-color: {costMap[c.name].color};">
-     <span class="icon">{@html getIcon(costMap[c.name].icon)}</span>
-    </div>
-  {/each}
-</div>
-<h1>Cards:</h1>
-<div class="card-wrapper">
-  {#each filteredCards as card}
-    <Card card={card}></Card>
-  {/each}
-</div>
+<main class="main">
+  <h3>loaded fra databasen</h3>
+  <h1>Land Types:</h1>
+  <input type="text" name="search" id="" bind:value={searchTerm}>
+  <div class="costs">
+    {#each land_enums as c}
+      <div class="cost" style="background-color: {costMap[c.name].color};">
+      <span class="icon">{@html getIcon(costMap[c.name].icon)}</span>
+      </div>
+    {/each}
+  </div>
+  <h1>Cards:</h1>
+  <div class="card-wrapper">
+    {#each filteredCards as card}
+      <Card card={card}></Card>
+    {/each}
+  </div>
+</main>
  
 <style lang="scss">
+  .main{
+    margin: 30px;
+  }
   .card-wrapper{
     padding: 10px;
     background-color: $grey-mid;

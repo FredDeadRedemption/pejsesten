@@ -16,9 +16,10 @@
   let queuedUp = $state(false);
 </script>
 
-<main>
+<main class="main">
+  <a href="/game/test">Load Test Game (no session)</a>
   <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong> change in <a href="/settings">settings</a></p>
-  <p>{profile?.username}</p>
+  <p>Playin as <strong>{profile?.username}</strong></p>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
 
   <button class="button primary" onclick={() => { 
@@ -34,13 +35,13 @@
   a{
     color: $primary;
   }
-  main {
+  .main {
+    margin: 30px;
     display: flex;
     flex-direction: column;
     width: 100%;
     align-items: center;
     text-align: center;
-    margin-top: 2rem;
     gap: 10px;
   }
 </style>

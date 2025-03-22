@@ -36,7 +36,7 @@
 
 </script>
 
-<main>
+<main class="main">
   <!-- CREATE FORM -->
   <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data">
     <div class="grp">
@@ -207,7 +207,8 @@
 
 
 <style lang="scss">
-  main{
+  .main{
+    margin: 30px;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     justify-content: center;

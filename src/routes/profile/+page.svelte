@@ -13,7 +13,7 @@
    })
  </script>
  
- <main>
+ <main class="main">
    <form use:enhance={() => {
       return ({ result }) => {
          if(!result) return;
@@ -30,9 +30,9 @@
  </main>
  
  <style lang="scss">
-   main {
+   .main {
+      margin: 30px auto;
       max-width: 400px;
-      margin: 20px auto;
       text-align: center;
    }
    input {

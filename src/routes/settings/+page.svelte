@@ -1,7 +1,7 @@
 <script>
 </script>
 
-<main>
+<main class="main">
   <h1>Settings</h1>
   <div class="wrap">
     <p>Session server runs on <strong>(This is broken)</strong></p> 
@@ -35,8 +35,8 @@
 </main>
 
 <style lang="scss">
-  main{
-    margin-top: 2rem;
+  .main{
+    margin: 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
