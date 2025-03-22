@@ -88,15 +88,15 @@ export type Database = {
       land_enums: {
         Row: {
           id: number
-          name: string | null
+          name: string
         }
         Insert: {
           id?: number
-          name?: string | null
+          name: string
         }
         Update: {
           id?: number
-          name?: string | null
+          name?: string
         }
         Relationships: []
       }
