@@ -13,13 +13,13 @@
     death_cost: { color: "#2a2929", icon: "skull" } // Death
   };
 
-  let primaryCost = Object.entries({
-    earth: card.earth_cost,
-    dream: card.dream_cost,
-    death: card.death_cost,
-    holy: card.holy_cost
-  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
-  // let primaryCost = "standard";
+  // let primaryCost = Object.entries({
+  //   earth: card.earth_cost,
+  //   dream: card.dream_cost,
+  //   death: card.death_cost,
+  //   holy: card.holy_cost
+  // }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  let primaryCost = "standard";
 
 
   let costs: Array<{ color: string, icon: string }> = [];
