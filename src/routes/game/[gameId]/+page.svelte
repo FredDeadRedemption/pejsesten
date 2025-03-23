@@ -30,8 +30,23 @@
     <div>Your turn: { $yourTurn }</div>
   </div>
   <!-- GAME ZONES-->
-  <div class="opponent-half"></div>
-  <div class="self-half"></div>
+  <div class="opponent-zone">
+    <div class="opponent-graveyard"></div>
+    <div class="opponent-hand-battlefield-zone">
+      <div class="opponent-battlefield"></div>
+      <div class="opponent-hand"></div>
+    </div>
+    <div class="opponent-deck"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="self-zone">
+    <div class="self-graveyard"></div>
+    <div class="self-hand-battlefield-zone">
+      <div class="self-battlefield"></div>
+      <div class="self-hand"></div>
+    </div>
+    <div class="self-deck"></div>
+  </div>
 </div>
 
 <style lang="scss">
@@ -49,16 +64,35 @@
     justify-content: space-between;
   }
   #fullscreen-div {
-    border: 2px solid red;
+    border: 2px solid $black;
     min-width: 100%;
     min-height: calc(100vh - 50px);
     display: grid;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 1fr 2px 1fr;
   }
-  .opponent-half{
+  .opponent-zone{
     background-color: lightsalmon;
   }
-  .self-half{
+  .divider{
+    background-color: $black;
+    width: 100%;
+  }
+  .self-zone{
     background-color: teal;
+    display: grid;
+    grid-template-columns: 15% 1fr 15%;
+  }
+  .self-deck{
+    background-color: red;
+  }
+  .self-graveyard{
+    background-color: red;
+  }
+  .self-hand-battlefield-zone{
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+  }
+  .self-hand{
+    background-color: blueviolet;
   }
 </style>
