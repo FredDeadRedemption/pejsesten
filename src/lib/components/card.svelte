@@ -8,10 +8,19 @@
 
   const costRecord: Record<string, Record<string, string>> = {
     earth_cost: { color: "#28b84a" , icon: "leaf" }, // Earth
-    dream_cost: { color: "#f3ca12", icon: "cross" }, // Holys
-    death_cost: { color: "#af1cb6", icon: "lily" }, // Dream
-    holy_cost: { color: "#2a2929", icon: "skull" } // Death
+    holy_cost: { color: "#f3ca12", icon: "cross" }, // Holys
+    dream_cost: { color: "#af1cb6", icon: "lily" }, // Dream
+    death_cost: { color: "#2a2929", icon: "skull" } // Death
   };
+
+  let primaryCost = Object.entries({
+    earth: card.earth_cost,
+    dream: card.dream_cost,
+    death: card.death_cost,
+    holy: card.holy_cost
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  // let primaryCost = "standard";
+
 
   let costs: Array<{ color: string, icon: string }> = [];
 
@@ -23,24 +32,24 @@
   }
 </script>
 
-<div id="card">
+<div id="card" class="{primaryCost}-bg">
   <div id="content">
-    <div class="title icey">
+    <div class="title {primaryCost}">
       {card.name}
     </div>
     <div class="img-wrap">
       <img src={card.image_url} alt="" draggable="false">
     </div>
-    <div class="costs icey">
+    <div class="costs {primaryCost}">
       {#each costs as c}
         <div class="cost" style="background-color: {c.color};">
          <span class="icon">{@html getIcon(c.icon)}</span>
         </div>
       {/each}
     </div>
-    <div class="description icey-desc">
+    <div class="description {primaryCost}-desc">
       <span class="text">{card.description}</span>
-      <div class="bottom icey">
+      <div class="bottom {primaryCost}">
         {card.attack} | {card.defence}
       </div>
     </div>
@@ -48,9 +57,28 @@
 </div>
 
 <style lang="scss">
+  .standard-bg{
+    outline: 1px solid red;
+    background-image: url("/media/cards/card-bg-standard.jpg");
+  }
+  .earth-bg{
+    outline: 1px solid rgb(0, 220, 0);
+    background-image: url("/media/cards/card-bg-earth.webp");
+  }
+  .holy-bg{
+    outline: 1px solid rgb(255, 179, 0);
+    background-image: url("/media/cards/card-bg-holy.webp");
+  }
+  .dream-bg{
+    outline: 1px solid rgb(204, 0, 255);
+    background-image: url("/media/cards/card-bg-dream.webp");
+  }
+  .death-bg{
+    outline: 1px solid rgb(253, 252, 252);
+    background-image: url("/media/cards/card-bg-death.webp");
+  }
   #card{
     //scale: 0.6; // game scale
-    outline: 1px solid red;
     border: 2px solid $black;
     width: 180px;
     height: 250px;
@@ -63,9 +91,8 @@
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    padding: 3px;
+    padding: 5px;
     padding-bottom: 6px;
-    background-image: url("/media/cards/card-background.jpg");
     background-size: cover;
     background-repeat: no-repeat;
     #content{
@@ -159,47 +186,50 @@
         border-radius: 3px;
         padding:  3px;
         justify-content: space-between;
-        .attack, .defence{
-          padding: 3px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .attack{
-          background-color: rgba(255, 162, 0, 0.5);
-        }
-        .defence{
-          background-color: rgba(255, 0, 0, 0.5);
-        }
       }
     }
   }
-  .cool-mesh{
-    --s: 40px; /* control the size*/
-    --c1: #ffffff;
-    --c2: rgb(231, 234, 255);   
-    --_g: 
-      #0000 calc(-650%/13) calc(50%/13),var(--c1) 0 calc(100%/13),
-      #0000 0 calc(150%/13),var(--c1) 0 calc(200%/13),
-      #0000 0 calc(250%/13),var(--c1) 0 calc(300%/13);
-    --_g0: repeating-linear-gradient( 45deg,var(--_g));
-    --_g1: repeating-linear-gradient(-45deg,var(--_g));
-    background:
-      var(--_g0),var(--_g0) var(--s) var(--s),
-      var(--_g1),var(--_g1) var(--s) var(--s) var(--c2);
-    background-size: calc(2*var(--s)) calc(2*var(--s));
-  }
-  .icey-trans {
-    background: linear-gradient(to right, 
-        rgba(255, 255, 255, 1) 0%, 
-        rgba(225, 240, 255, 0.6) 100%);
-  }
-  .icey {
+  .holy {
+  background: linear-gradient(to right, 
+      rgb(255, 242, 222) 0%, 
+      rgba(180, 150, 120, 0.8) 100%);
+}
+.holy-desc {
+  background: rgba(200, 180, 150, 0.95);
+}
+
+.death {
+  background: linear-gradient(to right, 
+      rgb(255, 248, 248) 0%, 
+      rgba(160, 160, 160, 0.8) 100%);
+}
+.death-desc {
+  background: rgba(180, 180, 180, 0.95);
+}
+
+.dream {
+  background: linear-gradient(to right, 
+      rgb(241, 236, 251) 0%, 
+      rgba(170, 150, 190, 0.8) 100%);
+}
+.dream-desc {
+  background: rgba(185, 175, 190, 0.95);
+}
+
+.earth {
+  background: linear-gradient(to right, 
+      rgb(238, 252, 231) 0%, 
+      rgba(160, 180, 150, 0.8) 100%);
+}
+.earth-desc {
+  background: rgba(175, 190, 165, 0.95);
+}
+  .standard {
     background: linear-gradient(to right, 
         rgb(255, 226, 226) 0%, 
         rgba(188, 45, 45, 0.5)100%);
   }
-  .icey-desc {
+  .standard-desc {
     background: rgba(249, 215, 215, 0.9);
   }
 </style>
