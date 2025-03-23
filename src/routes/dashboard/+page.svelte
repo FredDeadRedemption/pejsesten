@@ -16,13 +16,18 @@
   });
 </script>
 
-<h1>dashboard</h1>
-<p>Greetings, <strong>{profile?.username}!</strong> 
-  Take a look at the <a href="/catalog">Catalog</a> 
-or browse the <a href="/deck-builder">Deck Builder</a>,
-you have <span class="wins">0</span> wins!&nbsp;(noob)</p>
+<main class="main">
+  <h1>dashboard</h1>
+  <p>Greetings, <strong>{profile?.username}!</strong> 
+    Take a look at the <a href="/catalog">Catalog</a> 
+  or browse the <a href="/deck-builder">Deck Builder</a>,
+  you have <span class="wins">0</span> wins!&nbsp;(noob)</p>
+</main>
 
 <style lang="scss">
+  .main{
+    padding: 30px;
+  }
   p{ 
     color: $black;
   }
