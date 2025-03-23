@@ -17,25 +17,48 @@
   }
 </script>
 
-<div id="fullscreen-div">
-  <!-- svelte-ignore a11y_consider_explicit_label -->
-  <button disabled={ !$yourTurn } class="button primary" onclick={()=>{
-    endTurn();
-  }}>END TURN</button>
-  <h1>Game ID: {gameId}</h1>
-</div>
-<button onclick={()=> {enterFullscreen()}}>Go Fullscreen</button>
 
-<div>Your turn: { $yourTurn }</div>
+<div id="fullscreen-div">
+  <div class="DEBUG">
+    <!-- svelte-ignore a11y_consider_explicit_label -->
+    <button disabled={ !$yourTurn } onclick={()=>{
+      endTurn();
+    }}>END TURN</button>
+    <p>Game ID: {gameId}</p>
+    <button onclick={()=> {enterFullscreen()}}>Go Fullscreen</button>
+
+    <div>Your turn: { $yourTurn }</div>
+  </div>
+  <!-- GAME ZONES-->
+  <div class="opponent-half"></div>
+  <div class="self-half"></div>
+</div>
 
 <style lang="scss">
-  #fullscreen-div {
-    width: 100%;
-    height: 100%;
-    background-color: lightgreen;
+  .DEBUG{
+    position: absolute;
+    background-color: $black;
+    color: $white;
+    border: 2px solid red;
+    top: 0;
+    width: 90%;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 2rem;
+    flex-direction: row;
+    transform: translateY(50px);
+    font-size: 1rem;
+    justify-content: space-between;
+  }
+  #fullscreen-div {
+    border: 2px solid red;
+    min-width: 100%;
+    min-height: calc(100vh - 50px);
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+  }
+  .opponent-half{
+    background-color: lightsalmon;
+  }
+  .self-half{
+    background-color: teal;
   }
 </style>

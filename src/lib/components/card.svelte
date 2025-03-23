@@ -6,30 +6,34 @@
 
   let { card } = $props<{ card: Card }>();
 
-  const costRecord: Record<string, Record<string, string>> = {
+  type CostMap = {
+    [key: string]: { color: string; icon: string };
+  };
+
+  const costMap: CostMap = {
     earth_cost: { color: "#28b84a" , icon: "leaf" }, // Earth
     holy_cost: { color: "#f3ca12", icon: "cross" }, // Holys
     dream_cost: { color: "#af1cb6", icon: "lily" }, // Dream
     death_cost: { color: "#2a2929", icon: "skull" } // Death
   };
 
-  // let primaryCost = Object.entries({
-  //   earth: card.earth_cost,
-  //   dream: card.dream_cost,
-  //   death: card.death_cost,
-  //   holy: card.holy_cost
-  // }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
-  let primaryCost = "standard";
+  let primaryCost = Object.entries({
+    earth: card.earth_cost,
+    dream: card.dream_cost,
+    death: card.death_cost,
+    holy: card.holy_cost
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  // let primaryCost = "standard";
 
 
   let costs: Array<{ color: string, icon: string }> = [];
 
-  for (const [costType, costData] of Object.entries(costRecord)) {
-    const value = card[costType as keyof Card]; 
+  Object.entries(costMap).forEach(([costType, costData]) => {
+    const value = card[costType as keyof typeof card];
     if (typeof value === "number") {
       costs.push(...Array(value).fill(costData));
     }
-  }
+  });
 </script>
 
 <div id="card" class="{primaryCost}-bg">

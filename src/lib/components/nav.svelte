@@ -17,7 +17,7 @@
   <a class="home button ghost" href="/dashboard">HOME</a>
   <button class="signin-out button ghost" onclick={logout}>LOGOUT</button>
   <!-- svelte-ignore a11y_consider_explicit_label -->
-  <a href="profile"><div class="avatar"></div></a>
+  <a href="/profile"><div class="avatar"></div></a>
 </nav>
 
 <style lang="scss">
