@@ -5,6 +5,7 @@
 	import { browser } from "$app/environment";
 
   import { yourTurn } from "$lib/socket/socket";
+	import Hand from "$lib/components/hand.svelte";
 
   let gameId = $state(page.params.gameId);
 
@@ -15,8 +16,9 @@
       elem.requestFullscreen();
     }
   }
-</script>
 
+  let hand = $state([12, 23, 44]);
+</script>
 
 <div id="fullscreen-div">
   <div class="DEBUG">
@@ -43,9 +45,13 @@
     <div class="self-graveyard"></div>
     <div class="self-hand-battlefield-zone">
       <div class="self-battlefield"></div>
-      <div class="self-hand"></div>
+      <div class="self-hand">
+        <Hand hand={hand}></Hand>
+      </div>
     </div>
-    <div class="self-deck"></div>
+    <div class="self-deck">
+      <button class="button primary" onclick={()=>{hand.push(2)}}></button>
+    </div>
   </div>
 </div>
 
