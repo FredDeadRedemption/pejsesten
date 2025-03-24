@@ -24,26 +24,38 @@
     1: "-20deg",
     2: "-12deg",
     3: "-6deg",
-    4: "0deg",    // Left center (no perfect middle)
-    5: "0deg",     // Right center
+    4: "-3deg",    // Left center (no perfect middle)
+    5: "3deg",     // Right center
     6: "6deg",
     7: "12deg",
     8: "20deg",
     9: "30deg"     // Far right
   };
 
-  // Corresponding position maps
-  const positionMap: Map = {
-    0: "-80px",
-    1: "-60px",
-    2: "-40px",
-    3: "-20px",
-    4: "-10px",
-    5: "10px",
-    6: "20px",
-    7: "40px",
-    8: "60px",
-    9: "80px"
+  // Position maps with overlapping
+  const oddPositionMap: Map = { // For 1,3,5,7,9 cards
+    8: "-70px",   // Furthest left
+    7: "-50px",   // Less overlap near center
+    6: "-30px",
+    5: "-15px",
+    4: "0px",     // Center card
+    3: "15px",
+    2: "30px",
+    1: "50px",
+    0: "70px"     // Furthest right
+  };
+
+  const evenPositionMap: Map = { // For 2,4,6,8,10 cards
+    9: "-75px",
+    8: "-55px",
+    7: "-35px",
+    6: "-20px",
+    5: "-10px",   // Left center pair
+    4: "10px",    // Right center pair
+    3: "20px",
+    2: "35px",
+    1: "55px",
+    0: "75px"
   };
 
   function getMappedValues(index: number) {
@@ -54,7 +66,7 @@
     
     return {
       rotation: isEven ? evenRotationMap[virtualIndex] : oddRotationMap[virtualIndex],
-      position: positionMap[virtualIndex]
+      position: isEven ? evenPositionMap[virtualIndex] : oddPositionMap[virtualIndex]
     };
   }
 </script>
@@ -92,13 +104,14 @@
     /* Apply rotation and position from your maps */
     left: 50%;
     transform: 
-    
+      translateX(calc(-50% + var(--position)))
       rotate(var(--rotation));
     z-index: var(--i);
     
     /* Hover effect - lifts card up and brings forward */
     &:hover {
       transform: 
+       translateX(calc(-50% + var(--position)))
         rotate(var(--rotation))
         translateY(-30px);
       z-index: 100;
