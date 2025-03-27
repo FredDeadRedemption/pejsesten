@@ -61,6 +61,9 @@
 </div>
 
 <style lang="scss">
+  img{
+    user-drag: none;
+  }
   .standard-bg{
     outline: 1px solid red;
     background-image: url("/media/cards/card-bg-standard.jpg");
@@ -92,6 +95,7 @@
     border-radius: 3px;
     overflow: hidden;
     user-select: none; // Prevents selection
+    -webkit-user-drag: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
