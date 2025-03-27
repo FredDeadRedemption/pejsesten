@@ -50,6 +50,7 @@
       </div>
     </div>
     <div class="self-deck">
+      <!-- svelte-ignore a11y_consider_explicit_label -->
       <button class="button primary" onclick={()=>{hand.push(2)}}></button>
     </div>
   </div>

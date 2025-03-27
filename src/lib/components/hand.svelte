@@ -60,23 +60,23 @@
   {#each hand as card, index}
     <div 
       class="cardback" 
-      style="--rotation: {getMappedValues(index).rotation}; 
-      --position: {getMappedValues(index).position}; 
-      --y-position: {getMappedValues(index).yPosition}"
+      style="--i: {index}; --total: {hand.length}"
     ></div>
   {/each}
 </div>
 
 <style lang="scss">
-   #hand {
+    #hand {
     display: flex;
     justify-content: center;
     margin: 0 auto;
     width: fit-content;
-    transform-style: preserve-3d;
-    perspective: 1000px;
+    position: relative;
+    height: 140px;
   }
+  
   .cardback {
+    position: absolute;
     height: 140px;
     width: 100px;
     background-image: url("/media/cards/cardback.webp");
@@ -86,23 +86,17 @@
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     transition: all 0.3s ease;
-    transform-origin: bottom center;
     
-    /* Apply rotation and position from your maps */
+    /* Centered overlapping translation */
     left: 50%;
     transform: 
-      translateX(calc(-50% + var(--position)))
-      translateY(calc(var(--y-position) - 40px))
-      rotate(var(--rotation));
+      translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 60px));
     z-index: var(--i);
     
-    /* Hover effect - lifts card up and brings forward */
     &:hover {
       transform: 
-       translateX(calc(-50% + var(--position)))
-       translateY(calc(var(--y-position) - 40px))
-        rotate(var(--rotation))
-        translateY(-30px);
+        translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 60px))
+        translateY(-20px);
       z-index: 100;
       box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     }
