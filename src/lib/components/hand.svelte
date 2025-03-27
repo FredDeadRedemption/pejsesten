@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { scale } from "svelte/transition";
+	import { scale, fly } from "svelte/transition";
   import type { Database } from '$lib/database.types'; 
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
@@ -26,8 +26,8 @@
     draggin = true;
     draggerIndex = index;
     dragCoords = {
-      x: event.clientX,
-      y: event.clientY,
+      x: event.clientX -50,
+      y: event.clientY -73
     };
     dragCard = hand[index];
   }
@@ -55,7 +55,7 @@
       onmouseleave={clearHover}
     >
 
-      {#if hoverIndex === index}
+      {#if hoverIndex === index && !draggin}
         <div 
           class="hover-card"
           onmousedown={(e: MouseEvent)=>beginDrag(index, e)}
@@ -72,23 +72,21 @@
     </div>
   {/each}
   {#if draggin && dragCard}
-      <div class="x" style="position: abosolute; left: {dragCoords.x}px; top: {dragCoords.y}px; ">
+      <div class="dragger" style="position: abosolute; left: {dragCoords.x}px; top: {dragCoords.y}px;"
+      >
         <CardSmall card={dragCard}></CardSmall>
       </div>
   {/if}
 </div>
 
 <style lang="scss">
-  .x{position: fixed; /* Use fixed for smooth dragging */
+  .dragger{
+    position: fixed; /* Use fixed for smooth dragging */
     z-index: 1000;
     pointer-events: none;
-    cursor: grabbing;}
-  
-  #red{
-    width: 20px;
-    height: 20px;
-    background-color: greenyellow;
+    cursor: grabbing;
   }
+
   #hand {
     display: flex;
     justify-content: center;
@@ -109,7 +107,12 @@
     transform: 
       translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 80px))
       translateY(40%);
-    z-index: var(--i);
+    .default-card{
+      z-index: var(--i);
+    }
+    .hover-card{
+      z-index: calc(var(--i) + 909809871);
+    }
   }
   .hover-card {
       border: 2px solid greenyellow;
@@ -118,6 +121,11 @@
       top: 0;
       left: -35px;
       transform: translateY(-50%);
-      z-index: 1000
     }
+    #hand, .card-container {
+    z-index: 999;
+    &.hover{
+      z-index: 9999999;
+    }
+  }
 </style>
