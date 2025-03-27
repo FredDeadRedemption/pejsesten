@@ -107,12 +107,6 @@
     transform: 
       translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 80px))
       translateY(40%);
-    .default-card{
-      z-index: var(--i);
-    }
-    .hover-card{
-      z-index: calc(var(--i) + 909809871);
-    }
   }
   .hover-card {
       border: 2px solid greenyellow;
@@ -122,10 +116,4 @@
       left: -35px;
       transform: translateY(-50%);
     }
-    #hand, .card-container {
-    z-index: 999;
-    &.hover{
-      z-index: 9999999;
-    }
-  }
 </style>
