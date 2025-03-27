@@ -123,7 +123,7 @@
         border-left: 2px solid $black;
         border-right: 2px solid $black;
         width: 97%;
-        height: 100px;
+        height: 40%;
         background-color: $grey-black;
         color: $white;
         display: flex;
