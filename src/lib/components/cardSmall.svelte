@@ -17,13 +17,15 @@
     death_cost: { color: "#2a2929", icon: "skull" } // Death
   };
 
-  // let primaryCost = Object.entries({
-  //   earth: card.earth_cost,
-  //   dream: card.dream_cost,
-  //   death: card.death_cost,
-  //   holy: card.holy_cost
-  // }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  let primaryCostType = Object.entries({
+    earth: card.earth_cost,
+    dream: card.dream_cost,
+    death: card.death_cost,
+    holy: card.holy_cost
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
   let primaryCost = "standard";
+
+  const primaryCostSYMBOL = costMap[`${primaryCostType}_cost`];
 
 
   let costs: Array<{ color: string, icon: string }> = [];
@@ -45,17 +47,12 @@
       <img src={card.image_url} alt="" draggable="false">
     </div>
     <div class="costs {primaryCost}">
-      {#each costs as c}
-        <div class="cost" style="background-color: {c.color};">
-         <span class="icon">{@html getIcon(c.icon)}</span>
+        <div class="cost" style="background-color: {primaryCostSYMBOL.color};">
+         <span class="icon">{@html getIcon(primaryCostSYMBOL.icon)}</span>
         </div>
-      {/each}
     </div>
-    <div class="description {primaryCost}-desc">
-      <span class="text">{card.description}</span>
-      <div class="bottom {primaryCost}">
-        {card.attack} | {card.defence}
-      </div>
+    <div class="bottom {primaryCost}">
+      {card.attack} | {card.defence}
     </div>
   </div>
 </div>
@@ -86,8 +83,8 @@
     border: 2px solid $black;
     // width: 170px; 
     // height: 250px;
-    width: 170px; 
-    height: 250px;
+    height: 147px;
+    width: 100px;
     box-shadow: $box-shadow-primary;
     border-radius: 3px;
     overflow: hidden;
@@ -95,7 +92,7 @@
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    padding: 5px;
+    padding: 2px;
     padding-bottom: 6px;
     background-size: cover;
     background-repeat: no-repeat;
@@ -110,6 +107,9 @@
       align-items: center;
 
       .title{
+        overflow: hidden;         
+        text-overflow: ellipsis; 
+        white-space: nowrap;     
         text-align: left;
         width: 100%;
         border: 2px solid $black;
@@ -163,7 +163,7 @@
         } 
       }
       .description{
-        display: flex;
+        display: none;
         flex-direction: column;
         justify-content: space-between;
         align-items: center;
@@ -182,7 +182,7 @@
       .bottom{  
         font-weight: 800;
         transform: translateY(8px);
-        width: 40%;
+        width: 100%;
         justify-self: flex-end;
         text-align: center;
         background-color: rgb(200, 186, 186);

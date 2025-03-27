@@ -1,11 +1,15 @@
-<script>
-   import { endTurn } from "$lib/socket/socket";
-
+<script lang="ts">
+  import { endTurn } from "$lib/socket/socket";
   import { page } from "$app/state";
 	import { browser } from "$app/environment";
-
   import { yourTurn } from "$lib/socket/socket";
 	import Hand from "$lib/components/hand.svelte";
+  import type { Database } from '$lib/database.types'; 
+	import { onMount } from "svelte";
+  type Card = Database['public']['Tables']['cards']['Row'];
+
+  let { data } = $props()
+  let { cards } = $derived(data);
 
   let gameId = $state(page.params.gameId);
 
@@ -17,7 +21,19 @@
     }
   }
 
-  let hand = $state([12, 23, 44]);
+  let hand: Card[] = $state([]);
+
+  function getRandomCard(array: Card[]) {
+    if (array.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * array.length);
+    return array[randomIndex];
+  }
+
+  onMount(()=>{
+    hand.push(getRandomCard(cards)!);
+    hand.push(getRandomCard(cards)!);
+    hand.push(getRandomCard(cards)!);
+  })
 </script>
 
 <div id="fullscreen-div">
@@ -51,7 +67,7 @@
     </div>
     <div class="self-deck">
       <!-- svelte-ignore a11y_consider_explicit_label -->
-      <button class="button primary" onclick={()=>{hand.push(2)}}></button>
+      <button class="button primary" onclick={()=>{hand.push(getRandomCard(cards)!)}}></button>
     </div>
   </div>
 </div>
@@ -74,6 +90,7 @@
     border: 2px solid $black;
     min-width: 100%;
     min-height: calc(100vh - 50px);
+    max-height: calc(100vh - 50px);
     display: grid;
     grid-template-rows: 1fr 2px 1fr;
   }
