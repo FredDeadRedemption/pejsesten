@@ -7,7 +7,7 @@
   type Card = Database['public']['Tables']['cards']['Row'];
 
 
-  let { hand = $bindable() } = $props();
+  let { hand = $bindable(), onPlaceCard } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big car
   let draggerIndex: number | null = $state(null); // keeps track of which index is being dragged
@@ -35,6 +35,9 @@
     console.log("chilling")
     draggerIndex = null;
     draggin = false;
+    if (!onPlaceCard) return;
+    onPlaceCard(dragCoords.x, dragCoords.y, dragCard)
+    dragCard = null;
   }
   const onMouseMove = (e: { movementX: number; movementY: number; }) => {
 		if (!draggin) return;
@@ -93,7 +96,7 @@
     margin: 0 auto;
     width: fit-content;
     position: relative;
-    height: 140px;
+    height: 100%;
   }
   
   .card-container {
@@ -106,14 +109,15 @@
     left: 50%;
     transform: 
       translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 80px))
-      translateY(40%);
+      translateY(10%);
   }
   .hover-card {
+      cursor: pointer;
       border: 2px solid greenyellow;
       border-radius: 5px;
       position: absolute;
       top: 0;
       left: -35px;
-      transform: translateY(-50%);
+      transform: translateY(-60%);
     }
 </style>

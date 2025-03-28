@@ -6,6 +6,7 @@
 	import Hand from "$lib/components/hand.svelte";
   import type { Database } from '$lib/database.types'; 
 	import { onMount } from "svelte";
+	import Battlefield from "$lib/components/battlefield.svelte";
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
@@ -22,11 +23,34 @@
   }
 
   let hand: Card[] = $state([]);
+  let battlefield: Card[] = $state([]);
 
   function getRandomCard(array: Card[]) {
     if (array.length === 0) return;
     const randomIndex = Math.floor(Math.random() * array.length);
     return array[randomIndex];
+  }
+
+  let battlefieldElement: HTMLElement;
+
+  export function tryPlaceCard(x: number, y: number, card: Card){
+    if (!battlefieldElement) return false;
+    if (!card) return;
+    // Get battlefield position and dimensions
+    const rect = battlefieldElement.getBoundingClientRect();
+    
+    // Check if coordinates are within the battlefield
+    console.log(x)
+    const isWithinBattlefield = (
+      x >= rect.left && // normalize with small card position
+      x <= rect.right &&
+      y >= rect.top &&
+      y <= rect.bottom
+    );
+    if(!isWithinBattlefield) return;
+    battlefield.push(card);
+    hand = hand.filter((cardInHand) => cardInHand !== card);
+    console.log("IS WITHIN" + isWithinBattlefield)
   }
 
   onMount(()=>{
@@ -60,9 +84,11 @@
   <div class="self-zone">
     <div class="self-graveyard"></div>
     <div class="self-hand-battlefield-zone">
-      <div class="self-battlefield"></div>
+      <div class="self-battlefield" bind:this={battlefieldElement}>
+        <Battlefield battleField={battlefield}></Battlefield>
+      </div>
       <div class="self-hand">
-        <Hand hand={hand}></Hand>
+        <Hand hand={hand} onPlaceCard={tryPlaceCard}></Hand>
       </div>
     </div>
     <div class="self-deck">
@@ -114,7 +140,7 @@
   }
   .self-hand-battlefield-zone{
     display: grid;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 1fr 35%;
   }
   .self-hand{
     background-color: blueviolet;
