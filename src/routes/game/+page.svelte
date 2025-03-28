@@ -1,6 +1,7 @@
 <script lang="ts">
   import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
   import type { Database, Json } from '$lib/database.types'; 
+  import type { PlayerMetaData } from "$lib/sharedTypes.js";
 	import { fly, slide } from "svelte/transition";
   type Deck = Database['public']['Tables']['decks']['Row'];
 
@@ -20,21 +21,12 @@
   let choosenDeck: number[] = $derived(
     choosenDeckJson ?? []
   );
-  // share this to the backend
-  type PlayerMetaData = {
-    username: string,
-    choosenDeck: Number[],
-    avatar: string,
-  }
 
   let playerMetaData: PlayerMetaData = $derived({
     username: profile?.username ?? "Out-of-Towner",
     choosenDeck: choosenDeck, 
     avatar: "uaogidsogijsogij"
   })
-
-  let dots = $state('.');
-  let intervalId: number;
 
   let ellipseVar = $state('.');
   setInterval(() => ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.', 300);
@@ -56,7 +48,7 @@
 
   <button class="button primary" class:queuedUp={queuedUp} onclick={() => { 
     connectSocket(url);
-    queuedUp ? leaveQueue() : queueUp(profile?.username || "Out-of-Towner");
+    queuedUp ? leaveQueue() : queueUp(playerMetaData);
     queuedUp = true;
     }}>
       {queuedUp ? `Queueing ${ellipseVar}` : "Join Queue"}

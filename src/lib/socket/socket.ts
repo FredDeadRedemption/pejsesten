@@ -1,6 +1,7 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
+import type { PlayerMetaData } from "$lib/sharedTypes.js";
 
 let socket: Socket | null = null;
 
@@ -50,7 +51,7 @@ export const connectSocket = (url: string) => {
 };
 
 // Function to queue up
-export const queueUp = (userName: string) => {
+export const queueUp = (userName: PlayerMetaData) => {
   if (socket) {
     console.log('Queuing up:', userName);
     socket.emit('queueUp', userName);
