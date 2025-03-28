@@ -1,6 +1,7 @@
 <script lang="ts">
   import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
   import type { Database, Json } from '$lib/database.types'; 
+	import { fly, slide } from "svelte/transition";
   type Deck = Database['public']['Tables']['decks']['Row'];
 
   let { data } = $props()
@@ -32,6 +33,12 @@
     avatar: "uaogidsogijsogij"
   })
 
+  let dots = $state('.');
+  let intervalId: number;
+
+  let ellipseVar = $state('.');
+  setInterval(() => ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.', 300);
+
   let queuedUp = $state(false);
 </script>
 
@@ -47,18 +54,34 @@
     {/each}
   </select>
 
-  <button class="button primary" onclick={() => { 
+  <button class="button primary" class:queuedUp={queuedUp} onclick={() => { 
     connectSocket(url);
     queuedUp ? leaveQueue() : queueUp(profile?.username || "Out-of-Towner");
-    queuedUp = !queuedUp;
+    queuedUp = true;
     }}>
-      {queuedUp ? "Leave Queue" : "Join Queue"}
+      {queuedUp ? `Queueing ${ellipseVar}` : "Join Queue"}
   </button>
+  {#if queuedUp}
+    <!-- svelte-ignore a11y_consider_explicit_label -->
+    <button class="button primary" transition:fly={{ duration: 250 }} onclick={() => { 
+      leaveQueue();
+      queuedUp = false;
+      }}>
+      Leave Queue
+    </button>
+  {/if}
 </main>
 
 <style lang="scss">
   a{
     color: $primary;
+  }
+  .queuedUp{
+    background-color: $grey-mid;
+    &:hover{
+      background-color: $grey-mid;
+      cursor: auto;
+    }
   }
   .main {
     margin: 30px;
