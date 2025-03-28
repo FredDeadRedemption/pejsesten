@@ -33,7 +33,7 @@
 
   let battlefieldElement: HTMLElement;
 
-  export function tryPlaceCard(x: number, y: number, card: Card){
+  function tryPlaceCard(x: number, y: number, card: Card){
     if (!battlefieldElement) return false;
     if (!card) return;
     // Get battlefield position and dimensions
@@ -48,6 +48,7 @@
       y <= rect.bottom
     );
     if(!isWithinBattlefield) return;
+    if (battlefield.length >= 6) return;
     battlefield.push(card);
     hand = hand.filter((cardInHand) => cardInHand !== card);
     console.log("IS WITHIN" + isWithinBattlefield)
