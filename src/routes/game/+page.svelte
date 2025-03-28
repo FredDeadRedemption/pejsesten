@@ -1,8 +1,10 @@
 <script lang="ts">
   import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
+  import type { Database, Json } from '$lib/database.types'; 
+  type Deck = Database['public']['Tables']['decks']['Row'];
 
   let { data } = $props()
-  let { profile } = $derived(data)
+  let { profile, decks } = $derived(data)
     
   let dev = $state(false)
 
@@ -13,6 +15,23 @@
     invalidateSocket();
   })
 
+  let choosenDeckJson: Json | null = $state(null)
+  let choosenDeck: number[] = $derived(
+    choosenDeckJson ?? []
+  );
+  // share this to the backend
+  type PlayerMetaData = {
+    username: string,
+    choosenDeck: Number[],
+    avatar: string,
+  }
+
+  let playerMetaData: PlayerMetaData = $derived({
+    username: profile?.username ?? "Out-of-Towner",
+    choosenDeck: choosenDeck, 
+    avatar: "uaogidsogijsogij"
+  })
+
   let queuedUp = $state(false);
 </script>
 
@@ -21,6 +40,12 @@
   <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong> change in <a href="/settings">settings</a></p>
   <p>Playin as <strong>{profile?.username}</strong></p>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
+
+  <select bind:value={choosenDeckJson}>
+    {#each decks as deck}
+      <option value={deck.cards}>{deck.id}</option>
+    {/each}
+  </select>
 
   <button class="button primary" onclick={() => { 
     connectSocket(url);
