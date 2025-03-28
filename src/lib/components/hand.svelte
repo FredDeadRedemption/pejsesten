@@ -3,7 +3,6 @@
   import type { Database } from '$lib/database.types'; 
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
-	import Dragger from "./dragger.svelte";
   type Card = Database['public']['Tables']['cards']['Row'];
 
 
