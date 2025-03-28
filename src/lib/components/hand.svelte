@@ -3,7 +3,7 @@
   import type { Database } from '$lib/database.types'; 
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
-  type Card = Database['public']['Tables']['cards']['Row'];
+  type CardT = Database['public']['Tables']['cards']['Row'];
 
 
   let { hand = $bindable(), onPlaceCard } = $props();
@@ -11,7 +11,7 @@
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big car
   let draggerIndex: number | null = $state(null); // keeps track of which index is being dragged
   let dragCoords = $state({ x: 0, y: 0});
-  let dragCard: Card | null = $state(null);
+  let dragCard: CardT | null = $state(null);
 
   const setHover = (index: number) =>hoverIndex = index;
   const clearHover = () => hoverIndex = null;
