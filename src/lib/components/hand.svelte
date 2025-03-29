@@ -6,7 +6,7 @@
   type CardT = Database['public']['Tables']['cards']['Row'];
 
 
-  let { hand = $bindable(), onPlaceCard } = $props();
+  let { hand = $bindable(), battleField, battleFieldElement } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
@@ -34,8 +34,8 @@
     console.log("chilling")
     draggerIndex = null;
     draggin = false;
-    if (!onPlaceCard) return;
-    onPlaceCard(dragCoords.x, dragCoords.y, dragCard)
+    if (!dragCard) return;
+    tryPlaceCard(dragCoords.x, dragCoords.y, dragCard)
     dragCard = null;
   }
   const onMouseMove = (e: { movementX: number; movementY: number; }) => {
@@ -43,6 +43,26 @@
 		dragCoords.x += e.movementX;
 	  dragCoords.y += e.movementY;
 	};
+  function tryPlaceCard(x: number, y: number, card: CardT){ // TODO: move this logic into hand component
+    if (!battleFieldElement) return false;
+    if (!card) return;
+    // Get battlefield position and dimensions
+    const rect = battleFieldElement.getBoundingClientRect();
+    
+    // Check if coordinates are within the battlefield
+    console.log(x)
+    const isWithinBattlefield = (
+      x >= rect.left && // normalize with small card position
+      x <= rect.right &&
+      y >= rect.top &&
+      y <= rect.bottom
+    );
+    if(!isWithinBattlefield) return;
+    if (battleField.length >= 7) return;
+    battleField.push(card);
+    hand = hand.filter((cardInHand: any) => cardInHand !== card);
+    console.log("IS WITHIN" + isWithinBattlefield)
+  }
 </script>
 
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove}></svelte:window>

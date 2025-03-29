@@ -33,28 +33,7 @@
     return array[randomIndex];
   }
 
-  let battlefieldElement: HTMLElement;
-
-  function tryPlaceCard(x: number, y: number, card: Card){ // TODO: move this logic into hand component
-    if (!battlefieldElement) return false;
-    if (!card) return;
-    // Get battlefield position and dimensions
-    const rect = battlefieldElement.getBoundingClientRect();
-    
-    // Check if coordinates are within the battlefield
-    console.log(x)
-    const isWithinBattlefield = (
-      x >= rect.left && // normalize with small card position
-      x <= rect.right &&
-      y >= rect.top &&
-      y <= rect.bottom
-    );
-    if(!isWithinBattlefield) return;
-    if (battlefield.length >= 7) return;
-    battlefield.push(card);
-    hand = hand.filter((cardInHand) => cardInHand !== card);
-    console.log("IS WITHIN" + isWithinBattlefield)
-  }
+  let battlefieldElement: HTMLElement | null = $state(null);
 
   onMount(()=>{
     hand.push(getRandomCard(cards)!);
@@ -95,7 +74,7 @@
         <Battlefield battleField={battlefield}></Battlefield>
       </div>
       <div class="self-hand">
-        <Hand hand={hand} onPlaceCard={tryPlaceCard}></Hand>
+        <Hand hand={hand} battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
       </div>
     </div>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
