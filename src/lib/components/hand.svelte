@@ -8,8 +8,8 @@
 
   let { hand = $bindable(), onPlaceCard } = $props();
 
-  let hoverIndex: number | null = $state(null); // keeps track of which index to display big car
-  let draggerIndex: number | null = $state(null); // keeps track of which index is being dragged
+  let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
+  let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
   let dragCoords = $state({ x: 0, y: 0});
   let dragCard: CardT | null = $state(null);
 
@@ -25,8 +25,8 @@
     draggin = true;
     draggerIndex = index;
     dragCoords = {
-      x: event.clientX -50,
-      y: event.clientY -73
+      x: event.clientX -50, // normalize to so client is draggin in the middle of the card
+      y: event.clientY -73 // normalize to so client is draggin in the middle of the card
     };
     dragCard = hand[index];
   }
