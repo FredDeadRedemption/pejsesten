@@ -5,77 +5,52 @@ import type { PlayerMetaData } from "$lib/sharedTypes.js";
 
 let socket: Socket | null = null;
 
-export const queueHasPartner = writable(false);
-
 // Function to invalidate (disconnect) the socket
-export const invalidateSocket = () => {
-  if (socket) {
-    console.log('Disconnecting socket...');
-    socket.disconnect();
-    socket = null;
-  }
-};
 
 export const gameAvailable = writable<boolean>(false);
-export const yourTurn = writable<boolean>(false);
+export const yourTurn = writable<boolean>(false); // TODO make part of global state object
 
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
-  if (!socket) {
-    console.log('Creating socket connection...');
-    socket = io(url);
+  if (socket) return
 
-    // Listen for connection events
-    socket.on('connect', () => {
-      console.log('Connected to socket server:', socket?.id);
-    });
+  console.log('Creating socket connection...');
+  socket = io(url);
 
-    socket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
-      invalidateSocket(); // Disconnect and reset the socket on error
-    });
+  // Listen for connection events
+  socket.on('connect', () => {
+    console.log('Connected to socket server:', socket?.id);
+  });
 
-    socket.on('startGame', (gameId : string) => {
-      console.log(gameId);
-      console.log("gameID");
-      goto(`/game/${gameId}`);
-    });
+  socket.on('connect_error', (err) => {
+    console.error('Socket connection error:', err);
+    invalidateSocket(); // Disconnect and reset the socket on error
+  });
 
-    socket.on('startTurn', (currentTurn) => {
-      yourTurn.set(currentTurn);
-    });
+  socket.on('startGame', (gameId : string) => {
+    console.log(gameId);
+    console.log("gameID");
+    goto(`/game/${gameId}`);
+  });
 
-  } else {
-    console.log('Socket already connected:', socket.id);
-  }
+  socket.on('startTurn', (currentTurn) => { // TODO REPLACE WITH GLOBAL STATE THING
+    yourTurn.set(currentTurn);
+  });
 };
 
-// Function to queue up
-export const queueUp = (userName: PlayerMetaData) => {
-  if (socket) {
-    console.log('Queuing up:', userName);
-    socket.emit('queueUp', userName);
-  } else {
-    console.error('Socket not connected. Please connect first.');
-  }
-};
+// Fires any event with optional data
+const fire = (socket: Socket | null, event: string, data?: any) => {
+  socket ? socket.emit(event, data) : console.error("socket is null during event: " + event)
+}
 
-export const leaveQueue = () => {
-  if (socket) {
-    console.log('leaving queueu:');
-    socket.emit('leaveQueue');
-  } else {
-    console.error('Socket not connected. Please connect first.');
-  }
-};
+export const invalidateSocket = () => { socket?.disconnect(); socket = null; console.log("disconnected socket")}
 
-export const endTurn = () => {
-  if (socket) {
-    console.log('endTurn:');
-    socket.emit('endTurn');
-  } else {
-    console.error('Socket not connected. Please connect first.');
-  }
-};
+export const queueUp = (data: PlayerMetaData) => fire(socket, "queueUp", data)
+
+export const leaveQueue = () => fire(socket, "leaveQueue")
+
+export const endTurn = () => fire(socket, "endTurn")
+ 
+export const drawCard = () => fire(socket, "drawCard")
 
 

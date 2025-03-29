@@ -7,6 +7,8 @@
   import type { Database } from '$lib/database.types'; 
 	import { onMount } from "svelte";
 	import Battlefield from "$lib/components/battlefield.svelte";
+	import Deck from "$lib/components/deck.svelte";
+	import Graveyard from "$lib/components/graveyard.svelte";
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
@@ -33,7 +35,7 @@
 
   let battlefieldElement: HTMLElement;
 
-  function tryPlaceCard(x: number, y: number, card: Card){
+  function tryPlaceCard(x: number, y: number, card: Card){ // TODO: move this logic into hand component
     if (!battlefieldElement) return false;
     if (!card) return;
     // Get battlefield position and dimensions
@@ -79,11 +81,15 @@
       <div class="opponent-battlefield"></div>
       <div class="opponent-hand"></div>
     </div>
-    <div class="opponent-deck"></div>
+    <div class="opponent-deck">
+      
+    </div>
   </div>
   <div class="divider"></div>
   <div class="self-zone">
-    <div class="self-graveyard"></div>
+    <div class="self-graveyard">
+      <Graveyard></Graveyard>
+    </div>
     <div class="self-hand-battlefield-zone">
       <div class="self-battlefield" bind:this={battlefieldElement}>
         <Battlefield battleField={battlefield}></Battlefield>
@@ -92,9 +98,10 @@
         <Hand hand={hand} onPlaceCard={tryPlaceCard}></Hand>
       </div>
     </div>
-    <div class="self-deck">
-      <!-- svelte-ignore a11y_consider_explicit_label -->
-      <button class="button primary" onclick={()=>{hand.push(getRandomCard(cards)!)}}></button>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="self-deck" onclick={()=>{hand.push(getRandomCard(cards)!)}}>
+      <Deck></Deck> 
     </div>
   </div>
 </div>
