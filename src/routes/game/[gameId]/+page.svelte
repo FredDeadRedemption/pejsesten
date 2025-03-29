@@ -48,7 +48,7 @@
       y <= rect.bottom
     );
     if(!isWithinBattlefield) return;
-    if (battlefield.length >= 6) return;
+    if (battlefield.length >= 7) return;
     battlefield.push(card);
     hand = hand.filter((cardInHand) => cardInHand !== card);
     console.log("IS WITHIN" + isWithinBattlefield)
