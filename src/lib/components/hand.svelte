@@ -52,7 +52,7 @@
     // Check if coordinates are within the battlefield
     console.log(x)
     const isWithinBattlefield = (
-      x >= rect.left && // normalize with small card position
+      x >= rect.left && // TODO: normalize with small card position
       x <= rect.right &&
       y >= rect.top &&
       y <= rect.bottom
