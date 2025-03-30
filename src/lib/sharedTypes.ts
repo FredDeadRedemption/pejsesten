@@ -5,3 +5,4 @@ export type PlayerMetaData = {
   choosenDeck: number[],
   avatar: string,
 }
+
