@@ -9,6 +9,7 @@
 	import Battlefield from "$lib/components/battlefield.svelte";
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
+  import { gameState } from "$lib/socket/socket";
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()

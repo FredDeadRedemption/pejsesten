@@ -1,13 +1,16 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
-import type { PlayerMetaData, GameState } from "$lib/sharedTypes.js";
+import { parseGameStateServerToGameState } from '$lib/sharedTypes.js';
+import type { PlayerMetaData, GameState, GameStateServer } from "$lib/sharedTypes.js";
 
 let socket: Socket | null = null;
 
 // Function to invalidate (disconnect) the socket
 
 export const yourTurn = writable<boolean>(false); // TODO make part of global state object
+
+//export const yourWhite = writable<boolean>(false);
 
 export const gameState = writable<GameState>();
 
@@ -18,10 +21,11 @@ export const connectSocket = (url: string) => {
   console.log('Creating socket connection...');
   socket = io(url);
 
-  socket.on("initGameState", (newGameState, _yourTurn) => {
-    gameState.set(newGameState);
-    yourTurn.set(_yourTurn);
-    console.log("IS YOUR TURN: " + _yourTurn);
+  socket.on("initGameState", (newGameState: GameStateServer, yourTurnRes) => {
+    
+    gameState.set(parseGameStateServerToGameState(newGameState, yourTurnRes));
+    yourTurn.set(yourTurnRes);
+    console.log("IS YOUR TURN: " + yourTurnRes);
     console.log(newGameState) // log fra helvede
   })
 
