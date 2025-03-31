@@ -7,10 +7,6 @@ let socket: Socket | null = null;
 
 // Function to invalidate (disconnect) the socket
 
-export const yourTurn = writable<boolean>(false); // TODO make part of global state object
-
-//export const yourWhite = writable<boolean>(false);
-
 export const gameState = writable<GameState>();
 
 // Function to connect to the socket server
@@ -20,15 +16,17 @@ export const connectSocket = (url: string) => {
   console.log('Creating socket connection...');
   socket = io(url);
 
-  socket.on("initGameState", (newGameState: GameState, yourTurnRes) => {
-    
+  socket.on("initGameState", (newGameState: GameState) => {
     gameState.set(newGameState);
-    yourTurn.set(yourTurnRes);
-    console.log("IS YOUR TURN: " + yourTurnRes);
+    console.log("IS YOUR TURN: " + newGameState.yourTurn);
     console.log(newGameState) // log fra helvede
   })
 
-  socket.on("newGameState", (newGameState) => {
+  socket.on("redirect", (URL) => {
+    goto(`/game/${URL}`);
+  })
+
+  socket.on("newGameState", (newGameState: GameState) => {
     gameState.set(newGameState);
     console.log(newGameState) // log fra helvede
   })

@@ -12,7 +12,7 @@ export type GameState = {
   enemy: Board,
   whitePlayerID: string; // used for validation turn
   blackPlayerID: string; // used for validation turn
-  whiteTurn: boolean, // used for processing the actual game 
+  yourTurn: boolean, // used for processing the actual game 
   turnCount: number,
 }
 

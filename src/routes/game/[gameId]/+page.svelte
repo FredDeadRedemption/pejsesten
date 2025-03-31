@@ -2,14 +2,13 @@
   import { endTurn } from "$lib/socket/socket";
   import { page } from "$app/state";
 	import { browser } from "$app/environment";
-  import { yourTurn } from "$lib/socket/socket";
+  import { gameState } from "$lib/socket/socket";
 	import Hand from "$lib/components/hand.svelte";
   import type { Database } from '$lib/database.types'; 
 	import { onMount } from "svelte";
 	import Battlefield from "$lib/components/battlefield.svelte";
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
-  import { gameState } from "$lib/socket/socket";
 	import { setCards } from "$lib/cards.js";
   type Card = Database['public']['Tables']['cards']['Row'];
 
@@ -45,13 +44,13 @@
 <div id="fullscreen-div">
   <div class="DEBUG">
     <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button disabled={ !$yourTurn } onclick={()=>{
+    <button disabled={ !$gameState.yourTurn } onclick={()=>{
       endTurn();
     }}>END TURN</button>
     <p>Game ID: {gameId}</p>
     <button onclick={()=> {enterFullscreen()}}>Go Fullscreen</button>
 
-    <div>Your turn: { $yourTurn }</div>
+    <div>Your turn: { !$gameState.yourTurn }</div>
   </div>
   <!-- GAME ZONES-->
   <div class="opponent-zone">
