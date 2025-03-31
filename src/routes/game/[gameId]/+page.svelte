@@ -78,6 +78,7 @@
     </div>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
+     <!-- TODO: REMOVE DEN DER PUSH TING-->
     <div class="self-deck" onclick={()=>{hand.push(getRandomCard(cards)!)}}>
       <Deck bind:deck={ $gameState.self.deck }></Deck> 
     </div>
