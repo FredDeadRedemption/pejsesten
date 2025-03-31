@@ -6,7 +6,7 @@
   type CardT = Database['public']['Tables']['cards']['Row'];
 
 
-  let { hand = $bindable(), battleField, battleFieldElement } = $props();
+  let { hand = $bindable(), battleField, battleFieldElement  } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
