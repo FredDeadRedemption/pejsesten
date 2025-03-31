@@ -16,12 +16,6 @@ export const connectSocket = (url: string) => {
   console.log('Creating socket connection...');
   socket = io(url);
 
-  socket.on("initGameState", (newGameState: GameState) => {
-    gameState.set(newGameState);
-    console.log("IS YOUR TURN: " + newGameState.yourTurn);
-    console.log(newGameState) // log fra helvede
-  })
-
   socket.on("redirect", (URL) => {
     goto(`/game/${URL}`);
   })
@@ -45,10 +39,6 @@ export const connectSocket = (url: string) => {
     console.log(gameId);
     console.log("gameID");
     goto(`/game/${gameId}`);
-  });
-
-  socket.on('startTurn', (currentTurn) => { // TODO REPLACE WITH GLOBAL STATE THING
-    yourTurn.set(currentTurn);
   });
 };
 
