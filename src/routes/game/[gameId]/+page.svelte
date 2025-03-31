@@ -10,6 +10,7 @@
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
   import { gameState } from "$lib/socket/socket";
+	import { setCards } from "$lib/cards.js";
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
@@ -37,9 +38,7 @@
   let battlefieldElement: HTMLElement | null = $state(null);
 
   onMount(()=>{
-    hand.push(getRandomCard(cards)!);
-    hand.push(getRandomCard(cards)!);
-    hand.push(getRandomCard(cards)!);
+    setCards(cards);
   })
 </script>
 
@@ -75,13 +74,13 @@
         <Battlefield battleField={battlefield}></Battlefield>
       </div>
       <div class="self-hand">
-        <Hand hand={hand} battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
+        <Hand hand={ $gameState.self.hand } battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
       </div>
     </div>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="self-deck" onclick={()=>{hand.push(getRandomCard(cards)!)}}>
-      <Deck></Deck> 
+      <Deck bind:deck={ $gameState.self.deck }></Deck> 
     </div>
   </div>
 </div>

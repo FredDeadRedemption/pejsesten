@@ -1,12 +1,14 @@
 <script lang="ts">
   import { drawCard } from "$lib/socket/socket";
+
+  let { deck = $bindable() } = $props();
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div id="wrapper">
-  <div id="deck" onclick={()=>drawCard()}>
-    DECK
+  <div id="deck" onclick={() => drawCard()}>
+    DECK | {deck.length}
   </div>
 </div>
 

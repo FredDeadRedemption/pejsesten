@@ -3,10 +3,11 @@
   import type { Database } from '$lib/database.types'; 
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
+  import { getCardByID } from "$lib/cards";
   type CardT = Database['public']['Tables']['cards']['Row'];
 
 
-  let { hand = $bindable(), battleField, battleFieldElement  } = $props();
+  let { hand = $bindable(), battleField, battleFieldElement } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
@@ -28,7 +29,7 @@
       x: event.clientX -50, // normalize to so client is draggin in the middle of the card
       y: event.clientY -73 // normalize to so client is draggin in the middle of the card
     };
-    dragCard = hand[index];
+    dragCard = getCardByID(hand[index])!;
   }
   const endDrag = () => {
     console.log("chilling")
@@ -68,7 +69,7 @@
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove}></svelte:window>
 
 <div id="hand">
-  {#each hand as card, index}
+  {#each hand as cardID, index}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
       class="card-container" 
@@ -84,11 +85,11 @@
           in:scale={{ start: 0.9, duration: 250 }}
           out:scale={{ duration: 200 }}
         >
-          <Card {card}/>
+          <Card card={getCardByID(cardID)!}/>
         </div>
       {:else if draggerIndex !== index}
         <div class="default-card">
-            <CardSmall {card}/>
+            <CardSmall card={getCardByID(cardID)!}/>
         </div>
       {/if}
     </div>
