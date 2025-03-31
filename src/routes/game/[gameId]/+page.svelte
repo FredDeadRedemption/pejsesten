@@ -74,7 +74,7 @@
         <Battlefield battleField={battlefield}></Battlefield>
       </div>
       <div class="self-hand">
-        <Hand hand={ $gameState.self.hand } battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
+        <Hand bind:hand={ $gameState.self.hand } battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
       </div>
     </div>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
