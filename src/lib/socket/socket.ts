@@ -1,8 +1,7 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
-import { parseGameStateServerToGameState } from '$lib/sharedTypes.js';
-import type { PlayerMetaData, GameState, GameStateServer } from "$lib/sharedTypes.js";
+import type { PlayerMetaData, GameState } from "$lib/sharedTypes.js";
 
 let socket: Socket | null = null;
 
@@ -21,9 +20,9 @@ export const connectSocket = (url: string) => {
   console.log('Creating socket connection...');
   socket = io(url);
 
-  socket.on("initGameState", (newGameState: GameStateServer, yourTurnRes) => {
+  socket.on("initGameState", (newGameState: GameState, yourTurnRes) => {
     
-    gameState.set(parseGameStateServerToGameState(newGameState, yourTurnRes));
+    gameState.set(newGameState);
     yourTurn.set(yourTurnRes);
     console.log("IS YOUR TURN: " + yourTurnRes);
     console.log(newGameState) // log fra helvede
