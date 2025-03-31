@@ -71,7 +71,7 @@
     </div>
     <div class="self-hand-battlefield-zone">
       <div class="self-battlefield" bind:this={battlefieldElement}>
-        <Battlefield battleField={battlefield}></Battlefield>
+        <Battlefield bind:battleField={ $gameState.self.battlefield }></Battlefield>
       </div>
       <div class="self-hand">
         <Hand bind:hand={ $gameState.self.hand } battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
