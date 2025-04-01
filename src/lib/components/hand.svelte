@@ -35,7 +35,7 @@
   const endDrag = () => {
     console.log("chilling")
     draggin = false;
-    if (!dragCard || !draggerIndex) return;
+    if (!dragCard || draggerIndex === null) return; // js moment 2
     tryPlaceCard(dragCoords.x, dragCoords.y, draggerIndex)
     dragCard = null;
     draggerIndex = null;
@@ -47,7 +47,7 @@
 	};
   function tryPlaceCard(x: number, y: number, dragIndex: number){ // TODO: move this logic into hand component
     if (!battleFieldElement) return;
-    if (!dragIndex) return;
+    if (dragIndex === null) return; // js moment
     // Get battlefield position and dimensions
     const rect = battleFieldElement.getBoundingClientRect();
     
