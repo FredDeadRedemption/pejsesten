@@ -4,10 +4,11 @@
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
   import { getCardByID } from "$lib/cards";
+  import { playCard } from "$lib/socket/socket";
   type CardT = Database['public']['Tables']['cards']['Row'];
 
 
-  let { hand = $bindable(), battleField, battleFieldElement } = $props();
+  let { hand = $bindable(), battleFieldElement } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
@@ -33,20 +34,20 @@
   }
   const endDrag = () => {
     console.log("chilling")
-    draggerIndex = null;
     draggin = false;
-    if (!dragCard) return;
-    tryPlaceCard(dragCoords.x, dragCoords.y, dragCard)
+    if (!dragCard || !draggerIndex) return;
+    tryPlaceCard(dragCoords.x, dragCoords.y, draggerIndex)
     dragCard = null;
+    draggerIndex = null;
   }
   const onMouseMove = (e: { movementX: number; movementY: number; }) => {
 		if (!draggin) return;
 		dragCoords.x += e.movementX;
 	  dragCoords.y += e.movementY;
 	};
-  function tryPlaceCard(x: number, y: number, card: CardT){ // TODO: move this logic into hand component
+  function tryPlaceCard(x: number, y: number, dragIndex: number){ // TODO: move this logic into hand component
     if (!battleFieldElement) return false;
-    if (!card) return;
+    if (!dragIndex) return;
     // Get battlefield position and dimensions
     const rect = battleFieldElement.getBoundingClientRect();
     
@@ -59,10 +60,9 @@
       y <= rect.bottom
     );
     if(!isWithinBattlefield) return;
-    if (battleField.length >= 7) return;
-    battleField.push(card);
-    hand = hand.filter((cardInHand: any) => cardInHand !== card);
     console.log("IS WITHIN" + isWithinBattlefield)
+
+    playCard(dragIndex) // HERE I NEED THE INDEX OF THE CARD NOT THE CARD ITSELF
   }
 </script>
 

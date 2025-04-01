@@ -1,7 +1,7 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
-import type { PlayerMetaData, GameState } from "$lib/sharedTypes.js";
+import type { PlayerMetaData, GameState, AttackData } from "$lib/sharedTypes.js";
 
 let socket: Socket | null = null;
 
@@ -50,6 +50,10 @@ const fire = (socket: Socket | null, event: string, data?: any) => {
 export const invalidateSocket = () => { socket?.disconnect(); socket = null; console.log("disconnected socket")}
 
 export const queueUp = (data: PlayerMetaData) => fire(socket, "queueUp", data)
+
+export const playCard = (index: number) => fire(socket, "move", index);
+
+export const attack = (data: AttackData) => fire(socket, "attack", data);
 
 export const leaveQueue = () => fire(socket, "leaveQueue")
 

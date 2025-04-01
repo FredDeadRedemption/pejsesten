@@ -21,3 +21,9 @@ export type PlayerMetaData = {
   choosenDeck: number[],
   avatar: string,
 }
+
+export type AttackData = {
+  origin: number,
+  target: number,
+  face: boolean
+}

@@ -4,13 +4,11 @@
 	import { browser } from "$app/environment";
   import { gameState } from "$lib/socket/socket";
 	import Hand from "$lib/components/hand.svelte";
-  import type { Database } from '$lib/database.types'; 
 	import { onMount } from "svelte";
 	import Battlefield from "$lib/components/battlefield.svelte";
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
 	import { setCards } from "$lib/cards.js";
-  type Card = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
   let { cards } = $derived(data);
@@ -23,15 +21,6 @@
     if (elem?.requestFullscreen) {
       elem.requestFullscreen();
     }
-  }
-
-  let hand: Card[] = $state([]);
-  let battlefield: Card[] = $state([]);
-
-  function getRandomCard(array: Card[]) {
-    if (array.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * array.length);
-    return array[randomIndex];
   }
 
   let battlefieldElement: HTMLElement | null = $state(null);
@@ -73,13 +62,10 @@
         <Battlefield bind:battleField={ $gameState.self.battlefield }></Battlefield>
       </div>
       <div class="self-hand">
-        <Hand bind:hand={ $gameState.self.hand } battleField={battlefield} battleFieldElement={battlefieldElement}></Hand>
+        <Hand bind:hand={ $gameState.self.hand } battleFieldElement={battlefieldElement}></Hand>
       </div>
     </div>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-     <!-- TODO: REMOVE DEN DER PUSH TING-->
-    <div class="self-deck" onclick={()=>{hand.push(getRandomCard(cards)!)}}>
+    <div class="self-deck">
       <Deck bind:deck={ $gameState.self.deck }></Deck> 
     </div>
   </div>
