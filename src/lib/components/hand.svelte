@@ -46,7 +46,7 @@
 	  dragCoords.y += e.movementY;
 	};
   function tryPlaceCard(x: number, y: number, dragIndex: number){ // TODO: move this logic into hand component
-    if (!battleFieldElement) return false;
+    if (!battleFieldElement) return;
     if (!dragIndex) return;
     // Get battlefield position and dimensions
     const rect = battleFieldElement.getBoundingClientRect();
