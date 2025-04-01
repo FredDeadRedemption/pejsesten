@@ -9,19 +9,12 @@
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
 	import { setCards } from "$lib/cards.js";
+	import { enterFullscreen } from "$lib/util.js";
 
   let { data } = $props()
   let { cards } = $derived(data);
 
   let gameId = $state(page.params.gameId);
-
-  function enterFullscreen() {
-    if(!browser) return;
-    const elem = document.getElementById("fullscreen-div");
-    if (elem?.requestFullscreen) {
-      elem.requestFullscreen();
-    }
-  }
 
   let battlefieldElement: HTMLElement | null = $state(null);
 
@@ -37,7 +30,7 @@
       endTurn();
     }}>END TURN</button>
     <p>Game ID: {gameId}</p>
-    <button onclick={()=> {enterFullscreen()}}>Go Fullscreen</button>
+    <button onclick={()=> {enterFullscreen("fullscreen-div")}}>Go Fullscreen</button>
 
     <div>Your turn: { !$gameState.yourTurn }</div>
   </div>
