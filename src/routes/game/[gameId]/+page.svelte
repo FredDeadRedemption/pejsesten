@@ -14,8 +14,6 @@
   let { data } = $props()
   let { cards } = $derived(data);
 
-  let gameId = $state(page.params.gameId);
-
   let battlefieldElement: HTMLElement | null = $state(null);
 
   onMount(()=>{
@@ -23,14 +21,14 @@
   })
 </script>
 
-<div id="fullscreen-div">
+<div id="game-frame">
   <div class="DEBUG">
     <!-- svelte-ignore a11y_consider_explicit_label -->
     <button disabled={ !$gameState.yourTurn } onclick={()=>{
       endTurn();
     }}>END TURN</button>
-    <p>Game ID: {gameId}</p>
-    <button onclick={()=> {enterFullscreen("fullscreen-div")}}>Go Fullscreen</button>
+    <p>Game ID: {page.params.gameId}</p>
+    <button onclick={()=> {enterFullscreen("game-frame")}}>Go Fullscreen</button>
 
     <div>Your turn: { !$gameState.yourTurn }</div>
   </div>
@@ -78,7 +76,7 @@
     font-size: 1rem;
     justify-content: space-between;
   }
-  #fullscreen-div {
+  #game-frame {
     border: 2px solid $black;
     min-width: 100%;
     min-height: calc(100vh - 50px);
