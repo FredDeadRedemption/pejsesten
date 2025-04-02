@@ -91,41 +91,6 @@
 
     <button type="submit" class="button primary">Create Card</button>
   </form>
-
-
-  <!-- DELETE FORM -->
-  <form id="delete" method="POST" action="?/deleteCard" use:enhance>
-    <div class="grp">
-      <label for="name">Name</label>
-      <select name="name">
-        <option value="" disabled selected>Select an option</option>
-        <!-- Land -->
-        <!-- <optgroup label="Land"> TODO: Should be land
-          {#each cards as card}
-            <option value={card.name}>{card.name}</option>
-          {/each}
-        </optgroup> -->
-
-        <!-- Creatures -->
-        <optgroup label="Creatures">
-          {#each cards as card}
-            <option value={card.name}>{card.name}</option>
-          {/each}
-        </optgroup>
-        
-        <!-- Incantations -->
-        <!-- <optgroup label="Land"> TODO: Should be incantations(spells)
-          {#each cards as card}
-            <option value={card.name}>{card.name}</option>
-          {/each}
-        </optgroup> -->
-      </select>
-    </div>
-
-    <button type="submit" class="button primary">Delete Card</button>
-  </form>
-
-
   <!-- UPDATE FORM -->
   <div id="update">
   <!-- <form action=}> -->
@@ -218,7 +183,7 @@
     justify-content: center;
     gap: 25px;
   }
-  #create, #delete, #update{
+  #create, #update{
     border-radius: 6px;
     background-color: $grey-light;
     padding: 15px;

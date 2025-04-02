@@ -113,51 +113,6 @@ export const actions: Actions = {
       return fail(500, { error: 'Failed to create card. Please try again.' });
     }
   },
-  deleteCard: async({ request, locals: { supabase }}) => {
-    const formData = await request.formData();
-
-    const name = formData.get('name') as string;
-
-    console.log(name)
-
-    const { data: card, error: fetchError } = await supabase
-      .from("cards")
-      .select("image_url")
-      .eq("name", name)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching card:", fetchError);
-      return;
-    }
-
-    const fullPath = card.image_url; 
-    const filename = fullPath.split('/').pop(); 
-    console.log("Filename:", filename); 
-
-    const { error: deleteImageError } = await supabase
-      .storage
-      .from("card-images")
-      .remove([`cards/${filename}`]);
-
-    if (deleteImageError) {
-      console.error("Error deleting image:", deleteImageError);
-      return;
-    }
-
-    // Delete the card
-    const { error: deleteCardError } = await supabase
-      .from("cards")
-      .delete()
-      .eq("name", name);
-
-    if (deleteCardError) {
-      console.error("Error deleting card:", deleteCardError);
-    }
-    return { success: true };
-  },
-
-
   updateCard: async ({ request, locals: { supabase }}) => {
     const formData = await request.formData();
 
