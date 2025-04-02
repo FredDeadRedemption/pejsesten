@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { slide } from 'svelte/transition';
 
-  let errmsg = $state();
+  let error = $state(null);
 </script>
 
 <div id="bg"></div>
@@ -11,12 +11,15 @@
   <form method="POST" action="?/login" use:enhance={() => {
     return async ({ result }: any) => {
       console.log(result);
-      if(result.type = "redirect"){
+      if(result.type === "redirect"){
         goto(result.location);
       }
       if(!result?.data?.success){
-        errmsg = result?.data?.message;
+        error = result?.data?.message;
       } 
+      if(result?.data?.message){
+        error = result?.data?.message;
+      }
     };
   }}>
     <input name="email" type="email" placeholder="EMAIL" />
@@ -25,9 +28,9 @@
     <button class="create" formaction="?/signup">SIGN UP</button>
   </form>
   
-  {#if errmsg}
+  {#if error}
     <div transition:slide={{ axis: "y", duration: 500}} class="status">
-      <div>{errmsg}</div>  
+      <div>{error}</div>  
     </div>
   {/if}
 </div>
@@ -82,7 +85,7 @@
       border: 1px solid $grey-mid;
       background-color: $grey-ultralight;  
       outline: none;
-      color: $grey-mid;
+      color: $grey-ultradark;
     }
     button{
       border: none;

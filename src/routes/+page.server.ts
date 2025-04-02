@@ -13,7 +13,7 @@ export const actions: Actions = {
       console.error(error)
       return { success: false, message: error.message};
     } else {
-      redirect(303, '/')
+      return { success: true, message: "Account created - please check your mail"};
     }
   },
   login: async ({ request, locals: { supabase } }) => {
