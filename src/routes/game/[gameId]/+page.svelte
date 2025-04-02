@@ -117,4 +117,7 @@
   .self-hand, .enemy-hand{
     background-color: blueviolet;
   }
+  .enemy-hand{ //TODO: det her er måske kun temporary fix
+    pointer-events: none;
+  }
 </style>
