@@ -100,50 +100,27 @@ export type Database = {
         }
         Relationships: []
       }
-      lands: {
-        Row: {
-          id: number
-          land_type: number | null
-          name: string | null
-        }
-        Insert: {
-          id?: number
-          land_type?: number | null
-          name?: string | null
-        }
-        Update: {
-          id?: number
-          land_type?: number | null
-          name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lands_land_type_fkey"
-            columns: ["land_type"]
-            isOneToOne: false
-            referencedRelation: "land_enums"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
-          profile_picture: string | null
+          is_admin: boolean
           updated_at: string | null
           user_id: string
           username: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
-          profile_picture?: string | null
+          is_admin?: boolean
           updated_at?: string | null
           user_id: string
           username?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
-          profile_picture?: string | null
+          is_admin?: boolean
           updated_at?: string | null
           user_id?: string
           username?: string | null

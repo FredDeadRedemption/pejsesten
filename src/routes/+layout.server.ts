@@ -1,4 +1,6 @@
 import type { LayoutServerLoad } from './$types'
+import type { Database } from '$lib/database.types';
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 export const load: LayoutServerLoad = async ({ locals: { supabase, safeGetSession }, cookies }) => {
   const { session } = await safeGetSession()
@@ -13,9 +15,9 @@ export const load: LayoutServerLoad = async ({ locals: { supabase, safeGetSessio
   // Fetch the profile data
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username')
+    .select('username, avatar_url, is_admin')
     .eq('user_id', session?.user.id)
-    .single();
+    .single<Profile>();
     
   console.log(profile)
 

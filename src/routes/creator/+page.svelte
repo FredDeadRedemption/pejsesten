@@ -5,7 +5,7 @@
 
 
   let { data } = $props()
-  let { land_enums, cards} = $derived(data)
+  let { land_enums, cards, profile} = $derived(data)
 
 
   type Card = Database['public']['Tables']['cards']['Row'];
@@ -38,6 +38,7 @@
 
 <main class="main">
   <!-- CREATE FORM -->
+   {#if profile?.is_admin}
   <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data">
     <div class="grp">
       <label for="name">Name</label>
@@ -203,6 +204,9 @@
   <img src={cardToUpdate.image_url} alt="" draggable="false">
   {/if}
 
+  {:else}
+    <h1>Only admin users can use this page :(</h1>
+  {/if}
 </main>
 
 
