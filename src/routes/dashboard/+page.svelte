@@ -2,9 +2,22 @@
   let { data } = $props()
   let { profile } = $derived(data)
 
+  // TODO FIX DET HER LORT
+  $effect(() => {
+    if (profile == null) {
+      reload();
+    }
+  });
+
+  const reload = () => {
+    if (!browser) return;
+    window.location.reload();
+  }
+
   import { invalidate } from '$app/navigation';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
+	import { browser } from '$app/environment';
 
   let refresh = page.url.searchParams.get('refresh') === 'true';
 
