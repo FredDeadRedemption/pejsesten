@@ -11,6 +11,7 @@
   const deleteCard = async (id: number) => {
     if(!id) return;
 
+    // Get card image url for later :p
     const { data: cardResponse, error: fetchError } = await supabase
       .from("cards")
       .select("image_url")
@@ -22,10 +23,12 @@
       return;
     }
 
+    // Construct filepath
     const fullPath = cardResponse.image_url; 
     const filename = fullPath.split('/').pop(); 
     console.log("Filename:", filename); 
 
+    // Delete the card image with the filepath
     const { error: deleteImageError } = await supabase
       .storage
       .from("card-images")
@@ -36,7 +39,7 @@
       return;
     }
 
-    // Delete the card
+    // Delete the card itself
     const { error: deleteCardError } = await supabase
       .from("cards")
       .delete()
@@ -45,14 +48,14 @@
     if (deleteCardError) {
       console.error("Error deleting card:", deleteCardError);
     }
+
+    // remove it from the ui - voila
     onDeleteCard(id);
   }
 
   let deleting: boolean = $state(false);
 
-  const beginDelete = () => {
-    deleting = true;
-  }
+  const beginDelete = () => deleting = true;
 </script>
 
 <div id="panel">
