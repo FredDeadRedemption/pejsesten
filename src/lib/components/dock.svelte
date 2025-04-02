@@ -31,6 +31,11 @@
       path: "/creator"
     },
     {
+      title: "Admin",
+      icon: "admin",
+      path: "/admin"
+    },
+    {
       title: "Settings",
       icon: "settings",
       path: "/settings"

@@ -30,16 +30,17 @@
 </script>
 
 <main class="main">
-  <input type="text" name="search" id="" bind:value={searchTerm}>
-  <div class="costs">
-    {#each land_enums as c}
-      <p>{c.name.replace("_land", "")}</p>
-      <div class="cost" style="background-color: {costMap[c.name].color};">
-      <span class="icon">{@html getIcon(costMap[c.name].icon)}</span>
-      </div>
-    {/each}
+  <div class="bar-wrapper"> 
+    <input type="text" name="search" id="" placeholder="Search Catalog" bind:value={searchTerm}>
+    <div class="costs">
+      {#each land_enums as c}
+        <span class="text">{c.name.replace("_land", "")}</span>
+        <div class="cost" style="background-color: {costMap[c.name].color};">
+        <span class="icon">{@html getIcon(costMap[c.name].icon)}</span>
+        </div>
+      {/each}
+    </div>
   </div>
-  <h1>Cards:</h1>
   <div class="card-wrapper">
     {#each filteredCards as card (card.id)}
       <div class="card-admin-panel-wrapper">
@@ -55,12 +56,31 @@
 </main>
  
 <style lang="scss">
+  input{  
+      border: none;
+      border: 1px solid $grey-mid;
+      background-color: $grey-ultralight;  
+      outline: none;
+      color: $grey-ultradark;
+      border-radius: 5px;
+      padding: 10px;
+    }
   .main{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin: 30px;
+  }
+  .bar-wrapper{
+    padding: 10px;
+    background-color: $grey-light;
+    border-radius: 10px;
+    display: flex;
+    gap: 10px;
   }
   .card-wrapper{
     padding: 10px;
-    background-color: $grey-mid;
+    background-color: $grey-light;
     border-radius: 10px;
     display: flex;
     flex-wrap: wrap;
@@ -92,6 +112,10 @@
         justify-content: center;
         align-items: center;
       }
+    } 
+    .text{
+      color: $grey-dark;
+      margin: 5px;
     } 
   }
 </style>
