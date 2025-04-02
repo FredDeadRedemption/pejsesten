@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Card from '$lib/components/card.svelte';
 	import { getIcon } from '$lib/icons.js';
+	import html2canvas from 'html2canvas';
 
   let { data } = $props()
   let { land_enums, cards } = $derived(data);
@@ -23,6 +24,21 @@
     death_land: { color: "#af1cb6", icon: "lily" }, // Dream
     holy_land: { color: "#2a2929", icon: "skull" } // Death
   };
+
+  const downloadDivAsPNG = (divId: string, filename: string) => {
+    const element = document.getElementById(divId);
+  
+    html2canvas(element ?? new HTMLElement(), {
+      useCORS: true, // Attempt to load cross-origin images as CORS
+      allowTaint: true, // Allow tainted canvas (but won't be readable)
+    }).then(canvas => {
+        // Create a download link
+        const link = document.createElement('a');
+        link.download = filename || 'div-image.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
 </script>
 
 <main class="main">
@@ -39,7 +55,11 @@
   <h1>Cards:</h1>
   <div class="card-wrapper">
     {#each filteredCards as card}
-      <Card card={card}></Card>
+    <!-- svelte-ignore a11y_consider_explicit_label -->
+    <button class="download-btn" onclick={()=>downloadDivAsPNG(card.name, card.name)}></button>
+      <div id={card.name}>
+        <Card card={card}></Card>
+      </div>
     {/each}
   </div>
 </main>
