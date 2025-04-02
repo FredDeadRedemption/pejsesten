@@ -33,13 +33,17 @@
     <div>Your turn: { !$gameState.yourTurn }</div>
   </div>
   <!-- GAME ZONES-->
-  <div class="opponent-zone">
-    <div class="opponent-graveyard"></div>
-    <div class="opponent-hand-battlefield-zone">
-      <div class="opponent-battlefield"></div>
-      <div class="opponent-hand"></div>
+  <div class="enemy-zone">
+    <div class="enemy-graveyard"></div>
+    <div class="enemy-hand-battlefield-zone">
+      <div class="enemy-hand">
+        <Hand bind:hand={ $gameState.enemy.hand} battleFieldElement={battlefieldElement}></Hand>
+      </div>
+      <div class="enemy-battlefield">
+        <Battlefield bind:battleField={ $gameState.enemy.battlefield }></Battlefield>
+      </div>
     </div>
-    <div class="opponent-deck">
+    <div class="enemy-deck">
       
     </div>
   </div>
@@ -84,29 +88,33 @@
     display: grid;
     grid-template-rows: 1fr 2px 1fr;
   }
-  .opponent-zone{
+  .enemy-zone{
     background-color: lightsalmon;
   }
   .divider{
     background-color: $black;
     width: 100%;
   }
-  .self-zone{
+  .self-zone, .enemy-zone{
     background-color: teal;
     display: grid;
     grid-template-columns: 15% 1fr 15%;
   }
-  .self-deck{
+  .self-deck, .enemy-deck{
     background-color: red;
   }
-  .self-graveyard{
+  .self-graveyard, .enemy-graveyard{
     background-color: red;
   }
   .self-hand-battlefield-zone{
     display: grid;
     grid-template-rows: 1fr 35%;
   }
-  .self-hand{
+  .enemy-hand-battlefield-zone{
+    display: grid;
+    grid-template-rows: 35% 1fr;
+  }
+  .self-hand, .enemy-hand{
     background-color: blueviolet;
   }
 </style>
