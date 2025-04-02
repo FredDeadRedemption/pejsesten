@@ -55,16 +55,39 @@
   <h1>Cards:</h1>
   <div class="card-wrapper">
     {#each filteredCards as card}
-    <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button class="download-btn" onclick={()=>downloadDivAsPNG(card.name, card.name)}></button>
-      <div id={card.name}>
-        <Card card={card}></Card>
+      <div class="x">
+        <div id={card.name}>
+          <Card card={card}></Card>
+        </div>
+        <!-- svelte-ignore a11y_consider_explicit_label -->
+        <button class="download-btn" onclick={()=>downloadDivAsPNG(card.name, card.name)}>
+          <span class="icon">{@html getIcon("download")}</span>
+        </button>
       </div>
     {/each}
   </div>
 </main>
  
 <style lang="scss">
+  .x{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .download-btn{
+    min-width: 100%;
+    z-index: 2;
+    align-self: center;
+    border-radius: 5px;
+    border: 1px solid red;
+    height: 30px;
+    width: 30px;
+    background-color: $black;
+    color: $primary;
+    &:hover{
+      cursor: pointer;
+    }
+  }
   .main{
     margin: 30px;
   }
