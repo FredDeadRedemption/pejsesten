@@ -3,6 +3,7 @@
   import { downloadDivAsPNG } from '$lib/util';
   import type { SupabaseClient } from '@supabase/supabase-js';
   import type { Database } from '$lib/database.types'; 
+	import { slide } from 'svelte/transition';
   type Card = Database['public']['Tables']['cards']['Row'];
 
   let { card, supabase, onDeleteCard }: { card: Card, supabase: SupabaseClient, onDeleteCard: any} = $props()
@@ -46,16 +47,24 @@
     }
     onDeleteCard(id);
   }
+
+  let deleting: boolean = $state(false);
+
+  const beginDelete = () => {
+    deleting = true;
+  }
 </script>
 
 <div id="panel">
-  <button class="btn download" onclick={() => downloadDivAsPNG(card.name, card.name)}>
-    <span class="icon">{@html getIcon("png")}</span>
-  </button>
-  <button class="btn edit" onclick={() => downloadDivAsPNG(card.name, card.name)}>
-    <span class="icon">{@html getIcon("creator")}</span>
-  </button>
-  <button class="btn delete" onclick={() => deleteCard(card.id)}>
+  {#if !deleting}
+    <button transition:slide={{ axis: "x", duration: 100 }} class="btn download" onclick={() => downloadDivAsPNG(card.name, card.name)}>
+      <span class="icon">{@html getIcon("png")}</span>
+    </button>
+    <button transition:slide={{ axis: "x", duration: 100 }} class="btn edit" onclick={() => downloadDivAsPNG(card.name, card.name)}>
+      <span class="icon">{@html getIcon("creator")}</span>
+    </button>
+  {/if}
+  <button class="btn delete" onmouseleave={() => deleting = false} onclick={() => deleting ? deleteCard(card.id) : beginDelete()}>
     <span class="icon">{@html getIcon("delete")}</span>
   </button>
 </div>
@@ -90,7 +99,7 @@
       background-color: red;
     }
   }
-  .download:hover { background-color: $blue; }
-  .delete:hover { background-color: $red; }
-  .edit:hover { background-color: $yellow; }
+  .download:hover { background-color: $blue; color: $white; }
+  .delete:hover { background-color: $red; color: $white; }
+  .edit:hover { background-color: $yellow; color: $white; }
 </style>
