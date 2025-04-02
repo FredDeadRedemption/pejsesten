@@ -1,10 +1,11 @@
 <script lang="ts">
- 
+  let { graveyard = $bindable() } = $props();
+
 </script>
 
 <div id="wrapper">
   <div id="graveyard">
-    Graveyard
+    {graveyard.length}
   </div>
 </div>
 

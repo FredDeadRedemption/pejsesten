@@ -14,14 +14,16 @@
   let { data } = $props()
   let { cards } = $derived(data);
 
-  let battlefieldElement: HTMLElement | null = $state(null);
+  let battlefieldElement: HTMLElement | null = $state(null); // TODO: get rid of this shit
 
+  // Pre-load all cards in existence
   onMount(()=>{
     setCards(cards);
   })
 </script>
 
 <div id="game-frame">
+  <!-- DEBUGGING / LOGGIN -->
   <div class="DEBUG">
     <!-- svelte-ignore a11y_consider_explicit_label -->
     <button disabled={ !$gameState.yourTurn } onclick={()=>{
@@ -30,11 +32,13 @@
     <p>Game ID: {page.params.gameId}</p>
     <button onclick={()=> {enterFullscreen("game-frame")}}>Go Fullscreen</button>
 
-    <div>Your turn: { !$gameState.yourTurn }</div>
+    <div>Your turn: { $gameState.yourTurn }</div>
   </div>
   <!-- GAME ZONES-->
   <div class="enemy-zone">
-    <div class="enemy-graveyard"></div>
+    <div class="enemy-graveyard">
+      <Graveyard bind:graveyard={ $gameState.enemy.graveyard }></Graveyard>
+    </div>
     <div class="enemy-hand-battlefield-zone">
       <div class="enemy-hand">
         <Hand bind:hand={ $gameState.enemy.hand} battleFieldElement={battlefieldElement}></Hand>
@@ -44,13 +48,13 @@
       </div>
     </div>
     <div class="enemy-deck">
-      
+      <Deck bind:deck={ $gameState.enemy.deck }></Deck>
     </div>
   </div>
   <div class="divider"></div>
   <div class="self-zone">
     <div class="self-graveyard">
-      <Graveyard></Graveyard>
+      <Graveyard bind:graveyard={ $gameState.self.graveyard }></Graveyard>
     </div>
     <div class="self-hand-battlefield-zone">
       <div class="self-battlefield" bind:this={battlefieldElement}>
@@ -117,7 +121,7 @@
   .self-hand, .enemy-hand{
     background-color: blueviolet;
   }
-  .enemy-hand{ //TODO: det her er måske kun temporary fix
+  .enemy-hand, .enemy-deck{ //TODO: det her er måske kun temporary fix
     pointer-events: none;
   }
 </style>
