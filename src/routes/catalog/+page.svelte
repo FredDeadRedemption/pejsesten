@@ -4,7 +4,7 @@
 	import { getIcon } from '$lib/icons.js';
 
   let { data } = $props()
-  let { land_enums, cards, profile } = $derived(data);
+  let { land_enums, cards, profile, supabase } = $derived(data);
 
   let searchTerm: string = $state("");
 
@@ -13,6 +13,8 @@
       card.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
+
+  const onDeleteCard = (id: number) => cards.filter(card => card.id = id);
 
   type CostMap = {
     [key: string]: { color: string; icon: string };
@@ -44,7 +46,7 @@
           <Card card={card}></Card>
         </div>
         {#if profile?.is_admin}
-          <CardAdminPanel card={card}></CardAdminPanel>
+          <CardAdminPanel card={card} supabase={supabase} onDeleteCard={onDeleteCard}></CardAdminPanel>
         {/if}
       </div>
     {/each}

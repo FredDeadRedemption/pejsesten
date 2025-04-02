@@ -1,20 +1,61 @@
 <script lang="ts">
   import { getIcon } from '$lib/icons.js';
   import { downloadDivAsPNG } from '$lib/util';
-  let { card } = $props()
+  import type { SupabaseClient } from '@supabase/supabase-js';
+  import type { Database } from '$lib/database.types'; 
+  type Card = Database['public']['Tables']['cards']['Row'];
+
+  let { card, supabase, onDeleteCard }: { card: Card, supabase: SupabaseClient, onDeleteCard: any} = $props()
+
+  const deleteCard = async (id: number) => {
+    if(!id) return;
+
+    const { data: cardResponse, error: fetchError } = await supabase
+      .from("cards")
+      .select("image_url")
+      .eq("id", id)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching card:", fetchError);
+      return;
+    }
+
+    const fullPath = cardResponse.image_url; 
+    const filename = fullPath.split('/').pop(); 
+    console.log("Filename:", filename); 
+
+    const { error: deleteImageError } = await supabase
+      .storage
+      .from("card-images")
+      .remove([`cards/${filename}`]);
+
+    if (deleteImageError) {
+      console.error("Error deleting image:", deleteImageError);
+      return;
+    }
+
+    // Delete the card
+    const { error: deleteCardError } = await supabase
+      .from("cards")
+      .delete()
+      .eq("id", id);
+
+    if (deleteCardError) {
+      console.error("Error deleting card:", deleteCardError);
+    }
+    onDeleteCard(id);
+  }
 </script>
 
 <div id="panel">
-  <button class="btn download" onclick={()=>downloadDivAsPNG(card.name, card.name)}>
+  <button class="btn download" onclick={() => downloadDivAsPNG(card.name, card.name)}>
     <span class="icon">{@html getIcon("png")}</span>
   </button>
-  <button class="btn new" onclick={()=>downloadDivAsPNG(card.name, card.name)}>
-    <span class="icon">{@html getIcon("new")}</span>
-  </button>
-  <button class="btn edit" onclick={()=>downloadDivAsPNG(card.name, card.name)}>
+  <button class="btn edit" onclick={() => downloadDivAsPNG(card.name, card.name)}>
     <span class="icon">{@html getIcon("creator")}</span>
   </button>
-  <button class="btn delete" onclick={()=>downloadDivAsPNG(card.name, card.name)}>
+  <button class="btn delete" onclick={() => deleteCard(card.id)}>
     <span class="icon">{@html getIcon("delete")}</span>
   </button>
 </div>
@@ -42,14 +83,14 @@
     background-color: inherit;
     align-self: center;
     height: 30px;
+    transition: ease all 100ms;
 
     &:hover{
       cursor: pointer;
       background-color: red;
     }
   }
-  .download:hover { background-color: rgb(109, 145, 185); }
-  .new:hover { background-color: rgb(87, 198, 116); }
-  .delete:hover { background-color: rgb(207, 71, 71); }
-  .edit:hover { background-color: rgb(234, 200, 80); }
+  .download:hover { background-color: $blue; }
+  .delete:hover { background-color: $red; }
+  .edit:hover { background-color: $yellow; }
 </style>
