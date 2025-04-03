@@ -5,7 +5,10 @@
   import type { Database } from '$lib/database.types'; 
 	import { fade, slide } from 'svelte/transition';
 	import { enhance } from '$app/forms';
+
+
   type Card = Database['public']['Tables']['cards']['Row'];
+
 
   let { card, supabase, onDeleteCard }: { card: Card, supabase: SupabaseClient, onDeleteCard: any} = $props()
 
@@ -62,6 +65,7 @@
 
 
   const handleImgUpdate = (event : Event) => {
+
     const target = event.target as HTMLInputElement;
 
     const img = target.files?.[0];
@@ -77,7 +81,6 @@
       }
       reader.readAsDataURL(img);
 
-      // console.log(img);
     }
   } 
 </script>
@@ -98,52 +101,66 @@
 
 
 {#if updating}
-<div class="pop-up-wrapper">
-  <button onclick={() => {updating = !updating}}>X</button>
-  <form  method="POST" action="?/updateCard" use:enhance enctype="multipart/form-data">
-    <div class="grp">
-      <label for="name">Name</label>
-      <input type="text" id="name" name="name" required bind:value={card.name}/>
-    </div>
+<div class="pop-up-wrapper" transition:fade={{ duration: 100 }}>
+  <button id="close-btn" onclick={() => {updating = !updating}}>
+    <span>{@html getIcon("close")}</span>
+  </button>
 
-    <div class="grp-side-by-side-four">
+  <div id="update">
+    
+    <form method="POST" use:enhance >
+
       <div class="grp">
-        <label for="holyCost">Holy</label>
-        <input type="number" id="holyCost" name="holyCost" bind:value={card.holy_cost}/>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required bind:value={card.name}/>
+      </div>
+
+      <div class="grp-side-by-side-four">
+        <div class="grp">
+          <label for="holyCost">Holy</label>
+          <input type="number" id="holyCost" name="holyCost" bind:value={card.holy_cost}/>
+        </div>
+
+        <div class="grp">
+          <label for="deathCost">Death</label>
+          <input type="number" id="deathCost" name="deathCost" bind:value={card.death_cost}/>
+        </div>
+
+        <div class="grp">
+          <label for="dreamCost">Dream</label>
+          <input type="number" id="dreamCost" name="dreamCost" bind:value={card.dream_cost}/>
+        </div>
+
+        <div class="grp">
+          <label for="earthCost">Earth</label>
+          <input type="number" id="earthCost" name="earthCost" bind:value={card.earth_cost}/>
+        </div>
       </div>
 
       <div class="grp">
-        <label for="deathCost">Death</label>
-        <input type="number" id="deathCost" name="deathCost" bind:value={card.death_cost}/>
+        <label for="description">Description</label>
+        <textarea id="description" name="description" bind:value={card.description}></textarea>
       </div>
 
       <div class="grp">
-        <label for="dreamCost">Dream</label>
-        <input type="number" id="dreamCost" name="dreamCost" bind:value={card.dream_cost}/>
+        <label for="image">Image</label>
+
+        <label for="file-upload" class="file-upload">
+          
+          <img class="image" src={card.image_url} alt="" draggable="false">
+          <span>{@html getIcon("new")}</span>
+        
+        </label>
+        <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
+        {console.log(card.image_url)}
+        
       </div>
-
-      <div class="grp">
-        <label for="earthCost">Earth</label>
-        <input type="number" id="earthCost" name="earthCost" bind:value={card.earth_cost}/>
-      </div>
-    </div>
-
-    <div class="grp">
-      <label for="description">Description</label>
-      <textarea id="description" name="description" bind:value={card.description}></textarea>
-    </div>
-
-    <div class="grp">
-      <label for="image">Image</label>
-      <input type="file" id="image" name="image" accept="image/*" onchange={handleImgUpdate} />
-      {console.log(card.image_url)}
-      <img src={card.image_url} alt="" draggable="false">
-    </div>
-    <button type="submit" class="button primary">Update Card</button>
-  </form>
+      <button type="submit" class="button primary">Update Card</button>
+    </form>
+  </div>
 </div>
 
-<div id="blur" transition:fade={{ duration: 100 }}></div>
+<div id="blur" transition:fade={{ duration: 200 }}></div>
 {/if}
 
 
@@ -180,6 +197,20 @@
   .delete:hover { background-color: $red; color: $white; }
   .edit:hover { background-color: $yellow; color: $white; }
 
+  #close-btn {
+    position: absolute;
+    width: 2rem;
+    height: 2rem;
+    right: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: $grey-black;
+    transition: 250ms ease all;
+    &:hover{
+      color: $grey-dark;
+    }
+  }
 
   #blur{
     z-index: 50;
@@ -198,7 +229,82 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 9999999;
-    background-color: wheat;
+    width: 20rem;
+  }
+
+  #update{
+    border-radius: 6px;
+    background-color: $grey-light;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    button{
+      width: 100%;
+    }
+  }
+  input, textarea, .file-upload{
+    text-align: center;
+    background-color: $grey-mid;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    &:focus{
+      outline: none;
+    }
+  }
+  textarea{
+    resize: none;
+    height: 70px;
+  }
+  .grp{
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .grp-side-by-side-four{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 15px;
+    input{
+      width: 100%;
+    }
+  }
+  label{
+    align-self: center;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none; /* WebKit browsers */
+    margin: 0; /* Optional: Remove margin */
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+
+  .file-upload {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+    cursor: pointer;
+    color: $grey-black;
+    transition: 250ms ease all;
+    &:hover{
+      color: $grey-dark;
+    }
+  }
+  .image {
+    z-index: 1;
+    height: 50%;
+    width: 50%;
+    object-fit: cover;
+    border: none;
+    border-radius: 3px;
+    filter: drop-shadow(2px 2px 2px $grey-dark);
+    
   }
   
 </style>
