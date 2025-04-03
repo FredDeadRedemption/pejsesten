@@ -39,8 +39,8 @@ export const actions: Actions = {
     }
 
     // Validate the deck
-    if (deck.length < 1 || deck.length > 30) {
-      return { success: false, error: "Deck must contain between 1 and 30 cards" };
+    if (deck.length > 30) {
+      return { success: false, error: "Deck must contain less than 30 cards" };
     }
 
     // Check if all card IDs are valid

@@ -57,14 +57,14 @@
  
 <style lang="scss">
   input{  
-      border: none;
-      border: 1px solid $grey-mid;
-      background-color: $grey-ultralight;  
-      outline: none;
-      color: $grey-ultradark;
-      border-radius: 5px;
-      padding: 10px;
-    }
+    border: none;
+    border: 1px solid $grey-mid;
+    background-color: $grey-ultralight;  
+    outline: none;
+    color: $grey-ultradark;
+    border-radius: 5px;
+    padding: 10px;
+  }
   .main{
     display: flex;
     flex-direction: column;

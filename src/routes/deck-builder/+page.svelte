@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Card from '$lib/components/card.svelte';
 	import type { Json } from '$lib/database.types.js';
-	import { getRandomString } from '$lib/util.js';
+	import { getRandomDeckName, getRandomString } from '$lib/util.js';
 	import { slide } from 'svelte/transition';
 
   let { data } = $props()
@@ -23,6 +23,7 @@
   let deck: number[] = $state([]); // contains id's of all cards
   let deckUniques: number[] = $derived([...new Set(deck)]);; // contains id's of all cards (no duplicates)
   let selectedDeckName: string | null = $state(null);
+  let inspectingDeck: boolean = $state(false);
 
   // Serialize the deck array to JSON whenever it changes
   let deckJSON = $state('');
@@ -30,11 +31,12 @@
     deckJSON = JSON.stringify(deck);
   });
 
-  const loadDeck = (selectedDeckId: number) => {
+  const loadExistingDeck = (selectedDeckId: number) => {
     const selectedDeck = decks.find((d) => d.id === selectedDeckId);
     if (selectedDeck) {
       selectedDeckID = selectedDeck.id;
       selectedDeckName = selectedDeck.name;
+      inspectingDeck = true;
       if (Array.isArray(selectedDeck.cards)) {
         deck = selectedDeck.cards.map((cardId) => Number(cardId)); // Convert each item to a number
       } else {
@@ -45,13 +47,19 @@
       deck = []; // Reset the deck if "New Deck" is selected
     }
   }
+
+  const loadNewDeck = () => {
+    inspectingDeck = true;
+    selectedDeckName = getRandomDeckName();
+    deck = [];
+  }
 </script>
 
 <div class="main">
   <div class="catalog-search-wrapper">
-    <input type="text" name="search" id="" bind:value={searchTerm}>
-    <h1>CURRENT DECK ID: {selectedDeckID || "null"}</h1>
-    <h1>{deck.length + " / 30"}</h1>
+    <div class="bar-wrapper"> 
+      <input type="text" name="search" id="" placeholder="Search Library" bind:value={searchTerm}>     
+    </div>
     <div class="card-wrapper">
       {#each filteredCards as card}
          <!-- svelte-ignore a11y_consider_explicit_label -->
@@ -68,17 +76,8 @@
     </div>
   </div>
   <div class="deck">
-    <!--
-    <select name="decks" id="decks" onchange={(e: any) => {
-      const selectedDeckId = parseInt(e?.target?.value);
-      loadDeck(selectedDeckId); // Load the selected deck's cards
-    }}>
-      {#each decks as deck}
-        <option value={deck.id}>{deck.id}</option>
-      {/each}
-      <option value="">New Deck</option>
-    </select>-->
-    {#if selectedDeckID}
+    <!-- RENDER CARDS IN SELECTED DECK -->
+    {#if inspectingDeck}
       <input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName}>
       {#each deckUniques as id}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -94,8 +93,9 @@
         return async ({ result }: any) => {
           selectedDeckID = null;
           selectedDeckName = null;
+          inspectingDeck = false;
           console.log(result)
-          const existingDeck = decks.find((deck) => deck.id === result?.data?.newDeck?.id);
+          const existingDeck = decks?.find((deck) => deck.id === result?.data?.newDeck?.id);
           if (existingDeck) {
               // Update the existing deck's cards
               existingDeck.cards = result.data.newDeck.cards;
@@ -107,23 +107,27 @@
           }
         };
         }} onsubmit={(e) => {
-          console.log("Submitting deck ID:", selectedDeckID);}}>
+          console.log("Submitting deck ID:", selectedDeckID);
+          if(deck?.length === 0 ) return;}}>
         <input type="hidden" name="deckId" bind:value={selectedDeckID}>
         <input type="hidden" name="deck" bind:value={deckJSON}>
         <input type="hidden" name="name" bind:value={selectedDeckName}>
         <button class="button primary back" type="submit">Back</button>
       </form>
     {:else}
+     <!-- RENDER ALL USERS DECKS -->
       {#each decks as deck}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div transition:slide={{ axis: "x", duration: 250 }} class="deck-in-deck-view" style="background-image: url(TODO MAKE SOME KINDA IMAGE HERE);" onclick={()=>{
-          loadDeck(deck.id);
+        <div transition:slide={{ axis: "x", duration: 250 }} class="deck-in-deck-view" style="background-image: url(TODO MAKE SOME KINDA IMAGE HERE);" onclick={() => {
+          loadExistingDeck(deck.id);
         }}>
-          <span class="name">{deck.name}</span>
+          <span class="name">{deck?.name}</span>
         </div>
       {/each}
-      <button class="button primary new">New Deck</button>
+      <button class="button primary new" onclick={() => {
+        loadNewDeck()
+      }}>New Deck</button>
     {/if}
   </div>
 </div>
@@ -131,11 +135,11 @@
 
 <style lang="scss">
   .deck{
-    background-color: $grey-mid;
+    background-color: $grey-light;
     border-radius: 3px;
     overflow: hidden;
     display: flex;    
-    max-height: 500px;
+    height: 500px;
     flex-direction: column;
     .card-in-deck-view{
       display: flex;
@@ -202,6 +206,23 @@
       }
     }
   }
+  .bar-wrapper{
+    padding: 10px;
+    background-color: $grey-light;
+    border-radius: 10px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    input{  
+      border: none;
+      border: 1px solid $grey-mid;
+      background-color: $grey-ultralight;  
+      outline: none;
+      color: $grey-ultradark;
+      border-radius: 5px;
+      padding: 10px;
+    }
+  }
   .invisible{
     box-sizing: auto !important;
     border: none;
@@ -243,7 +264,7 @@
   }
   .card-wrapper{
     padding: 10px;
-    background-color: $grey-mid;
+    background-color: $grey-light;
     border-radius: 10px;
     display: flex;
     flex-wrap: wrap;
