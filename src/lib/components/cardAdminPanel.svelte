@@ -72,7 +72,6 @@
   </button>
 </div>
 
-
 <style lang="scss">
   #panel{
     display: flex;
