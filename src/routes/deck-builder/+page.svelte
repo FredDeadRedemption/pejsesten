@@ -2,11 +2,12 @@
 	import { enhance } from '$app/forms';
 	import Card from '$lib/components/card.svelte';
 	import type { Json } from '$lib/database.types.js';
+	import { getIcon } from '$lib/icons.js';
 	import { getRandomDeckName, getRandomString } from '$lib/util.js';
 	import { slide } from 'svelte/transition';
 
   let { data } = $props()
-  let { cards } = $derived(data);
+  let { cards, supabase } = $derived(data);
 
   let searchTerm: string = $state("");
 
@@ -30,6 +31,21 @@
   $effect(() => {
     deckJSON = JSON.stringify(deck);
   });
+
+  const deleteDeck = async (id: number | null) => {
+    if(!id) return;
+
+    const { error } = await supabase
+      .from("decks")
+      .delete()
+      .eq("id", id);
+
+    if(error) { console.error(error); return }
+
+    decks = decks?.filter(d => d.id !== id);
+    selectedDeckID = null;
+    inspectingDeck = false;
+  }
 
   const loadExistingDeck = (selectedDeckId: number) => {
     const selectedDeck = decks.find((d) => d.id === selectedDeckId);
@@ -89,32 +105,33 @@
           <span class="name">{getCardData(id)?.name}</span><span class="count">x {deck.filter((c) => c === id).length}</span>
         </div>
       {/each}
-      <form id="back-form" action="?/createDeck" method="POST" use:enhance={() => {
-        return async ({ result }: any) => {
-          selectedDeckID = null;
-          selectedDeckName = null;
-          inspectingDeck = false;
-          console.log(result)
-          const existingDeck = decks?.find((deck) => deck.id === result?.data?.newDeck?.id);
-          if (existingDeck) {
-              // Update the existing deck's cards
-              existingDeck.cards = result.data.newDeck.cards;
-              // Also update the name if it might change
-              existingDeck.name = result.data.newDeck.name || existingDeck.name;
-          } else {
-              // Only push if it's a genuinely new deck
-              decks.push(result.data.newDeck);
-          }
-        };
-        }} onsubmit={(e) => {
-          console.log("Submitting deck ID:", selectedDeckID);
-          if(deck?.length === 0 ) return;}}>
-        <input type="hidden" name="deckId" bind:value={selectedDeckID}>
-        <input type="hidden" name="deck" bind:value={deckJSON}>
-        <input type="hidden" name="name" bind:value={selectedDeckName}>
-        <button class="button primary back" type="submit">Back</button>
-      </form>
-    {:else}
+      <div class="back-delete-btn-grp">
+        <form id="back-form" action="?/createDeck" method="POST" use:enhance={() => {
+          return async ({ result }: any) => {
+            selectedDeckID = null;
+            selectedDeckName = null;
+            inspectingDeck = false;
+            console.log(result)
+            const existingDeck = decks?.find((deck) => deck.id === result?.data?.newDeck?.id);
+            if (existingDeck) {
+                // Update the existing deck's cards
+                existingDeck.cards = result?.data?.newDeck?.cards;
+                // Also update the name if it might change
+                existingDeck.name = result?.data?.newDeck?.name || existingDeck?.name;
+            } else {
+                // Only push if it's a genuinely new deck
+                decks.push(result.data.newDeck);
+            }
+          };
+          }}>
+          <input type="hidden" name="deckId" bind:value={selectedDeckID}>
+          <input type="hidden" name="deck" bind:value={deckJSON}>
+          <input type="hidden" name="name" bind:value={selectedDeckName}>
+          <button class="button primary back" type="submit">Back</button>
+        </form>
+        <button class="delete" onclick={() => deleteDeck(selectedDeckID)}><span class="icon">{@html getIcon("delete")}</span></button>
+      </div>
+      {:else}
      <!-- RENDER ALL USERS DECKS -->
       {#each decks as deck}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -255,6 +272,23 @@
   }
   .back{
     min-width: 100%;
+    border-top-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-right-radius: 0px;
+  }
+  .delete{
+    background-color: $secondary;
+    border: none;
+    color: $white;
+    &:hover{
+      background-color: $black;
+      cursor: pointer;
+    }
+  }
+  .back-delete-btn-grp{
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 1fr 35px;
   }
   .main{
     margin: 30px;
