@@ -13,6 +13,8 @@ export const downloadDivAsPNG = (divId: string, filename: string) => {
   if(!browser) return;
   const element = document.getElementById(divId);
 
+  filename = filename.toLowerCase().replace(" ", "_");
+
   html2canvas(element ?? new HTMLElement(), {
     useCORS: true, // Attempt to load cross-origin images as CORS
     allowTaint: true, // Allow tainted canvas (but won't be readable)
