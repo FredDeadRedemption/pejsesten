@@ -63,16 +63,19 @@ export type Database = {
         Row: {
           cards: Json | null
           id: number
+          name: string
           owner: string | null
         }
         Insert: {
           cards?: Json | null
           id?: number
+          name: string
           owner?: string | null
         }
         Update: {
           cards?: Json | null
           id?: number
+          name?: string
           owner?: string | null
         }
         Relationships: [

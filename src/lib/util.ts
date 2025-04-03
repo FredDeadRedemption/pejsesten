@@ -27,3 +27,5 @@ export const downloadDivAsPNG = (divId: string, filename: string) => {
       link.click();
   })
 };
+
+export const getRandomString = () => Math.random().toString(36).slice(2, 12);
