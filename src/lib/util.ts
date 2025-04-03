@@ -12,10 +12,11 @@ export const enterFullscreen = (divID: string) => {
 export const downloadDivAsPNG = (divId: string, filename: string) => {
   if(!browser) return;
   const element = document.getElementById(divId);
+  if(!element) return;
 
   filename = filename.toLowerCase().replace(" ", "_");
 
-  html2canvas(element ?? new HTMLElement(), {
+  html2canvas(element, {
     useCORS: true, // Attempt to load cross-origin images as CORS
     allowTaint: true, // Allow tainted canvas (but won't be readable)
   }).then(canvas => {
@@ -24,4 +25,5 @@ export const downloadDivAsPNG = (divId: string, filename: string) => {
       link.download = filename || 'div-image.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
-  })};
+  })
+};
