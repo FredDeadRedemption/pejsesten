@@ -69,6 +69,8 @@
     selectedDeckName = getRandomDeckName();
     deck = [];
   }
+
+  let savingDeck: boolean = $state(false); // TODO: lav en loading ting så man kan se at den sletter et deck
 </script>
 
 <div class="main">
