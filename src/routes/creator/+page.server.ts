@@ -63,14 +63,14 @@ export const actions: Actions = {
       // Upload image to Supabase Storage if provided
       if (imageFile && imageFile.size > 0) {
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `card-${Math.random()}.${fileExt}`;
+        const fileName = `card-${name}.${fileExt}`;
         const filePath = `cards/${fileName}`; // Store in a "cards" folder for organization
 
         const { data: uploadData, error} = await supabase.storage
           .from('card-images') // Your bucket name
           .upload(filePath, imageFile, {
             cacheControl: '3600', // Cache for 1 hour
-            upsert: false // Do not overwrite existing files
+            upsert: true // Do not overwrite existing files
           });
 
         if (error) {

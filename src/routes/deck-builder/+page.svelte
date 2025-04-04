@@ -137,7 +137,7 @@
           <input type="hidden" name="deckId" bind:value={selectedDeckID}>
           <input type="hidden" name="deck" bind:value={deckJSON}>
           <input type="hidden" name="name" bind:value={selectedDeckName}>
-          <button class="button primary back" type="submit" onclick={() => {savingDeck = true}} class:saving={savingDeck}>{savingDeck ? `Saving Deck ${ellipseVar}` : "Back"}</button>
+          <button class="button primary back" type="submit" onclick={() => {savingDeck = true}} class:saving={savingDeck}>{savingDeck ? `Saving Deck ${ellipseVar}` : "Done"}</button>
         </form>
         <button class="delete" onclick={() => deleteDeck(selectedDeckID)}><span class="icon">{@html getIcon("delete")}</span></button>
       </div>
