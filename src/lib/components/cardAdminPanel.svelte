@@ -82,7 +82,12 @@
       reader.readAsDataURL(img);
 
     }
-  } 
+  }
+
+  const updateCard = () => {
+    console.log(card.name);
+    updating = false;
+  }
 </script>
 
 <div id="panel">
@@ -108,7 +113,7 @@
 
   <div id="update">
     
-    <form method="POST" use:enhance >
+    <form method="POST" use:enhance onsubmit={updateCard} >
 
       <div class="grp">
         <label for="name">Name</label>
