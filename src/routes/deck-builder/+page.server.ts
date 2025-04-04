@@ -20,10 +20,14 @@ export const actions: Actions = {
     const formData = await request.formData();
     const deckJSON = formData.get('deck') as string;
     const deckIdInput = formData.get("deckId") as string;
+    let deckName = formData.get("name") as string;
+
+    if (deckName === null || deckName === ""){
+      deckName = "A Wizard Definitely Didn't Name This";
+    }
 
     // Convert empty string to null, then cast to number | null
     const deckId = deckIdInput === "" ? null : Number(deckIdInput);
-
     let deck: number[];
 
     try {
@@ -35,8 +39,8 @@ export const actions: Actions = {
     }
 
     // Validate the deck
-    if (deck.length < 1 || deck.length > 30) {
-      return { success: false, error: "Deck must contain between 1 and 30 cards" };
+    if (deck.length > 30) {
+      return { success: false, error: "Deck must contain less than 30 cards" };
     }
 
     // Check if all card IDs are valid
@@ -59,12 +63,14 @@ export const actions: Actions = {
     type DeckPayload = {
       owner: string | undefined;
       cards: number[];
+      name: string;
       id?: number;
     }
 
     const deckPayload: DeckPayload = {
       owner: (await supabase.auth.getUser()).data.user?.id, 
       cards: deck,
+      name: deckName,
     };
     
     // if deck already exist send id aswell to update existing table

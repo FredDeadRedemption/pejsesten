@@ -27,3 +27,23 @@ export const downloadDivAsPNG = (divId: string, filename: string) => {
       link.click();
   })
 };
+
+export const getRandomString = () => Math.random().toString(36).slice(2, 12);
+
+export const getRandomDeckName = () => {
+  const names = [
+    "Pixie's Rejected Tarot",
+    "Thoth's Hangover Deck",
+    "Rider-Waite Smackdown",
+    "The Fool's Tax Return",
+    "Tower Moment Deck",
+    "Moonlight Malpractice",
+    "Golden Dawn Interns",
+    "Crowley's Coffee Order",
+    "Satan's To-Do List",
+    "DMT Elf encounter",
+    "Demonology for Dummies"
+  ];
+
+  return names[Math.floor(Math.random() * names.length)];
+}

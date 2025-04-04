@@ -1,7 +1,6 @@
 <script lang="ts">
   import { endTurn } from "$lib/socket/socket";
   import { page } from "$app/state";
-	import { browser } from "$app/environment";
   import { gameState } from "$lib/socket/socket";
 	import Hand from "$lib/components/hand.svelte";
 	import { onMount } from "svelte";
@@ -13,8 +12,6 @@
 
   let { data } = $props()
   let { cards } = $derived(data);
-
-  let battlefieldElement: HTMLElement | null = $state(null); // TODO: get rid of this shit
 
   // Pre-load all cards in existence
   onMount(()=>{
@@ -41,7 +38,7 @@
     </div>
     <div class="enemy-hand-battlefield-zone">
       <div class="enemy-hand">
-        <Hand bind:hand={ $gameState.enemy.hand} battleFieldElement={battlefieldElement}></Hand>
+        <Hand bind:hand={ $gameState.enemy.hand}></Hand>
       </div>
       <div class="enemy-battlefield">
         <Battlefield bind:battleField={ $gameState.enemy.battlefield }></Battlefield>
@@ -57,11 +54,11 @@
       <Graveyard bind:graveyard={ $gameState.self.graveyard }></Graveyard>
     </div>
     <div class="self-hand-battlefield-zone">
-      <div class="self-battlefield" bind:this={battlefieldElement}>
+      <div class="self-battlefield">
         <Battlefield bind:battleField={ $gameState.self.battlefield }></Battlefield>
       </div>
       <div class="self-hand">
-        <Hand bind:hand={ $gameState.self.hand } battleFieldElement={battlefieldElement}></Hand>
+        <Hand bind:hand={ $gameState.self.hand }></Hand>
       </div>
     </div>
     <div class="self-deck">
