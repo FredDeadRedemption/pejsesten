@@ -112,21 +112,5 @@ export const actions: Actions = {
       console.error('Error creating card:', error);
       return fail(500, { error: 'Failed to create card. Please try again.' });
     }
-  },
-  updateCard: async ({ request, locals: { supabase }}) => {
-    const formData = await request.formData();
-
-    console.log("YEEEHAW")
-
-    // Extract form data
-    const name = formData.get('name') as string;
-    const attack = parseInt(formData.get('attack') as string);
-    const defence = parseInt(formData.get('defence') as string);
-    const holy_cost = parseInt(formData.get('holyCost') as string);
-    const death_cost = parseInt(formData.get('deathCost') as string);
-    const dream_cost = parseInt(formData.get('dreamCost') as string);
-    const earth_cost = parseInt(formData.get('earthCost') as string);
-    const description = formData.get('description') as string;
-    const imageFile = formData.get('image') as File;
   }
 }
