@@ -78,7 +78,6 @@
     justify-content: space-between;
   }
   #game-frame {
-    border: 2px solid $black;
     min-width: 100%;
     min-height: calc(100vh - 50px);
     max-height: calc(100vh - 50px);
