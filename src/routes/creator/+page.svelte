@@ -1,18 +1,35 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import type { Database } from '$lib/database.types'; 
+	import { getIcon } from '$lib/icons.js';
 
   let { data } = $props()
   let { land_enums, cards, profile} = $derived(data)
 
   type Card = Database['public']['Tables']['cards']['Row'];
 
+  let cardImage : string | null = $state(null);
+
+  const handleImgUpdate = (event : Event) => {
+    const target = event.target as HTMLInputElement;
+    const img = target.files?.[0];
+
+    if (img) {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        cardImage = e.target?.result as string;
+      }
+      reader.readAsDataURL(img);
+  }
+}
+
 </script>
 
 <main class="main">
   <!-- CREATE FORM -->
    {#if profile?.is_admin}
-  <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data">
+  <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
     <div class="grp">
       <label for="name">Name</label>
       <input type="text" id="name" name="name" required />
@@ -59,7 +76,15 @@
 
     <div class="grp">
       <label for="image">Image</label>
-      <input type="file" id="image" name="image" accept="image/*" />
+      <label for="file-upload" class="file-upload">
+        
+        {#if cardImage}
+          <img class="image" src={cardImage} alt="" draggable="false">
+        {/if}
+        <span>{@html getIcon("new")}</span>
+      
+      </label>
+      <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
     </div>
 
     <button type="submit" class="button primary">Create Card</button>
@@ -89,7 +114,7 @@
       width: 100%;
     }
   }
-  input, textarea{
+  input, textarea, .file-upload{
     text-align: center;
     background-color: $grey-mid;
     border: none;
@@ -99,6 +124,7 @@
       outline: none;
     }
   }
+
   textarea{
     resize: none;
     height: 70px;
@@ -127,5 +153,37 @@
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none; /* WebKit browsers */
     margin: 0; /* Optional: Remove margin */
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+
+  .file-upload {
+    width: 100%;
+
+    min-height: 10rem;
+    padding: 0px;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+    cursor: pointer;
+    color: $grey-black;
+    transition: 250ms ease all;
+    &:hover{
+      color: $grey-dark;
+    }
+  }
+  .image {
+    z-index: 1;
+    height: 80%;
+    width: 50%;
+    object-fit: cover;
+    border: none;
+    border-radius: 3px;
+    filter: drop-shadow(2px 2px 2px $grey-dark);
+    
   }
 </style>
