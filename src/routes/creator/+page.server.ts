@@ -63,7 +63,7 @@ export const actions: Actions = {
       // Upload image to Supabase Storage if provided
       if (imageFile && imageFile.size > 0) {
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `card-${name}.${fileExt}`;
+        const fileName = `card-${name.replaceAll(" ", "-")}.${fileExt}`;
         const filePath = `cards/${fileName}`; // Store in a "cards" folder for organization
 
         const { data: uploadData, error} = await supabase.storage
