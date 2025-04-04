@@ -67,7 +67,11 @@
 
   const setUpdatingCard = (card : Card) =>{
     cardToUpdate = JSON.parse(JSON.stringify(card));
+    newImageBase64 = cardToUpdate!.image_url;
   }
+  
+  let newImageFile : File | null = $state(null);
+  let newImageBase64 : string | null = $state(null);
 
 
   const handleImgUpdate = (event : Event) => {
@@ -75,13 +79,17 @@
     const target = event.target as HTMLInputElement;
 
     const img = target.files?.[0];
+    
 
     if (img) {
+      newImageFile = img;
+      console.log(newImageFile);
+
       const reader = new FileReader();
 
       reader.onload = (e) => {
         if(cardToUpdate) {
-          cardToUpdate.image_url = e.target?.result as string;
+          newImageBase64 = e.target?.result as string;
         }
       }
       reader.readAsDataURL(img);
@@ -95,6 +103,8 @@
 
     updating = false;    
 
+    console.log(card.image_url)
+
     try {
       // First, get the existing card to check if it exists and preserve values that aren't being updated
       const { data: existingCard, error: fetchError } = await supabase
@@ -102,29 +112,58 @@
         .select('*')
         .eq('id', card.id)
         .single();
-        
+      
       if (fetchError || !existingCard) {
         return fail(404, { error: 'Card not found' });
       }
-      
-      let imageUrl = card.image_url;
-      let needsImageUpdate = existingCard.image_url !== card.image_url;
 
-      if (needsImageUpdate) {
-        if (existingCard.image_url && existingCard.image_url.includes('card-images')) {
-          try {
-            // Extract the path from the URL
-            const pathMatch = existingCard.image_url.match(/card-images\/(.+)$/);
-            if (pathMatch && pathMatch[1]) {
-              await supabase.storage
-               .from('card-images')
-               .remove([`cards/${pathMatch[1]}`]);
-              }
-          } catch (deleteError) {
-            console.error('Failed to delete old image:', deleteError);
+      if (newImageFile) {
+
+        console.log("updateCard")
+
+        //-----Delete old image-----
+        const fullPath = existingCard.image_url; 
+        const filename = fullPath.split('/').pop(); 
+        console.log("Filename:", filename);
+
+        // Delete the card image with the filepath
+        const { error: deleteImageError } = await supabase
+          .storage
+          .from("card-images")
+          .remove([`cards/${filename}`]);
+
+        if (deleteImageError) {
+          console.error("Error deleting image:", deleteImageError);
+          return;
+        }
+
+        //-----Upload new image-----
+        if (newImageFile && newImageFile.size > 0) {
+          const fileExt = newImageFile.name.split('.').pop();
+          const fileName = `card-${card.name.replaceAll(" ", "-")}.${fileExt}`;
+          const filePath = `cards/${fileName}`; // Store in a "cards" folder for organization
+
+          const { data: uploadData, error} = await supabase.storage
+            .from('card-images') // Your bucket name
+            .upload(filePath, newImageFile, {
+              cacheControl: '3600', // Cache for 1 hour
+              upsert: true // Do not overwrite existing files
+            });
+
+          if (error) {
+            console.error('Upload error:', JSON.stringify(error, null, 2));
+            throw error;
           }
+
+          // Get the public URL of the uploaded image
+          const { data: { publicUrl } } = supabase.storage
+            .from('card-images')
+            .getPublicUrl(uploadData.path);
+
+          card.image_url = publicUrl;
         }
       }
+
       
       const { data: updatedCard, error: updateError } = await supabase
         .from('cards')
@@ -138,7 +177,7 @@
           earth_cost: card.earth_cost,
           description: card.description,
           race_type: card.race_type,
-          image_url: imageUrl
+          image_url: card.image_url
         })
         .eq('id', card.id)
         .select(); 
@@ -147,6 +186,10 @@
         console.error("Update error: " + updateError);
         throw updateError;
       }
+
+
+      newImageBase64 = null;
+      newImageFile = null;
       onUpdateCard(card);
       return { success: true, card: updatedCard[0] };
     } catch (error) {
@@ -217,7 +260,7 @@
 
         <label for="file-upload" class="file-upload">
           
-          <img class="image" src={cardToUpdate!.image_url} alt="" draggable="false">
+          <img class="image" src={newImageBase64} alt="" draggable="false">
           <span>{@html getIcon("new")}</span>
         
         </label>
@@ -228,7 +271,9 @@
   </div>
 </div>
 
-<div id="blur" transition:fade={{ duration: 200 }}></div>
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div id="blur" onclick={() => {updating = false}} transition:fade={{ duration: 200 }}></div>
 {/if}
 
 
@@ -281,7 +326,7 @@
   }
 
   #blur{
-    z-index: 50;
+    z-index: 99;
     position: fixed;
     height: 100vh;
     width: 100vw;
@@ -296,7 +341,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 9999999;
+    z-index: 100;
     width: 20rem;
   }
 
