@@ -33,7 +33,11 @@
   });
 
   const deleteDeck = async (id: number | null) => {
-    if(!id) return;
+    if(!id){ // if deck is not yey saved but deleted instantly
+      selectedDeckID = null;
+      selectedDeckName = null;
+      inspectingDeck = false;
+    }
 
     const { error } = await supabase
       .from("decks")
@@ -69,6 +73,9 @@
     selectedDeckName = getRandomDeckName();
     deck = [];
   }
+
+  let ellipseVar = $state('.');
+  setInterval(() => ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.', 300);
 
   let savingDeck: boolean = $state(false); // TODO: lav en loading ting så man kan se at den sletter et deck
 </script>
@@ -113,6 +120,7 @@
             selectedDeckID = null;
             selectedDeckName = null;
             inspectingDeck = false;
+            savingDeck = false;
             console.log(result)
             const existingDeck = decks?.find((deck) => deck.id === result?.data?.newDeck?.id);
             if (existingDeck) {
@@ -129,7 +137,7 @@
           <input type="hidden" name="deckId" bind:value={selectedDeckID}>
           <input type="hidden" name="deck" bind:value={deckJSON}>
           <input type="hidden" name="name" bind:value={selectedDeckName}>
-          <button class="button primary back" type="submit">Back</button>
+          <button class="button primary back" type="submit" onclick={() => {savingDeck = true}} class:saving={savingDeck}>{savingDeck ? `Saving Deck ${ellipseVar}` : "Back"}</button>
         </form>
         <button class="delete" onclick={() => deleteDeck(selectedDeckID)}><span class="icon">{@html getIcon("delete")}</span></button>
       </div>
@@ -277,6 +285,13 @@
     border-top-left-radius: 0px;
     border-bottom-right-radius: 0px;
     border-top-right-radius: 0px;
+    &.saving{
+      background-color: $grey-mid;
+      &:hover{
+        background-color: $grey-mid;
+        cursor: auto;
+      }
+    }
   }
   .delete{
     background-color: $secondary;

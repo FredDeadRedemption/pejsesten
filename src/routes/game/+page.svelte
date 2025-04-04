@@ -35,14 +35,13 @@
 </script>
 
 <main class="main">
-  <a href="/game/test">Load Test Game (no session)</a>
   <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong> change in <a href="/settings">settings</a></p>
   <p>Playin as <strong>{profile?.username}</strong></p>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
 
   <select bind:value={choosenDeckJson}>
     {#each decks as deck}
-      <option value={deck.cards}>{deck.id}</option>
+      <option value={deck.cards}>{deck.name}</option>
     {/each}
   </select>
 

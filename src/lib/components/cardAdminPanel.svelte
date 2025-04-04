@@ -161,8 +161,8 @@
     <button transition:slide={{ axis: "x", duration: 100 }} class="btn download" onclick={() => downloadDivAsPNG(card.name, card.name)}>
       <span class="icon">{@html getIcon("png")}</span>
     </button>
-    <button transition:slide={{ axis: "x", duration: 100 }} class="btn edit" onclick={() => {updating= !updating; setUpdatingCard(card)}}>
-      <span class="icon">{@html getIcon("creator")}</span>
+    <button transition:slide={{ axis: "x", duration: 100 }} class="btn edit" onclick={() => {updating= !updating}}>
+      <span class="icon">{@html getIcon("update")}</span>
     </button>
   {/if}
   <button class="btn delete" onmouseleave={() => deleting = false} onclick={() => deleting ? deleteCard(card.id) : beginDelete()}>
