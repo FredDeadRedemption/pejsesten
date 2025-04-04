@@ -31,35 +31,31 @@
 
     <div>Your turn: { $gameState.yourTurn }</div>
   </div>
-  <!-- GAME ZONES-->
-  <div class="enemy-zone">
+  <!-- GRAVEYARDS -->
+  <div class="graveyard-zone">
     <div class="enemy-graveyard">
       <Graveyard bind:graveyard={ $gameState.enemy.graveyard }></Graveyard>
     </div>
-    <div class="enemy-hand-battlefield-zone">
-      <div class="enemy-hand">
-        <Hand bind:hand={ $gameState.enemy.hand}></Hand>
-      </div>
-      <div class="enemy-battlefield">
-        <Battlefield bind:battleField={ $gameState.enemy.battlefield }></Battlefield>
-      </div>
-    </div>
-    <div class="enemy-deck">
-      <Deck bind:deck={ $gameState.enemy.deck }></Deck>
-    </div>
-  </div>
-  <div class="divider"></div>
-  <div class="self-zone">
     <div class="self-graveyard">
       <Graveyard bind:graveyard={ $gameState.self.graveyard }></Graveyard>
     </div>
-    <div class="self-hand-battlefield-zone">
-      <div class="self-battlefield">
-        <Battlefield bind:battleField={ $gameState.self.battlefield }></Battlefield>
-      </div>
-      <div class="self-hand">
-        <Hand bind:hand={ $gameState.self.hand }></Hand>
-      </div>
+  </div>
+  <!-- HANDS & BATTLEFIELD -->
+  <div class="hand-battlefield-zone">
+    <div class="enemy-hand">
+      <Hand bind:hand={ $gameState.enemy.hand}></Hand>
+    </div>
+    <div class="battlefield">
+      <Battlefield bind:selfBattleField={ $gameState.self.battlefield } bind:enemyBattleField={ $gameState.enemy.battlefield }></Battlefield>
+    </div>
+    <div class="self-hand">
+      <Hand bind:hand={ $gameState.self.hand }></Hand>
+    </div>
+  </div>
+  <!-- DECKS -->
+  <div class="deck-zone">
+    <div class="enemy-deck">
+      <Deck bind:deck={ $gameState.enemy.deck }></Deck>
     </div>
     <div class="self-deck">
       <Deck bind:deck={ $gameState.self.deck }></Deck> 
@@ -87,33 +83,26 @@
     min-height: calc(100vh - 50px);
     max-height: calc(100vh - 50px);
     display: grid;
-    grid-template-rows: 1fr 2px 1fr;
-  }
-  .enemy-zone{
-    background-color: lightsalmon;
-  }
-  .divider{
-    background-color: $black;
-    width: 100%;
-  }
-  .self-zone, .enemy-zone{
-    background-color: teal;
-    display: grid;
     grid-template-columns: 15% 1fr 15%;
   }
-  .self-deck, .enemy-deck{
+  .graveyard-zone, .deck-zone{
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+  }
+  .self-deck, .self-graveyard{
     background-color: red;
   }
-  .self-graveyard, .enemy-graveyard{
-    background-color: red;
+  .enemy-deck, .enemy-graveyard{
+    background-color: goldenrod;
   }
-  .self-hand-battlefield-zone{
+  .hand-battlefield-zone{
     display: grid;
-    grid-template-rows: 1fr 35%;
+    grid-template-rows: 18% 1fr 18%;
   }
-  .enemy-hand-battlefield-zone{
+  .battlefield{
+    background-color: burlywood;
     display: grid;
-    grid-template-rows: 35% 1fr;
+    grid-template-rows: 1fr 1fr;
   }
   .self-hand, .enemy-hand{
     background-color: blueviolet;
