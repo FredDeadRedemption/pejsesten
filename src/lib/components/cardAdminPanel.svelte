@@ -5,12 +5,13 @@
   import type { Database } from '$lib/database.types'; 
 	import { fade, slide } from 'svelte/transition';
 	import { enhance } from '$app/forms';
+	import { fail } from '@sveltejs/kit';
 
 
   type Card = Database['public']['Tables']['cards']['Row'];
 
 
-  let { card, supabase, onDeleteCard }: { card: Card, supabase: SupabaseClient, onDeleteCard: any} = $props()
+  let { card, supabase, onDeleteCard, onUpdateCard }: { card: Card, supabase: SupabaseClient, onDeleteCard: any, onUpdateCard: any} = $props()
 
   const deleteCard = async (id: number) => {
     if(!id) return;
@@ -61,7 +62,12 @@
 
   const beginDelete = () => deleting = true;
 
+  let cardToUpdate: Card | null = $state(null);
   let updating: boolean = $state(false);
+
+  const setUpdatingCard = (card : Card) =>{
+    cardToUpdate = JSON.parse(JSON.stringify(card));
+  }
 
 
   const handleImgUpdate = (event : Event) => {
@@ -74,9 +80,8 @@
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        if(card) {
-          card.image_url = e.target?.result as string;
-          console.log(card.image_url)
+        if(cardToUpdate) {
+          cardToUpdate.image_url = e.target?.result as string;
         }
       }
       reader.readAsDataURL(img);
@@ -84,9 +89,70 @@
     }
   }
 
-  const updateCard = () => {
-    console.log(card.name);
-    updating = false;
+  const updateCard = async() => {
+    if(!cardToUpdate) return;
+    let card = cardToUpdate;
+
+    updating = false;    
+
+    try {
+      // First, get the existing card to check if it exists and preserve values that aren't being updated
+      const { data: existingCard, error: fetchError } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('id', card.id)
+        .single();
+        
+      if (fetchError || !existingCard) {
+        return fail(404, { error: 'Card not found' });
+      }
+      
+      let imageUrl = card.image_url;
+      let needsImageUpdate = existingCard.image_url !== card.image_url;
+
+      if (needsImageUpdate) {
+        if (existingCard.image_url && existingCard.image_url.includes('card-images')) {
+          try {
+            // Extract the path from the URL
+            const pathMatch = existingCard.image_url.match(/card-images\/(.+)$/);
+            if (pathMatch && pathMatch[1]) {
+              await supabase.storage
+               .from('card-images')
+               .remove([`cards/${pathMatch[1]}`]);
+              }
+          } catch (deleteError) {
+            console.error('Failed to delete old image:', deleteError);
+          }
+        }
+      }
+      
+      const { data: updatedCard, error: updateError } = await supabase
+        .from('cards')
+        .update({
+          name: card.name,
+          attack: card.attack,
+          defence: card.defence,
+          holy_cost: card.holy_cost,
+          death_cost: card.death_cost,
+          dream_cost: card.dream_cost,
+          earth_cost: card.earth_cost,
+          description: card.description,
+          race_type: card.race_type,
+          image_url: imageUrl
+        })
+        .eq('id', card.id)
+        .select(); 
+        
+      if (updateError) {
+        console.error("Update error: " + updateError);
+        throw updateError;
+      }
+      onUpdateCard(card);
+      return { success: true, card: updatedCard[0] };
+    } catch (error) {
+      console.error('Error updating card:', error);
+      return fail(500, { error: 'Failed to update card. Please try again.' });
+    }
   }
 </script>
 
@@ -95,7 +161,7 @@
     <button transition:slide={{ axis: "x", duration: 100 }} class="btn download" onclick={() => downloadDivAsPNG(card.name, card.name)}>
       <span class="icon">{@html getIcon("png")}</span>
     </button>
-    <button transition:slide={{ axis: "x", duration: 100 }} class="btn edit" onclick={() => {updating= !updating}}>
+    <button transition:slide={{ axis: "x", duration: 100 }} class="btn edit" onclick={() => {updating= !updating; setUpdatingCard(card)}}>
       <span class="icon">{@html getIcon("creator")}</span>
     </button>
   {/if}
@@ -113,38 +179,37 @@
 
   <div id="update">
     
-    <form method="POST" use:enhance onsubmit={updateCard} >
 
       <div class="grp">
         <label for="name">Name</label>
-        <input type="text" id="name" name="name" required bind:value={card.name}/>
+        <input type="text" id="name" name="name" required bind:value={cardToUpdate!.name}/>
       </div>
 
       <div class="grp-side-by-side-four">
         <div class="grp">
           <label for="holyCost">Holy</label>
-          <input type="number" id="holyCost" name="holyCost" bind:value={card.holy_cost}/>
+          <input type="number" id="holyCost" name="holyCost" bind:value={cardToUpdate!.holy_cost}/>
         </div>
 
         <div class="grp">
           <label for="deathCost">Death</label>
-          <input type="number" id="deathCost" name="deathCost" bind:value={card.death_cost}/>
+          <input type="number" id="deathCost" name="deathCost" bind:value={cardToUpdate!.death_cost}/>
         </div>
 
         <div class="grp">
           <label for="dreamCost">Dream</label>
-          <input type="number" id="dreamCost" name="dreamCost" bind:value={card.dream_cost}/>
+          <input type="number" id="dreamCost" name="dreamCost" bind:value={cardToUpdate!.dream_cost}/>
         </div>
 
         <div class="grp">
           <label for="earthCost">Earth</label>
-          <input type="number" id="earthCost" name="earthCost" bind:value={card.earth_cost}/>
+          <input type="number" id="earthCost" name="earthCost" bind:value={cardToUpdate!.earth_cost}/>
         </div>
       </div>
 
       <div class="grp">
         <label for="description">Description</label>
-        <textarea id="description" name="description" bind:value={card.description}></textarea>
+        <textarea id="description" name="description" bind:value={cardToUpdate!.description}></textarea>
       </div>
 
       <div class="grp">
@@ -152,16 +217,14 @@
 
         <label for="file-upload" class="file-upload">
           
-          <img class="image" src={card.image_url} alt="" draggable="false">
+          <img class="image" src={cardToUpdate!.image_url} alt="" draggable="false">
           <span>{@html getIcon("new")}</span>
         
         </label>
         <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
-        {console.log(card.image_url)}
         
       </div>
-      <button type="submit" class="button primary">Update Card</button>
-    </form>
+      <button onclick={updateCard} class="button primary">Update Card</button>
   </div>
 </div>
 

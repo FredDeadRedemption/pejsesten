@@ -2,6 +2,8 @@
 	import Card from '$lib/components/card.svelte';
 	import CardAdminPanel from '$lib/components/cardAdminPanel.svelte';
 	import { getIcon } from '$lib/icons.js';
+  import type { Database } from '$lib/database.types'; 
+  type CardT = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
   let { land_enums, profile, supabase } = $derived(data);
@@ -16,7 +18,11 @@
   );
 
   const onDeleteCard = (id: number) => cards = cards.filter(card => card.id != id);
-
+  const onUpdateCard = (updatedCard: CardT) => {
+    let i = cards.findIndex(card => card.id === updatedCard.id);
+    cards[i] = updatedCard;
+  }
+ 
   type CostMap = {
     [key: string]: { color: string; icon: string };
   };
@@ -48,7 +54,7 @@
           <Card card={card}></Card>
         </div>
         {#if profile?.is_admin}
-          <CardAdminPanel card={card} supabase={supabase} onDeleteCard={onDeleteCard}></CardAdminPanel>
+          <CardAdminPanel card={card} supabase={supabase} onDeleteCard={onDeleteCard} onUpdateCard={onUpdateCard}></CardAdminPanel>
         {/if}
       </div>
     {/each}
