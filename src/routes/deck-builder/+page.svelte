@@ -33,7 +33,11 @@
   });
 
   const deleteDeck = async (id: number | null) => {
-    if(!id) return;
+    if(!id){ // if deck is not yey saved but deleted instantly
+      selectedDeckID = null;
+      selectedDeckName = null;
+      inspectingDeck = false;
+    }
 
     const { error } = await supabase
       .from("decks")
