@@ -7,6 +7,7 @@
   import { playCard } from "$lib/socket/socket";
   type CardT = Database['public']['Tables']['cards']['Row'];
 
+  let handElement: HTMLElement;
 
   let { hand = $bindable(), battleFieldElement } = $props();
 
@@ -46,21 +47,23 @@
 	  dragCoords.y += e.movementY;
 	};
   function tryPlaceCard(x: number, y: number, dragIndex: number){ // TODO: move this logic into hand component
-    if (!battleFieldElement) return;
+    if (!handElement) return;
     if (dragIndex === null) return; // js moment
     // Get battlefield position and dimensions
-    const rect = battleFieldElement.getBoundingClientRect();
+    const rect = handElement.getBoundingClientRect();
     
     // Check if coordinates are within the battlefield
     console.log(x)
-    const isWithinBattlefield = (
-      x >= rect.left && // TODO: normalize with small card position
-      x <= rect.right &&
-      y >= rect.top &&
-      y <= rect.bottom
+    const cardWidth = 100; // small card size (in cardSmall component)
+    const cardHeight = 147; // small card size (in cardSmall component)
+    const isWithinHand = (
+        (x + cardWidth / 2) >= rect.left &&  
+        (x + cardWidth / 2) <= rect.right &&
+        (y + cardHeight / 2) >= rect.top && 
+        (y + cardHeight / 2) <= rect.bottom
     );
-    if(!isWithinBattlefield) return;
-    console.log("IS WITHIN" + isWithinBattlefield)
+    if(isWithinHand) return;
+    console.log("IS WITHIN HAND" + isWithinHand)
 
     playCard(dragIndex) // HERE I NEED THE INDEX OF THE CARD NOT THE CARD ITSELF
   }
@@ -68,7 +71,7 @@
 
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove}></svelte:window>
 
-<div id="hand">
+<div id="hand" bind:this={handElement}>
   {#each hand as cardID, index}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
@@ -117,6 +120,7 @@
     width: fit-content;
     position: relative;
     height: 100%;
+    width: 100%;
   }
   
   .card-container {
