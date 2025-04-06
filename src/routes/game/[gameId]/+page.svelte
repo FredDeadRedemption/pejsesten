@@ -4,7 +4,7 @@
   import { gameState } from "$lib/socket/socket";
 	import Hand from "$lib/components/hand.svelte";
 	import { onMount } from "svelte";
-	import Battlefield from "$lib/components/battlefield.svelte";
+	import Battlefields from "$lib/components/battlefields.svelte";
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
 	import { setCards } from "$lib/cards.js";
@@ -46,7 +46,7 @@
       <Hand bind:hand={ $gameState.enemy.hand}></Hand>
     </div>
     <div class="battlefield">
-      <Battlefield bind:selfBattleField={ $gameState.self.battlefield } bind:enemyBattleField={ $gameState.enemy.battlefield }></Battlefield>
+      <Battlefields bind:selfBattleField={ $gameState.self.battlefield } bind:enemyBattleField={ $gameState.enemy.battlefield }></Battlefields>
     </div>
     <div class="self-hand">
       <Hand bind:hand={ $gameState.self.hand }></Hand>
