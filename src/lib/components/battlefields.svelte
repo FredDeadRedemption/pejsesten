@@ -22,7 +22,7 @@
     attack({
       origin: origin,
       target: index,
-      face: false,
+      face: false, // TODO: man skal kunne attacke face
     });
     attacking = false;
     origin = null;
