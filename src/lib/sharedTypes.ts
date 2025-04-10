@@ -1,10 +1,13 @@
+import type { Database } from '$lib/database.types'; 
+type Card = Database['public']['Tables']['cards']['Row'];
+
 // this is types that is shared with the backend only!!! :D
 type Board = {
-  deck: number[], 
-  hand: number[], 
-  graveyard: number[], // Mortem
-  battlefield: number[], // Bellum
-  land: number[], // Terra
+  deck: Card[], 
+  hand: Card[], 
+  graveyard: Card[], // Mortem
+  battlefield: Card[], // Bellum
+  land: Card[], // Terra
 }
 
 export type GameState = {

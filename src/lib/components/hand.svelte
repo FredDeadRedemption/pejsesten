@@ -31,7 +31,7 @@
       x: event.clientX -50, // normalize to so client is draggin in the middle of the card
       y: event.clientY -73 // normalize to so client is draggin in the middle of the card
     };
-    dragCard = getCardByID(hand[index])!;
+    dragCard = (hand[index])!;
   }
   const endDrag = () => {
     console.log("chilling")
@@ -72,7 +72,7 @@
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove}></svelte:window>
 
 <div id="hand" bind:this={handElement}>
-  {#each hand as cardID, index}
+  {#each hand as cardInHand, index}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
       class="card-container" 
@@ -88,11 +88,11 @@
           in:scale={{ start: 0.9, duration: 250 }}
           out:scale={{ duration: 200 }}
         >
-          <Card card={getCardByID(cardID)!}/>
+          <Card card={cardInHand!}/>
         </div>
       {:else if draggerIndex !== index}
         <div class="default-card">
-            <CardSmall card={getCardByID(cardID)!}/>
+            <CardSmall card={cardInHand!}/>
         </div>
       {/if}
     </div>

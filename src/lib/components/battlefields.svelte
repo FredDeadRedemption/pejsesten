@@ -39,28 +39,28 @@
 
 
 <div class="enemy-battlefield">
-  {#each enemyBattleField as cardID, index}
+  {#each enemyBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="card-container" style="--i: {index}; --total: {enemyBattleField.length}" onclick={(e) => {
       e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
       tryAttack(index);
     }}>
-      <CardSmall card={getCardByID(cardID)!}></CardSmall>
+      <CardSmall card={card!}></CardSmall>
     </div>  
   {/each}
 </div>
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="self-battlefield" onclick={cancelAttack}>
-  {#each selfBattleField as cardID, index}
+  {#each selfBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="card-container" style="--i: {index}; --total: {selfBattleField.length}" onclick={(e) => {
       e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
       beginAttack(index);
     }}>
-      <CardSmall card={getCardByID(cardID)!}></CardSmall>
+      <CardSmall card={card!}></CardSmall>
     </div>  
   {/each}
 </div>
