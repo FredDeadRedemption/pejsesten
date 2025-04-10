@@ -61,9 +61,6 @@
 </div>
 
 <style lang="scss">
-  img{
-    user-drag: none;
-  }
   .standard-bg{
     outline: 1px solid red;
     background-image: url("/media/cards/card-bg-standard.jpg");
@@ -181,6 +178,7 @@
         flex-grow: 1;
         .text{
           padding: 5px;
+          text-align: center;
         }
       }
       .bottom{  

@@ -140,7 +140,7 @@
         //-----Upload new image-----
         if (newImageFile && newImageFile.size > 0) {
           const fileExt = newImageFile.name.split('.').pop();
-          const fileName = `card-${card.name.replaceAll(" ", "-")}.${fileExt}`;
+          const fileName = `card-${card.name.replaceAll(" ", "-")}${new Date().getTime()}.${fileExt}`;
           const filePath = `cards/${fileName}`; // Store in a "cards" folder for organization
 
           const { data: uploadData, error} = await supabase.storage
@@ -187,7 +187,7 @@
         throw updateError;
       }
 
-
+      card.image_url = newImageBase64!;
       newImageBase64 = null;
       newImageFile = null;
       onUpdateCard(card);
