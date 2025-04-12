@@ -11,17 +11,19 @@
   };
 
   const costMap: CostMap = {
-    earth_cost: { color: "#28b84a" , icon: "leaf" }, // Earth
-    holy_cost: { color: "#f3ca12", icon: "cross" }, // Holys
-    dream_cost: { color: "#af1cb6", icon: "lily" }, // Dream
-    death_cost: { color: "#2a2929", icon: "skull" } // Death
+    green: { color: "#28b84a" , icon: "leaf" }, // Earth
+    white: { color: "#f3ca12", icon: "cross" }, // Holys
+    purple: { color: "#af1cb6", icon: "lily" }, // Dream
+    black: { color: "#2a2929", icon: "skull" }, // Death
+    red: { color: "red", icon: "fire" },
+    orange: { color: "orange", icon: "tool" }
   };
 
   // let primaryCost = Object.entries({
-  //   earth: card.earth_cost,
-  //   dream: card.dream_cost,
-  //   death: card.death_cost,
-  //   holy: card.holy_cost
+  //   earth: card.green,
+  //   dream: card.purple,
+  //   death: card.black,
+  //   holy: card.white
   // }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
   let primaryCost = "standard";
 

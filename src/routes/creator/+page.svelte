@@ -49,23 +49,33 @@
 
     <div class="grp-side-by-side-four">
       <div class="grp">
-        <label for="holyCost">Holy</label>
-        <input type="number" id="holyCost" name="holyCost" />
+        <label for="white">White</label>
+        <input defaultValue="0" type="number" id="white" name="white" />
       </div>
 
       <div class="grp">
-        <label for="deathCost">Death</label>
-        <input type="number" id="deathCost" name="deathCost"/>
+        <label for="black">Black</label>
+        <input defaultValue="0" type="number" id="black" name="black"/>
       </div>
 
       <div class="grp">
-        <label for="dreamCost">Dream</label>
-        <input type="number" id="dreamCost" name="dreamCost" />
+        <label for="purple">Purple</label>
+        <input defaultValue="0" type="number" id="purple" name="purple" />
       </div>
 
       <div class="grp">
-        <label for="earthCost">Earth</label>
-        <input type="number" id="earthCost" name="earthCost" />
+        <label for="green">Green</label>
+        <input defaultValue="0" type="number" id="green" name="green" />
+      </div>
+
+      <div class="grp">
+        <label for="red">Red</label>
+        <input defaultValue="0" type="number" id="red" name="red" />
+      </div>
+
+      <div class="grp">
+        <label for="orange">Orange</label>
+        <input defaultValue="0" type="number" id="orange" name="orange" />
       </div>
     </div>
 

@@ -10,32 +10,7 @@
     [key: string]: { color: string; icon: string };
   };
 
-  const costMap: CostMap = {
-    earth_cost: { color: "#28b84a" , icon: "leaf" }, // Earth
-    holy_cost: { color: "#f3ca12", icon: "cross" }, // Holys
-    dream_cost: { color: "#af1cb6", icon: "lily" }, // Dream
-    death_cost: { color: "#2a2929", icon: "skull" } // Death
-  };
-
-  let primaryCostType = Object.entries({
-    earth: card.earth_cost,
-    dream: card.dream_cost,
-    death: card.death_cost,
-    holy: card.holy_cost
-  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
   let primaryCost = "standard";
-
-  const primaryCostSYMBOL = costMap[`${primaryCostType}_cost`];
-
-
-  let costs: Array<{ color: string, icon: string }> = [];
-
-  Object.entries(costMap).forEach(([costType, costData]) => {
-    const value = card[costType as keyof typeof card];
-    if (typeof value === "number") {
-      costs.push(...Array(value).fill(costData));
-    }
-  });
 </script>
 
 <div id="card" class="{primaryCost}-bg">
@@ -47,8 +22,8 @@
       <img src={card.image_url} alt="" draggable="false">
     </div>
     <div class="costs {primaryCost}">
-        <div class="cost" style="background-color: {primaryCostSYMBOL.color};">
-         <span class="icon">{@html getIcon(primaryCostSYMBOL.icon)}</span>
+        <div class="cost" style="background-color: #2a2929;">
+         <span class="icon">{@html getIcon("skull")}</span>
         </div>
     </div>
     <div class="bottom {primaryCost}">

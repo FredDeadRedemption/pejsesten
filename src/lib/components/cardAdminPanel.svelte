@@ -171,10 +171,12 @@
           name: card.name,
           attack: card.attack,
           defence: card.defence,
-          holy_cost: card.holy_cost,
-          death_cost: card.death_cost,
-          dream_cost: card.dream_cost,
-          earth_cost: card.earth_cost,
+          white: card.white,
+          black: card.black,
+          purple: card.purple,
+          green: card.green,
+          red: card.red,
+          orange: card.orange,
           description: card.description,
           race_type: card.race_type,
           image_url: card.image_url
@@ -231,22 +233,32 @@
       <div class="grp-side-by-side-four">
         <div class="grp">
           <label for="holyCost">Holy</label>
-          <input type="number" id="holyCost" name="holyCost" bind:value={cardToUpdate!.holy_cost}/>
+          <input type="number" id="holyCost" name="holyCost" bind:value={cardToUpdate!.white}/>
         </div>
 
         <div class="grp">
           <label for="deathCost">Death</label>
-          <input type="number" id="deathCost" name="deathCost" bind:value={cardToUpdate!.death_cost}/>
+          <input type="number" id="deathCost" name="deathCost" bind:value={cardToUpdate!.black}/>
         </div>
 
         <div class="grp">
           <label for="dreamCost">Dream</label>
-          <input type="number" id="dreamCost" name="dreamCost" bind:value={cardToUpdate!.dream_cost}/>
+          <input type="number" id="dreamCost" name="dreamCost" bind:value={cardToUpdate!.purple}/>
         </div>
 
         <div class="grp">
           <label for="earthCost">Earth</label>
-          <input type="number" id="earthCost" name="earthCost" bind:value={cardToUpdate!.earth_cost}/>
+          <input type="number" id="earthCost" name="earthCost" bind:value={cardToUpdate!.green}/>
+        </div>
+
+        <div class="grp">
+          <label for="fireCost">Red</label>
+          <input type="number" id="fireCost" name="fireCost" bind:value={cardToUpdate!.red}/>
+        </div>
+
+        <div class="grp">
+          <label for="orangeCost">Orange</label>
+          <input type="number" id="orangeCost" name="orangeCost" bind:value={cardToUpdate!.orange}/>
         </div>
       </div>
 
