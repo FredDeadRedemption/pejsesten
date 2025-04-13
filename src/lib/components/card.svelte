@@ -260,10 +260,10 @@ background: linear-gradient(to right,
 }
 .orange {
   background: linear-gradient(to right, 
-      rgb(255, 203, 161) 0%, 
-      rgba(196, 132, 91, 0.7)100%);
+      rgb(180, 147, 119) 0%, 
+      rgba(163, 99, 60, 0.7)100%);
 }
 .orange-desc {
-  background: rgba(212, 190, 171, 0.9); 
+  background: rgba(212, 186, 163, 0.9); 
 }
 </style>
