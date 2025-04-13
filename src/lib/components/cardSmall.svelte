@@ -23,7 +23,7 @@
     </div>
     <div class="costs {primaryCost}">
         <div class="cost" style="background-color: #2a2929;">
-         <span class="icon">{@html getIcon("skull")}</span>
+         <span class="icon">{@html getIcon("manaBlack")}</span>
         </div>
     </div>
     <div class="bottom {primaryCost}">

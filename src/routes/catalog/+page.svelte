@@ -43,10 +43,10 @@
   };
 
   const costMap: CostMap = {
-    earth_land: { color: "#28b84a", icon: "leaf" }, // Earth
-    holy_land: { color: "#f3ca12", icon: "cross" }, // Holy
-    dream_land: { color: "#af1cb6", icon: "lily" }, // Dream
-    death_land: { color: "#2a2929", icon: "skull" } // Death
+    earth_land: { color: "#28b84a", icon: "manaGreen" }, // Earth
+    holy_land: { color: "#f3ca12", icon: "manaWhite" }, // Holy
+    dream_land: { color: "#af1cb6", icon: "manaPurple" }, // Dream
+    death_land: { color: "#2a2929", icon: "manaBlack" } // Death
   };
 </script>
 

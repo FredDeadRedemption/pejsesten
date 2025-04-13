@@ -11,12 +11,12 @@
   };
 
   const costMap: CostMap = {
-    green: { color: " #38761d", icon: "leaf", iconColor: "#f3f3f3" }, // Earth
-    white: { color: "#e9e9e9", icon: "cross", iconColor: "#434343" }, // Holys
-    purple: { color: "#474ea7", icon: "lily", iconColor: "#f3f3f3" }, // Dream
-    black: { color: "#434343", icon: "skull", iconColor: "#f3f3f3" }, // Death
-    red: { color: "#cc0000", icon: "fire", iconColor: "#f3f3f3" },
-    orange: { color: "#bc874f", icon: "tool", iconColor: "#f3f3f3" }
+    green: { color: " #38761d", icon: "manaGreen", iconColor: "#f3f3f3" }, // Earth
+    white: { color: "#e9e9e9", icon: "manaWhite", iconColor: "#434343" }, // Holys
+    purple: { color: "#474ea7", icon: "manaPurple", iconColor: "#f3f3f3" }, // Dream
+    black: { color: "#434343", icon: "manaBlack", iconColor: "#f3f3f3" }, // Death
+    red: { color: "#cc0000", icon: "manaRed", iconColor: "#f3f3f3" },
+    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" }
   };
 
   let primaryCost = Object.entries({
@@ -77,27 +77,27 @@
     transform: translateY(-50%);
   }
   .red-bg{
-    outline: 1px solid red;
+    outline: 1px solid $mana-red;
     background-image: url("/media/cards/card-bg-red.webp");
   }
   .green-bg{
-    outline: 1px solid rgb(0, 220, 0);
+    outline: 1px solid $mana-green;
     background-image: url("/media/cards/card-bg-green.webp");
   }
   .white-bg{
-    outline: 1px solid rgb(255, 255, 255);
+    outline: 1px solid $mana-white;
     background-image: url("/media/cards/card-bg-white.webp");
   }
   .orange-bg{
-    outline: 1px solid rgb(255, 140, 17);
+    outline: 1px solid $mana-orange;
     background-image: url("/media/cards/card-bg-brown.webp");
   }
   .purple-bg{
-    outline: 1px solid rgb(98, 0, 255);
+    outline: 1px solid $mana-purple;
     background-image: url("/media/cards/card-bg-purple.webp");
   }
   .black-bg{
-    outline: 1px solid rgb(0, 0, 0);
+    outline: 1px solid $mana-black;
     background-image: url("/media/cards/card-bg-black.webp");
   }
   #card{
@@ -234,7 +234,7 @@ background: linear-gradient(to right,
 
 .purple {
   background: linear-gradient(to right, 
-      rgb(236, 239, 251) 0%, 
+      rgb(188, 203, 254) 0%, 
       rgba(150, 155, 190, 0.8) 100%);
 }
 .purple-desc {
@@ -243,33 +243,24 @@ background: linear-gradient(to right,
 
 .green {
   background: linear-gradient(to right, 
-      rgb(238, 252, 231) 0%, 
+      rgb(189, 216, 176) 0%, 
       rgba(160, 180, 150, 0.8) 100%);
 }
 .green-desc {
   background: rgba(170, 189, 159, 0.8);
 }
 
-.standard {
-  background: linear-gradient(to right, 
-      rgb(255, 226, 226) 0%, 
-      rgba(188, 45, 45, 0.5)100%);
-}
-.standard-desc {
-  background: rgba(249, 215, 215, 0.9);
-}
-
 .red {
   background: linear-gradient(to right, 
-      rgb(249, 210, 210) 0%, 
-      rgba(209, 89, 89, 0.5)100%);
+      rgb(240, 166, 166) 0%, 
+      rgba(182, 55, 55, 0.8)100%);
 }
 .red-desc {
   background: rgba(255, 178, 178, 0.8);
 }
 .orange {
   background: linear-gradient(to right, 
-      rgb(255, 239, 226) 0%, 
+      rgb(255, 203, 161) 0%, 
       rgba(196, 132, 91, 0.7)100%);
 }
 .orange-desc {
