@@ -5,6 +5,9 @@
   let { data } = $props()
   let { profile} = $derived(data)
 
+  type creatingT = "minion" | "mana" | "spell";
+
+  let creating: creatingT = $state("minion");
   let cardImage : string | null = $state(null);
 
   const handleImgUpdate = (event : Event) => {
@@ -25,141 +28,150 @@
 
 <main class="main">
   <!-- CREATE FORM -->
-   {#if profile?.is_admin}
-  <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
-    <h1>CREATE MINION</h1>
-    <input type="hidden" id="type" name="type" value="1" required>
-
-    <div class="grp">
-      <label for="name">Name</label>
-      <input type="text" id="name" name="name" required />
-    </div>
-
-    <div class="grp-side-by-side">
-      <div class="grp">
-        <label for="attack">Attack</label>
-        <input type="number" id="attack" name="attack" required />
-      </div>
-  
-      <div class="grp">
-        <label for="defence">Defence</label>
-        <input type="number" id="defence" name="defence" required />
-      </div>
-    </div>
-
-    <div class="grp-side-by-side-four">
-      <div class="grp">
-        <label for="white">White</label>
-        <input defaultValue="0" type="number" id="white" name="white" />
-      </div>
+   <div class="buttons">
+    <button class="button primary" aria-label="minion" onclick={()=> { creating = "minion"; cardImage = null;}}>Create Minion</button>
+    <button class="button primary" aria-label="mana" onclick={()=> { creating = "mana"; cardImage = null;}}>Create Mana</button>
+    <button class="button primary" aria-label="spell" onclick={()=> { creating = "spell"; cardImage = null;}}>Create Spell</button>
+   </div>
+  {#if profile?.is_admin}
+  {#if creating === "minion"}
+    <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
+      <h1>CREATE MINION</h1>
+      <input type="hidden" id="type" name="type" value="1" required>
 
       <div class="grp">
-        <label for="black">Black</label>
-        <input defaultValue="0" type="number" id="black" name="black"/>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+
+      <div class="grp-side-by-side">
+        <div class="grp">
+          <label for="attack">Attack</label>
+          <input type="number" id="attack" name="attack" required />
+        </div>
+    
+        <div class="grp">
+          <label for="defence">Defence</label>
+          <input type="number" id="defence" name="defence" required />
+        </div>
+      </div>
+
+      <div class="grp-side-by-side-four">
+        <div class="grp">
+          <label for="white">White</label>
+          <input defaultValue="0" type="number" id="white" name="white" />
+        </div>
+
+        <div class="grp">
+          <label for="black">Black</label>
+          <input defaultValue="0" type="number" id="black" name="black"/>
+        </div>
+
+        <div class="grp">
+          <label for="purple">Purple</label>
+          <input defaultValue="0" type="number" id="purple" name="purple" />
+        </div>
+
+        <div class="grp">
+          <label for="green">Green</label>
+          <input defaultValue="0" type="number" id="green" name="green" />
+        </div>
+
+        <div class="grp">
+          <label for="red">Red</label>
+          <input defaultValue="0" type="number" id="red" name="red" />
+        </div>
+
+        <div class="grp">
+          <label for="orange">Orange</label>
+          <input defaultValue="0" type="number" id="orange" name="orange" />
+        </div>
       </div>
 
       <div class="grp">
-        <label for="purple">Purple</label>
-        <input defaultValue="0" type="number" id="purple" name="purple" />
+        <label for="description">Description</label>
+        <textarea id="description" name="description"></textarea>
       </div>
 
       <div class="grp">
-        <label for="green">Green</label>
-        <input defaultValue="0" type="number" id="green" name="green" />
-      </div>
-
-      <div class="grp">
-        <label for="red">Red</label>
-        <input defaultValue="0" type="number" id="red" name="red" />
-      </div>
-
-      <div class="grp">
-        <label for="orange">Orange</label>
-        <input defaultValue="0" type="number" id="orange" name="orange" />
-      </div>
-    </div>
-
-    <div class="grp">
-      <label for="description">Description</label>
-      <textarea id="description" name="description"></textarea>
-    </div>
-
-    <div class="grp">
-      <label for="image">Image</label>
-      <label for="file-upload" class="file-upload">
+        <label for="image">Image</label>
+        <label for="file-upload" class="file-upload">
+          
+          {#if cardImage}
+            <img class="image" src={cardImage} alt="" draggable="false">
+          {/if}
+          <span>{@html getIcon("new")}</span>
         
-        {#if cardImage}
-          <img class="image" src={cardImage} alt="" draggable="false">
-        {/if}
-        <span>{@html getIcon("new")}</span>
-      
-      </label>
-      <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
-    </div>
+        </label>
+        <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
+      </div>
 
-    <button type="submit" class="button primary">Create Card</button>
-  </form>
-  <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
-    <h1>CREATE MANA</h1>
-    <input type="hidden" id="type" name="type" value="2" required>
+      <button type="submit" class="button primary">Create Card</button>
+    </form>
+  {/if}
+  {#if creating === "mana"}
+    <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
+      <h1>CREATE MANA</h1>
+      <input type="hidden" id="type" name="type" value="2" required>
 
-    <div class="grp">
-      <label for="name">Name</label>
-      <input type="text" id="name" name="name" required />
-    </div>
-
-    <div class="grp-side-by-side-four">
       <div class="grp">
-        <label for="white">White</label>
-        <input defaultValue="0" type="number" id="white" name="white" />
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+
+      <div class="grp-side-by-side-four">
+        <div class="grp">
+          <label for="white">White</label>
+          <input defaultValue="0" type="number" id="white" name="white" />
+        </div>
+
+        <div class="grp">
+          <label for="black">Black</label>
+          <input defaultValue="0" type="number" id="black" name="black"/>
+        </div>
+
+        <div class="grp">
+          <label for="purple">Purple</label>
+          <input defaultValue="0" type="number" id="purple" name="purple" />
+        </div>
+
+        <div class="grp">
+          <label for="green">Green</label>
+          <input defaultValue="0" type="number" id="green" name="green" />
+        </div>
+
+        <div class="grp">
+          <label for="red">Red</label>
+          <input defaultValue="0" type="number" id="red" name="red" />
+        </div>
+
+        <div class="grp">
+          <label for="orange">Orange</label>
+          <input defaultValue="0" type="number" id="orange" name="orange" />
+        </div>
       </div>
 
       <div class="grp">
-        <label for="black">Black</label>
-        <input defaultValue="0" type="number" id="black" name="black"/>
+        <label for="description">Description</label>
+        <textarea id="description" name="description"></textarea>
       </div>
 
       <div class="grp">
-        <label for="purple">Purple</label>
-        <input defaultValue="0" type="number" id="purple" name="purple" />
-      </div>
-
-      <div class="grp">
-        <label for="green">Green</label>
-        <input defaultValue="0" type="number" id="green" name="green" />
-      </div>
-
-      <div class="grp">
-        <label for="red">Red</label>
-        <input defaultValue="0" type="number" id="red" name="red" />
-      </div>
-
-      <div class="grp">
-        <label for="orange">Orange</label>
-        <input defaultValue="0" type="number" id="orange" name="orange" />
-      </div>
-    </div>
-
-    <div class="grp">
-      <label for="description">Description</label>
-      <textarea id="description" name="description"></textarea>
-    </div>
-
-    <div class="grp">
-      <label for="image">Image</label>
-      <label for="file-upload" class="file-upload">
+        <label for="image">Image</label>
+        <label for="file-upload" class="file-upload">
+          
+          {#if cardImage}
+            <img class="image" src={cardImage} alt="" draggable="false">
+          {/if}
+          <span>{@html getIcon("new")}</span>
         
-        {#if cardImage}
-          <img class="image" src={cardImage} alt="" draggable="false">
-        {/if}
-        <span>{@html getIcon("new")}</span>
-      
-      </label>
-      <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
-    </div>
+        </label>
+        <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
+      </div>
 
-    <button type="submit" class="button primary">Create Card</button>
-  </form>
+      <button type="submit" class="button primary">Create Card</button>
+    </form>
+    {/if}
   {:else}
     <h1>Only admin users can use this page :(</h1>
   {/if}
@@ -173,6 +185,11 @@
     grid-template-columns: 1fr 1fr 1fr;
     justify-content: center;
     gap: 25px;
+  }
+  .buttons{
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
   }
   #create{
     border-radius: 6px;

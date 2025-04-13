@@ -55,9 +55,11 @@
     </div>
     <div class="description {primaryCost}-desc">
       <span class="text">{card.description}</span>
-      <div class="bottom {primaryCost}">
-        {card.attack} | {card.defence}
-      </div>
+      {#if card.type === 1}<!-- IF CARD IS MINION DISPLAT ATTACK -->
+        <div class="bottom {primaryCost}">
+          {card.attack} | {card.defence}
+        </div>
+      {/if}
     </div>
   </div>
 </div>

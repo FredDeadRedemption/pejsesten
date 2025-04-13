@@ -10,6 +10,7 @@ export const actions: Actions = {
 
     // Extract form data
     const name = formData.get('name') as string;
+    const type = parseInt(formData.get("type") as string);
     const attack = parseInt(formData.get('attack') as string);
     const defence = parseInt(formData.get('defence') as string);
     const white = parseInt(formData.get('white') as string);
@@ -22,19 +23,19 @@ export const actions: Actions = {
     const imageFile = formData.get('image') as File;
 
     // Validate required fields
-    if (!name || !attack || !defence) {
-      return fail(400, { error: 'Name, attack, and defence are required' });
+    if (!name) {
+      console.log("name is required");
     }
 
     // Validate image file
     if (imageFile && imageFile.size > 0) {
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
       if (!allowedTypes.includes(imageFile.type)) {
-        return fail(400, { error: 'Invalid file type. Only JPEG, PNG, and GIF are allowed.' });
+        console.log('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
       }
 
       if (imageFile.size > 5 * 1024 * 1024) { // 5MB limit
-        return fail(400, { error: 'File size exceeds the 5MB limit.' });
+        console.log("file is too big!")
       }
     }
 
@@ -72,6 +73,7 @@ export const actions: Actions = {
         .from('cards')
         .insert([{ 
           name, 
+          type,
           attack, 
           defence, 
           white,
