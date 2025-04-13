@@ -7,28 +7,30 @@
   let { card } = $props<{ card: Card }>();
 
   type CostMap = {
-    [key: string]: { color: string; icon: string };
+    [key: string]: { color: string; icon: string, iconColor: string };
   };
 
   const costMap: CostMap = {
-    green: { color: "#28b84a" , icon: "leaf" }, // Earth
-    white: { color: "#f3ca12", icon: "cross" }, // Holys
-    purple: { color: "#af1cb6", icon: "lily" }, // Dream
-    black: { color: "#2a2929", icon: "skull" }, // Death
-    red: { color: "red", icon: "fire" },
-    orange: { color: "orange", icon: "tool" }
+    green: { color: " #38761d", icon: "leaf", iconColor: "#f3f3f3" }, // Earth
+    white: { color: "#e9e9e9", icon: "cross", iconColor: "#434343" }, // Holys
+    purple: { color: "#474ea7", icon: "lily", iconColor: "#f3f3f3" }, // Dream
+    black: { color: "#434343", icon: "skull", iconColor: "#f3f3f3" }, // Death
+    red: { color: "#cc0000", icon: "fire", iconColor: "#f3f3f3" },
+    orange: { color: "#bc874f", icon: "tool", iconColor: "#f3f3f3" }
   };
 
-  // let primaryCost = Object.entries({
-  //   earth: card.green,
-  //   dream: card.purple,
-  //   death: card.black,
-  //   holy: card.white
-  // }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
-  let primaryCost = "standard";
+  let primaryCost = Object.entries({
+    green: card.green,
+    purple: card.purple,
+    black: card.black,
+    white: card.white,
+    red: card.red,
+    orange: card.orange,
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  //let primaryCost = "standard";
 
 
-  let costs: Array<{ color: string, icon: string }> = [];
+  let costs: Array<{ color: string, icon: string, iconColor: string }> = [];
 
   Object.entries(costMap).forEach(([costType, costData]) => {
     const value = card[costType as keyof typeof card];
@@ -47,11 +49,13 @@
       <img src={card.image_url} alt="" draggable="false">
     </div>
     <div class="costs {primaryCost}">
-      {#each costs as c}
-        <div class="cost" style="background-color: {c.color};">
-         <span class="icon">{@html getIcon(c.icon)}</span>
-        </div>
-      {/each}
+      {#if card.type !== 2}
+        {#each costs as c}
+          <div class="cost" style="background-color: {c.color};">
+          <span class="icon" style="color: {c.iconColor}">{@html getIcon(c.icon)}</span>
+          </div>
+        {/each}
+      {/if}
     </div>
     <div class="description {primaryCost}-desc">
       <span class="text">{card.description}</span>
@@ -60,30 +64,41 @@
           {card.attack} | {card.defence}
         </div>
       {/if}
+      {#if card.type === 2}
+        <span class="icon-big" style="color: {costs[0].color}">{@html getIcon(costs[0].icon)}</span>
+      {/if}
     </div>
   </div>
 </div>
 
 <style lang="scss">
-  .standard-bg{
+  .icon-big{
+    scale: 6;
+    transform: translateY(-50%);
+  }
+  .red-bg{
     outline: 1px solid red;
-    background-image: url("/media/cards/card-bg-standard.jpg");
+    background-image: url("/media/cards/card-bg-red.webp");
   }
-  .earth-bg{
+  .green-bg{
     outline: 1px solid rgb(0, 220, 0);
-    background-image: url("/media/cards/card-bg-earth.webp");
+    background-image: url("/media/cards/card-bg-green.webp");
   }
-  .holy-bg{
-    outline: 1px solid rgb(255, 179, 0);
-    background-image: url("/media/cards/card-bg-holy.webp");
+  .white-bg{
+    outline: 1px solid rgb(255, 255, 255);
+    background-image: url("/media/cards/card-bg-white.webp");
   }
-  .dream-bg{
-    outline: 1px solid rgb(204, 0, 255);
-    background-image: url("/media/cards/card-bg-dream.webp");
+  .orange-bg{
+    outline: 1px solid rgb(255, 140, 17);
+    background-image: url("/media/cards/card-bg-brown.webp");
   }
-  .death-bg{
-    outline: 1px solid rgb(253, 252, 252);
-    background-image: url("/media/cards/card-bg-death.webp");
+  .purple-bg{
+    outline: 1px solid rgb(98, 0, 255);
+    background-image: url("/media/cards/card-bg-purple.webp");
+  }
+  .black-bg{
+    outline: 1px solid rgb(0, 0, 0);
+    background-image: url("/media/cards/card-bg-black.webp");
   }
   #card{
     //scale: 0.6; // game scale
@@ -100,8 +115,8 @@
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    padding: 5px;
-    padding-bottom: 6px;
+    padding: 1px;
+    padding-bottom: 3px;
     background-size: cover;
     background-repeat: no-repeat;
     #content{
@@ -199,47 +214,65 @@
       }
     }
   }
-  .holy {
-  background: linear-gradient(to right, 
-      rgb(255, 242, 222) 0%, 
-      rgba(180, 150, 120, 0.8) 100%);
+.white {
+background: linear-gradient(to right, 
+    rgb(201, 201, 201) 0%, 
+    rgba(200, 185, 169, 0.8) 100%);
 }
-.holy-desc {
-  background: rgba(200, 180, 150, 0.95);
-}
-
-.death {
-  background: linear-gradient(to right, 
-      rgb(255, 248, 248) 0%, 
-      rgba(160, 160, 160, 0.8) 100%);
-}
-.death-desc {
-  background: rgba(180, 180, 180, 0.95);
+.white-desc {
+  background: rgba(210, 193, 171, 0.7);
 }
 
-.dream {
+.black {
   background: linear-gradient(to right, 
-      rgb(241, 236, 251) 0%, 
-      rgba(170, 150, 190, 0.8) 100%);
+      rgb(162, 162, 162) 0%, 
+      rgba(93, 93, 93, 0.8) 100%);
 }
-.dream-desc {
-  background: rgba(185, 175, 190, 0.95);
+.black-desc {
+  background: rgba(179, 179, 179, 0.7);
 }
 
-.earth {
+.purple {
+  background: linear-gradient(to right, 
+      rgb(236, 239, 251) 0%, 
+      rgba(150, 155, 190, 0.8) 100%);
+}
+.purple-desc {
+  background: rgba(175, 175, 190, 0.7);
+}
+
+.green {
   background: linear-gradient(to right, 
       rgb(238, 252, 231) 0%, 
       rgba(160, 180, 150, 0.8) 100%);
 }
-.earth-desc {
-  background: rgba(175, 190, 165, 0.95);
+.green-desc {
+  background: rgba(170, 189, 159, 0.8);
 }
-  .standard {
-    background: linear-gradient(to right, 
-        rgb(255, 226, 226) 0%, 
-        rgba(188, 45, 45, 0.5)100%);
-  }
-  .standard-desc {
-    background: rgba(249, 215, 215, 0.9);
-  }
+
+.standard {
+  background: linear-gradient(to right, 
+      rgb(255, 226, 226) 0%, 
+      rgba(188, 45, 45, 0.5)100%);
+}
+.standard-desc {
+  background: rgba(249, 215, 215, 0.9);
+}
+
+.red {
+  background: linear-gradient(to right, 
+      rgb(249, 210, 210) 0%, 
+      rgba(209, 89, 89, 0.5)100%);
+}
+.red-desc {
+  background: rgba(255, 178, 178, 0.8);
+}
+.orange {
+  background: linear-gradient(to right, 
+      rgb(255, 239, 226) 0%, 
+      rgba(196, 132, 91, 0.7)100%);
+}
+.orange-desc {
+  background: rgba(212, 190, 171, 0.9); 
+}
 </style>
