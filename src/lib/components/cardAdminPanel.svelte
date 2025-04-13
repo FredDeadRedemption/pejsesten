@@ -318,9 +318,9 @@
       background-color: red;
     }
   }
-  .download:hover { background-color: $blue; color: $white; }
-  .delete:hover { background-color: $red; color: $white; }
-  .edit:hover { background-color: $yellow; color: $white; }
+  .download:hover { background-color: $info; color: $white; }
+  .delete:hover { background-color: $danger; color: $white; }
+  .edit:hover { background-color: $warning; color: $white; }
 
   #close-btn {
     position: absolute;

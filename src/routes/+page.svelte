@@ -47,12 +47,12 @@
   }
   .status{
     margin-top: 25px;
-    color: $yellow;
+    color: $warning;
     border-radius: 4px;
     padding: 25px;
-    background-color: rgba($color: $yellow, $alpha: 0.2);
+    background-color: rgba($color: $warning, $alpha: 0.2);
     backdrop-filter: blur(5px);
-    border: 1px solid $yellow;
+    border: 1px solid $warning;
   }
   .content{
     position: absolute;

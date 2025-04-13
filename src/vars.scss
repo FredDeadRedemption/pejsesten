@@ -11,14 +11,19 @@ $grey-black: #384034;
 $primary: rgb(76, 146, 117);
 $secondary: #1792bb;
 
-$dream: #af1cb6; // TODO: find på de her farver
-$holy: #f3ca12;
+// mana colors
+$mana-green: #38761d; 
+$mana-orange: #e69138;   
+$mana-red: #cc0000;      
+$mana-purple: #674ea7; 
+$mana-white: #f3f3f3;   
+$mana-black: #434343;
 
 // status colors
-$green: rgb(87, 198, 116);
-$yellow: rgb(234, 200, 80);
-$red: rgb(207, 71, 71);
-$blue: rgb(109, 145, 185);
+$ok: rgb(76, 176, 103);
+$warning: rgb(234, 200, 80);
+$danger: rgb(207, 71, 71);
+$info: rgb(109, 145, 185);
 
 $border-radius-lg: 20px;
 $border-radius-md: 10px;
