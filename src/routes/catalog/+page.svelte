@@ -6,15 +6,30 @@
   type CardT = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
-  let { land_enums, profile, supabase } = $derived(data);
+  let { profile, supabase } = $derived(data);
   let { cards } = $state(data);
 
   let searchTerm: string = $state("");
 
+  let showGreen: boolean = $state(false);
+  let showOrange: boolean = $state(false);
+  let showRed: boolean = $state(false);
+  let showBlue: boolean = $state(false);
+  let showWhite: boolean = $state(false);
+  let showBlack: boolean = $state(false);
+
   let filteredCards = $derived(
-    cards.filter(card =>
-      card.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    cards.filter(card => {
+      const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const a = showGreen ? card.green > 0 : true;
+      const b = showOrange ? card.orange > 0 : true;
+      const c = showRed ? card.red > 0 : true;
+      const d = showBlue ? card.purple > 0 : true;
+      const e = showWhite ? card.white > 0 : true;
+      const f = showBlack ? card.black > 0 : true;
+      
+      return matchesSearch && a && b && c && d && e && f;
+    })
   );
 
   const onDeleteCard = (id: number) => cards = cards.filter(card => card.id != id);
@@ -38,14 +53,12 @@
 <main class="main">
   <div class="bar-wrapper"> 
     <input type="text" name="search" id="" placeholder="Search Catalog" bind:value={searchTerm}>
-    <div class="costs">
-      {#each land_enums as c}
-        <span class="text">{c.name.replace("_land", "")}</span>
-        <div class="cost" style="background-color: {costMap[c.name].color};">
-        <span class="icon">{@html getIcon(costMap[c.name].icon)}</span>
-        </div>
-      {/each}
-    </div>
+    <button class="button" class:active={showGreen} onclick={() => showGreen = !showGreen}>GREEN</button>
+    <button class="button" class:active={showOrange} onclick={() => showOrange = !showOrange}>ORANGE</button>
+    <button class="button" class:active={showRed} onclick={() => showRed = !showRed}>RED</button>
+    <button class="button" class:active={showBlue} onclick={() => showBlue = !showBlue}>BLUE</button>
+    <button class="button" class:active={showWhite} onclick={() => showWhite = !showWhite}>WHITE</button>
+    <button class="button" class:active={showBlack} onclick={() => showBlack = !showBlack}>BLACK</button>
   </div>
   <div class="card-wrapper">
     {#each filteredCards as card (card.id)}
@@ -62,6 +75,9 @@
 </main>
  
 <style lang="scss">
+  .active{
+    background-color: $ok;
+  }
   input{  
     border: none;
     border: 1px solid $grey-mid;
