@@ -26,9 +26,9 @@ export type Database = {
       }
       cards: {
         Row: {
-          attack: number
+          attack: number | null
           black: number
-          defence: number
+          defence: number | null
           description: string | null
           green: number
           id: number
@@ -37,15 +37,15 @@ export type Database = {
           neutral: number
           orange: number
           purple: number
-          race_type: number | null
+          race: number | null
           red: number
           type: number
           white: number
         }
         Insert: {
-          attack: number
+          attack?: number | null
           black?: number
-          defence: number
+          defence?: number | null
           description?: string | null
           green?: number
           id?: number
@@ -54,15 +54,15 @@ export type Database = {
           neutral?: number
           orange?: number
           purple?: number
-          race_type?: number | null
+          race?: number | null
           red?: number
           type?: number
           white?: number
         }
         Update: {
-          attack?: number
+          attack?: number | null
           black?: number
-          defence?: number
+          defence?: number | null
           description?: string | null
           green?: number
           id?: number
@@ -71,15 +71,15 @@ export type Database = {
           neutral?: number
           orange?: number
           purple?: number
-          race_type?: number | null
+          race?: number | null
           red?: number
           type?: number
           white?: number
         }
         Relationships: [
           {
-            foreignKeyName: "cards_race_type_fkey"
-            columns: ["race_type"]
+            foreignKeyName: "cards_race_fkey"
+            columns: ["race"]
             isOneToOne: false
             referencedRelation: "race_enums"
             referencedColumns: ["id"]

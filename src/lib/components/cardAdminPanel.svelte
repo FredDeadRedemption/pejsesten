@@ -178,7 +178,7 @@
           red: card.red,
           orange: card.orange,
           description: card.description,
-          race_type: card.race_type,
+          race: card.race,
           image_url: card.image_url
         })
         .eq('id', card.id)
