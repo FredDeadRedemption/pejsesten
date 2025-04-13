@@ -1,12 +1,9 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import type { Database } from '$lib/database.types'; 
 	import { getIcon } from '$lib/icons.js';
 
   let { data } = $props()
-  let { land_enums, cards, profile} = $derived(data)
-
-  type Card = Database['public']['Tables']['cards']['Row'];
+  let { profile} = $derived(data)
 
   let cardImage : string | null = $state(null);
 
@@ -30,6 +27,9 @@
   <!-- CREATE FORM -->
    {#if profile?.is_admin}
   <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
+    <h1>CREATE MINION</h1>
+    <input type="hidden" id="type" name="type" value="1" required>
+
     <div class="grp">
       <label for="name">Name</label>
       <input type="text" id="name" name="name" required />
@@ -45,6 +45,67 @@
         <label for="defence">Defence</label>
         <input type="number" id="defence" name="defence" required />
       </div>
+    </div>
+
+    <div class="grp-side-by-side-four">
+      <div class="grp">
+        <label for="white">White</label>
+        <input defaultValue="0" type="number" id="white" name="white" />
+      </div>
+
+      <div class="grp">
+        <label for="black">Black</label>
+        <input defaultValue="0" type="number" id="black" name="black"/>
+      </div>
+
+      <div class="grp">
+        <label for="purple">Purple</label>
+        <input defaultValue="0" type="number" id="purple" name="purple" />
+      </div>
+
+      <div class="grp">
+        <label for="green">Green</label>
+        <input defaultValue="0" type="number" id="green" name="green" />
+      </div>
+
+      <div class="grp">
+        <label for="red">Red</label>
+        <input defaultValue="0" type="number" id="red" name="red" />
+      </div>
+
+      <div class="grp">
+        <label for="orange">Orange</label>
+        <input defaultValue="0" type="number" id="orange" name="orange" />
+      </div>
+    </div>
+
+    <div class="grp">
+      <label for="description">Description</label>
+      <textarea id="description" name="description"></textarea>
+    </div>
+
+    <div class="grp">
+      <label for="image">Image</label>
+      <label for="file-upload" class="file-upload">
+        
+        {#if cardImage}
+          <img class="image" src={cardImage} alt="" draggable="false">
+        {/if}
+        <span>{@html getIcon("new")}</span>
+      
+      </label>
+      <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />
+    </div>
+
+    <button type="submit" class="button primary">Create Card</button>
+  </form>
+  <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
+    <h1>CREATE MANA</h1>
+    <input type="hidden" id="type" name="type" value="2" required>
+
+    <div class="grp">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" required />
     </div>
 
     <div class="grp-side-by-side-four">
