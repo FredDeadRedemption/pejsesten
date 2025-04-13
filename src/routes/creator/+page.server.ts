@@ -29,9 +29,9 @@ export const actions: Actions = {
 
     // Validate image file
     if (imageFile && imageFile.size > 0) {
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!allowedTypes.includes(imageFile.type)) {
-        console.log('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
+        console.log('Invalid file type. Only JPEG, PNG, and WEBP are allowed.');
       }
 
       if (imageFile.size > 5 * 1024 * 1024) { // 5MB limit
