@@ -7,7 +7,16 @@
   let { card } = $props<{ card: Card }>();
 
   type CostMap = {
-    [key: string]: { color: string; icon: string };
+    [key: string]: { color: string; icon: string, iconColor: string };
+  };
+
+  const costMap: CostMap = {
+    green: { color: " #38761d", icon: "manaGreen", iconColor: "#f3f3f3" }, // Earth
+    white: { color: "#d2d2d2", icon: "manaWhite", iconColor: "#434343" }, // Holys
+    purple: { color: "#474ea7", icon: "manaPurple", iconColor: "#f3f3f3" }, // Dream
+    black: { color: "#434343", icon: "manaBlack", iconColor: "#f3f3f3" }, // Death
+    red: { color: "#cc0000", icon: "manaRed", iconColor: "#f3f3f3" },
+    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" }
   };
 
   let primaryCost = Object.entries({
@@ -18,6 +27,15 @@
     red: card.red,
     orange: card.orange,
   }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+
+  let costs: Array<{ color: string, icon: string, iconColor: string }> = [];
+
+  Object.entries(costMap).forEach(([costType, costData]) => {
+    const value = card[costType as keyof typeof card];
+    if (typeof value === "number") {
+      costs.push(...Array(value).fill(costData));
+    }
+  });
 </script>
 
 <div id="card" class="{primaryCost}-bg">
@@ -28,12 +46,21 @@
     <div class="img-wrap">
       <img src={card.image_url} alt="" draggable="false">
     </div>
-    <div class="costs {primaryCost}">
-      
-    </div>
-    <div class="bottom {primaryCost}">
-      {card.attack} | {card.defence}
-    </div>
+    {#if card.type === 2}
+      <div class="costs-mana {primaryCost}">
+  
+      </div>
+      <div class="mana-logo">
+        <span class="icon" style="color: {costs[0]?.color};">{@html getIcon(costs[0]?.icon)}</span>
+      </div>
+    {:else}
+      <div class="costs {primaryCost}">
+        
+      </div>
+      <div class="bottom {primaryCost}">
+        {card.attack} | {card.defence}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -131,20 +158,26 @@
         width: 100%;
         //background-color: $grey-light;
         padding: 2px;
-        .cost{
-          color: $white;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 14px;
-          height: 14px;
-          border-radius: 100px;
-          .icon{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-        } 
+      }
+      .costs-mana{
+        width: 100%;
+        border: 2px solid $black;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        width: 100%;
+        //background-color: $grey-light;
+        padding: 2px;
+      }
+      .mana-logo{
+        display: flex;
+        justify-content: center;
+        flex: 1;
+        width: 100%;
+        .icon{
+          scale: 4.5;
+        }
       }
       .description{
         display: none;
