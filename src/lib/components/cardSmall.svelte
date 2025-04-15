@@ -10,7 +10,14 @@
     [key: string]: { color: string; icon: string };
   };
 
-  let primaryCost = "standard";
+  let primaryCost = Object.entries({
+    green: card.green,
+    purple: card.purple,
+    black: card.black,
+    white: card.white,
+    red: card.red,
+    orange: card.orange,
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
 </script>
 
 <div id="card" class="{primaryCost}-bg">
@@ -22,9 +29,7 @@
       <img src={card.image_url} alt="" draggable="false">
     </div>
     <div class="costs {primaryCost}">
-        <div class="cost" style="background-color: #2a2929;">
-         <span class="icon">{@html getIcon("manaBlack")}</span>
-        </div>
+      
     </div>
     <div class="bottom {primaryCost}">
       {card.attack} | {card.defence}
@@ -33,25 +38,29 @@
 </div>
 
 <style lang="scss">
-  .standard-bg{
-    outline: 1px solid red;
-    background-image: url("/media/cards/card-bg-standard.jpg");
+  .red-bg{
+    outline: 1px solid $mana-red;
+    background-image: url("/media/cards/card-bg-red.webp");
   }
-  .earth-bg{
-    outline: 1px solid rgb(0, 220, 0);
-    background-image: url("/media/cards/card-bg-earth.webp");
+  .green-bg{
+    outline: 1px solid $mana-green;
+    background-image: url("/media/cards/card-bg-green.webp");
   }
-  .holy-bg{
-    outline: 1px solid rgb(255, 179, 0);
-    background-image: url("/media/cards/card-bg-holy.webp");
+  .white-bg{
+    outline: 1px solid $mana-white;
+    background-image: url("/media/cards/card-bg-white.webp");
   }
-  .dream-bg{
-    outline: 1px solid rgb(204, 0, 255);
-    background-image: url("/media/cards/card-bg-dream.webp");
+  .orange-bg{
+    outline: 1px solid $mana-orange;
+    background-image: url("/media/cards/card-bg-brown.webp");
   }
-  .death-bg{
-    outline: 1px solid rgb(253, 252, 252);
-    background-image: url("/media/cards/card-bg-death.webp");
+  .purple-bg{
+    outline: 1px solid $mana-purple;
+    background-image: url("/media/cards/card-bg-purple.webp");
+  }
+  .black-bg{
+    outline: 1px solid $mana-black;
+    background-image: url("/media/cards/card-bg-black.webp");
   }
   #card{
     //scale: 0.6; // game scale
@@ -168,47 +177,56 @@
       }
     }
   }
-  .holy {
-  background: linear-gradient(to right, 
-      rgb(255, 242, 222) 0%, 
-      rgba(180, 150, 120, 0.8) 100%);
+  .white {
+background: linear-gradient(to right, 
+    rgb(201, 201, 201) 0%, 
+    rgba(200, 185, 169, 0.8) 100%);
 }
-.holy-desc {
-  background: rgba(200, 180, 150, 0.95);
-}
-
-.death {
-  background: linear-gradient(to right, 
-      rgb(255, 248, 248) 0%, 
-      rgba(160, 160, 160, 0.8) 100%);
-}
-.death-desc {
-  background: rgba(180, 180, 180, 0.95);
+.white-desc {
+  background: rgba(210, 193, 171, 0.7);
 }
 
-.dream {
+.black {
   background: linear-gradient(to right, 
-      rgb(241, 236, 251) 0%, 
-      rgba(170, 150, 190, 0.8) 100%);
+      rgb(162, 162, 162) 0%, 
+      rgba(93, 93, 93, 0.8) 100%);
 }
-.dream-desc {
-  background: rgba(185, 175, 190, 0.95);
+.black-desc {
+  background: rgba(179, 179, 179, 0.7);
 }
 
-.earth {
+.purple {
   background: linear-gradient(to right, 
-      rgb(238, 252, 231) 0%, 
+      rgb(188, 203, 254) 0%, 
+      rgba(150, 155, 190, 0.8) 100%);
+}
+.purple-desc {
+  background: rgba(175, 175, 190, 0.7);
+}
+
+.green {
+  background: linear-gradient(to right, 
+      rgb(189, 216, 176) 0%, 
       rgba(160, 180, 150, 0.8) 100%);
 }
-.earth-desc {
-  background: rgba(175, 190, 165, 0.95);
+.green-desc {
+  background: rgba(170, 189, 159, 0.8);
 }
-  .standard {
-    background: linear-gradient(to right, 
-        rgb(255, 226, 226) 0%, 
-        rgba(188, 45, 45, 0.5)100%);
-  }
-  .standard-desc {
-    background: rgba(249, 215, 215, 0.9);
-  }
+
+.red {
+  background: linear-gradient(to right, 
+      rgb(240, 166, 166) 0%, 
+      rgba(182, 55, 55, 0.8)100%);
+}
+.red-desc {
+  background: rgba(255, 178, 178, 0.8);
+}
+.orange {
+  background: linear-gradient(to right, 
+      rgb(180, 147, 119) 0%, 
+      rgba(163, 99, 60, 0.7)100%);
+}
+.orange-desc {
+  background: rgba(212, 186, 163, 0.9); 
+}
 </style>
