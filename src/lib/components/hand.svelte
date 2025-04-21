@@ -13,7 +13,7 @@
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
-  let dragCoords = $state({ x: 0, y: 0});
+  let dragCoords = $state({ x: 0, y: 0}); 
   let dragCard: CardT | null = $state(null);
 
   const setHover = (index: number) =>hoverIndex = index;
