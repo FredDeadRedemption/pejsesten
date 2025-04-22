@@ -32,11 +32,18 @@
   setInterval(() => ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.', 300);
 
   let queuedUp = $state(false);
+
+  const resetProd = async () => {
+    const res = await fetch("https://matrixz-gs.up.railway.app/resetGame");
+  
+    console.log(res);
+  }
 </script>
 
 <main class="main">
   <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong> change in <a href="/settings">settings</a></p>
   <p>Playin as <strong>{profile?.username}</strong></p>
+  <button onclick={resetProd}>reset prod gamestate & queueu</button>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
 
   <select bind:value={choosenDeckJson}>
