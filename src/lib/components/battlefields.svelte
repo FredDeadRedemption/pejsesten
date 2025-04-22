@@ -3,7 +3,7 @@
   import { getCardByID } from "$lib/cards";
   import { attack } from "$lib/socket/socket";
 
-  let { selfBattleField = $bindable(), enemyBattleField = $bindable() } = $props();
+  let { selfBattleField = $bindable(), enemyBattleField = $bindable(), selfHP = $bindable(), enemyHP = $bindable()} = $props();
 
   let attacking: boolean = $state(false);
   let origin: number | null = $state(null);
@@ -47,7 +47,7 @@
   <div class="hero enemy" bind:this={enemyHero} onclick={(e) => {
     e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
     tryAttack(-1, true);
-  }}></div>
+  }}><span class="hp">{enemyHP}</span></div>
   {#each enemyBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -62,7 +62,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="self-battlefield" onclick={cancelAttack}>
-  <div class="hero self" bind:this={selfHero}></div>
+  <div class="hero self" bind:this={selfHero}><span class="hp">{selfHP}</span></div>
   {#each selfBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -76,6 +76,10 @@
 </div>
 
 <style lang="scss">
+  .hp{
+    color: white;
+    font-size: 1.5rem;
+  }
   .self-battlefield, .enemy-battlefield{
     display: flex;
     justify-content: center;
@@ -93,6 +97,9 @@
       translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 110px))
   }
   .hero {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     position: absolute;
     height: 60px;
     width: 60px;

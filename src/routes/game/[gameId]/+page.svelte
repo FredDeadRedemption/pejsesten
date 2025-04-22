@@ -43,10 +43,16 @@
   <!-- HANDS & BATTLEFIELD -->
   <div class="hand-battlefield-zone">
     <div class="enemy-hand">
+      
       <Hand bind:hand={ $gameState.enemy.hand}></Hand>
     </div>
     <div class="battlefield">
-      <Battlefields bind:selfBattleField={ $gameState.self.battlefield } bind:enemyBattleField={ $gameState.enemy.battlefield }></Battlefields>
+      <Battlefields 
+      bind:selfBattleField={ $gameState.self.battlefield } 
+      bind:enemyBattleField={ $gameState.enemy.battlefield }
+      bind:selfHP={ $gameState.selfHP }
+      bind:enemyHP={ $gameState.enemyHP }
+      ></Battlefields>
     </div>
     <div class="self-hand">
       <Hand bind:hand={ $gameState.self.hand }></Hand>
