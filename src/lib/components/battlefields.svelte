@@ -8,6 +8,9 @@
   let attacking: boolean = $state(false);
   let origin: number | null = $state(null);
 
+  let selfHero: HTMLElement;
+  let enemyHero: HTMLElement;
+
   const beginAttack = (index: number) => {
     console.log("ATTACKING WITH INDEX: ", index)
     if(attacking) return;
@@ -15,14 +18,14 @@
     origin = index;
   }
 
-  const tryAttack = (index: number) => {
+  const tryAttack = (index: number, face: boolean) => {
     if(!attacking) return;
     if(origin === null) return;
-    console.log("TRYING TO ATTACK INDEX: ", index)
+    console.log("TRYING TO ATTACK INDEX: ", index, "FACE: ", face)
     attack({
       origin: origin,
       target: index,
-      face: false, // TODO: man skal kunne attacke face
+      face: face, 
     });
     attacking = false;
     origin = null;
@@ -39,12 +42,18 @@
 
 
 <div class="enemy-battlefield">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="hero enemy" bind:this={enemyHero} onclick={(e) => {
+    e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
+    tryAttack(-1, true);
+  }}></div>
   {#each enemyBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="card-container" style="--i: {index}; --total: {enemyBattleField.length}" onclick={(e) => {
       e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
-      tryAttack(index);
+      tryAttack(index, false);
     }}>
       <CardSmall card={card!}></CardSmall>
     </div>  
@@ -53,6 +62,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="self-battlefield" onclick={cancelAttack}>
+  <div class="hero self" bind:this={selfHero}></div>
   {#each selfBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -81,5 +91,21 @@
     left: 50%;
     transform: 
       translateX(calc(-50% + (var(--i) - (var(--total) - 1)/2) * 110px))
+  }
+  .hero {
+    position: absolute;
+    height: 60px;
+    width: 60px;
+    border-radius: 100px;
+    &.self {
+      align-self: flex-end;
+      transform: translateY(30px);
+      background-color: blue;
+    }
+    &.enemy {
+      align-self: flex-start;
+      transform: translateY(-30px);
+      background-color: red;
+    }
   }
 </style>
