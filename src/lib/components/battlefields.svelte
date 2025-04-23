@@ -8,9 +8,6 @@
   let attacking: boolean = $state(false);
   let origin: number | null = $state(null);
 
-  let selfHero: HTMLElement;
-  let enemyHero: HTMLElement;
-
   const beginAttack = (index: number) => {
     console.log("ATTACKING WITH INDEX: ", index)
     if(attacking) return;
@@ -44,7 +41,7 @@
 <div class="enemy-battlefield">
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="hero enemy" bind:this={enemyHero} onclick={(e) => {
+  <div class="hero enemy" onclick={(e) => {
     e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
     tryAttack(-1, true);
   }}><span class="hp">{enemyHP}</span></div>
@@ -62,7 +59,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="self-battlefield" onclick={cancelAttack}>
-  <div class="hero self" bind:this={selfHero}><span class="hp">{selfHP}</span></div>
+  <div class="hero self"><span class="hp">{selfHP}</span></div>
   {#each selfBattleField as card, index}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
