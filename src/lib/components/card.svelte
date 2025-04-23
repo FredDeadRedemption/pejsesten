@@ -32,12 +32,19 @@
 
   let costs: Array<{ color: string, icon: string, iconColor: string }> = [];
 
-  Object.entries(costMap).forEach(([costType, costData]) => {
-    const value = card[costType as keyof typeof card];
-    if (typeof value === "number") {
-      costs.push(...Array(value).fill(costData));
-    }
-  });
+  type x = {
+    name: string, count: number,
+  }
+
+  let manaCosts = $derived([
+    { name: "green", count: Array(card.green).fill(null) },
+    { name: "orange", count: Array(card.orange).fill(null) },
+    { name: "red", count: Array(card.red).fill(null) },
+    { name: "purple", count: Array(card.purple).fill(null) },
+    { name: "white", count: Array(card.white).fill(null) },
+    { name: "black", count: Array(card.black).fill(null) }
+  ]);
+
 </script>
 
 <div id="card" class="{primaryCost}-bg">
@@ -50,21 +57,25 @@
     </div>
     <div class="costs {primaryCost}">
       {#if card.type !== 2}
-        {#each costs as c}
-          <div class="cost" style="background-color: {c.color};">
-          <span class="icon" style="color: {c.iconColor}">{@html getIcon(c.icon)}</span>
-          </div>
+        {#each manaCosts as mana}
+          {#if mana.count.length > 0}
+            {#each mana.count as _}
+              <div class="cost" style="background-color: {costMap[mana.name].color};">
+                <span class="icon" style="color: {costMap[mana.name].iconColor}">{@html getIcon(costMap[mana.name].icon)}</span>
+              </div>              
+            {/each}
+          {/if}
         {/each}
       {/if}
     </div>
     <div class="description {primaryCost}-desc">
       <span class="text">{card.description}</span>
-      {#if card.type === 1}<!-- IF CARD IS MINION DISPLAT ATTACK -->
+      {#if card.type === 1}<!-- IF CARD IS MINION DISPLAY ATTACK -->
         <div class="bottom {primaryCost}">
           {card.attack} | {card.defence}
         </div>
       {/if}
-      {#if card.type === 2}
+      {#if card.type === 2 && costs.length > 0} <!-- IF CARD IS MANA DISPLAY COSTS -->
         <span class="icon-big" style="color: {costs[0].color}">{@html getIcon(costs[0].icon)}</span>
       {/if}
     </div>
