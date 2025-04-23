@@ -8,6 +8,7 @@ type Board = {
   graveyard: Card[], // Mortem
   battlefield: Card[], // Bellum
   land: Card[], // Terra
+  hp: number,
 }
 
 export type GameState = {
@@ -15,8 +16,6 @@ export type GameState = {
   enemy: Board,
   whitePlayerID: string; // used for validation turn
   blackPlayerID: string; // used for validation turn
-  selfHP: number,
-  enemyHP: number,
   yourTurn: boolean, // used for processing the actual game 
   turnCount: number,
 }
