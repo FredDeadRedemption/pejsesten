@@ -7,6 +7,17 @@
 
   let showMinions: boolean = $state(false);
   let showManas: boolean = $state(false);
+  let showSpells: boolean = $state(false);
+  let showIncantations: boolean = $state(false);
+
+  // x is the variable that should not be reset
+  const resetCardTypes = (x: number) => {
+    if (x != 1) showMinions = false;
+    if (x != 2) showManas = false;
+    if (x != 3) showSpells = false;
+    if (x != 4)  showIncantations = false;
+  }
+
   let showGreen: boolean = $state(false);
   let showOrange: boolean = $state(false);
   let showRed: boolean = $state(false);
@@ -25,8 +36,10 @@
       const f = showBlack ? card.black > 0 : true;
       const g = showMinions ? card.type === 1 : true;
       const h = showManas ? card.type === 2 : true; 
+      const i = showSpells ? card.type === 3 : true;
+      const j = showIncantations ? card.type === 4 : true;
       
-      return matchesSearch && a && b && c && d && e && f && g && h;
+      return matchesSearch && a && b && c && d && e && f && g && h && i && j;
     });
   }
   filter();
@@ -35,8 +48,10 @@
 <div class="bar-wrapper">
   <input type="text" name="search" id="" placeholder="Search Catalog" bind:value={searchTerm} onchange={filter}>
   <div class="type-switch">
-    <button class="button minion-trigger" class:active={showMinions} onclick={() => { showMinions = !showMinions; if(showManas) showManas = false; filter() } }>Minions</button>
-    <button class="button mana-trigger" class:active={showManas} onclick={() => { showManas = !showManas; if(showMinions) showMinions = false; filter() } }>Manas</button>  
+    <button class="button minion-trigger" class:active={showMinions} onclick={() => { resetCardTypes(1); showMinions = !showMinions; filter() } }>Minions</button>
+    <button class="button mana-trigger" class:active={showManas} onclick={() => { resetCardTypes(2); showManas = !showManas; filter() } }>Manas</button>  
+    <button class="button spell-trigger" class:active={showSpells} onclick={() => { resetCardTypes(3); showSpells = !showSpells; filter() } }>Spells</button>
+    <button class="button incantation-trigger" class:active={showIncantations} onclick={() => { resetCardTypes(4); showIncantations = !showIncantations; filter()}}>Incantation</button>
   </div>
   <button class="button mana green" class:active={showGreen} onclick={() => {showGreen = !showGreen; filter()}}><span class="icon green">{@html getIcon("manaGreen")}</span></button>
   <button class="button mana orange" class:active={showOrange} onclick={() => {showOrange = !showOrange; filter()}}><span class="icon orange">{@html getIcon("manaOrange")}</span></button>
@@ -50,8 +65,9 @@
   .type-switch{
     display: flex;
   }
-  .minion-trigger, .mana-trigger{
+  .minion-trigger, .mana-trigger, .spell-trigger, .incantation-trigger{
     border: 1px solid $grey-mid;
+    border-right: none;
     background-color: $grey-ultralight;
     color: $grey-dark;
     padding: 8px;
@@ -64,11 +80,11 @@
     }
   }
   .minion-trigger{
-    border-right: none;
     border-top-left-radius: 5px;
     border-bottom-left-radius: 5px;
   }
-  .mana-trigger{
+  .incantation-trigger{
+    border-right: 1px solid $grey-mid;
     border-top-right-radius: 5px;
     border-bottom-right-radius: 5px;
   }

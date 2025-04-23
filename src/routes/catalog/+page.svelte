@@ -12,24 +12,12 @@
 
   let filteredCards = $state<CardT[]>([]);
 
-  const onDeleteCard = (id: number) => cards = cards.filter(card => card.id != id);
+  const onDeleteCard = (id: number) => { cards = cards.filter(card => card.id != id); filteredCards = cards;};
   const onUpdateCard = (updatedCard: CardT) => {
     let i = cards.findIndex(card => card.id === updatedCard.id);
     cards[i] = updatedCard;
+    filteredCards = cards;
   }
- 
-  type ManaMap = {
-    [key: string]: { color: string; icon: string, iconColor: string };
-  };
-
-  const manaMap: ManaMap = {
-    green: { color: " #38761d", icon: "manaGreen", iconColor: "#f3f3f3" }, // Earth
-    white: { color: "#e9e9e9", icon: "manaWhite", iconColor: "#434343" }, // Holys
-    purple: { color: "#474ea7", icon: "manaPurple", iconColor: "#f3f3f3" }, // Dream
-    black: { color: "#434343", icon: "manaBlack", iconColor: "#f3f3f3" }, // Death
-    red: { color: "#cc0000", icon: "manaRed", iconColor: "#f3f3f3" },
-    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" }
-  };
 </script>
 
 <main class="main">

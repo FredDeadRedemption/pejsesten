@@ -36,7 +36,7 @@
   main{
     margin-top: 50px;
     margin-left: 50px;
-    background-color: $grey-ultralight;
+    background-color: rgb(91, 110, 140);
     min-width: calc(100vw - 50px);
     min-height: calc(100vh - 50px);
     overflow: hidden;
