@@ -197,7 +197,9 @@ const decrement = (name: string) => {
           </div>
           <div class="tips"></div>
           <div class="buttons">
-            <button type="submit" class="button primary">Create Card</button>
+            <button type="submit" class="button primary" onclick={() => setTimeout(()=>{
+              resetForm();
+            }, 10)}>Create Card</button>
             <button type="button" class="button secondary" onclick={resetForm}>Reset</button>
           </div>
         </div>
@@ -213,7 +215,6 @@ const decrement = (name: string) => {
     {/if}
   </div>
 </main>
-
 
 <style lang="scss">
   .main{
