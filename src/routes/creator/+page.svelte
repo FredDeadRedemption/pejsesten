@@ -74,7 +74,7 @@
 	  purple: manaCounts.purple,
 	  white: manaCounts.white,
 	  black: manaCounts.black,
-	  image_url: cardImage ?? "",
+	  image_url: cardImage ?? "media/cards/missing-texture.jpg",
 	  type: creating === "minion" ? 1 : creating === "mana" ? 2 : creating === "spell" ? 3 : 4,
 	  neutral: manaCounts.neutral,
 	  race: null
@@ -133,7 +133,7 @@ const decrement = (name: string) => {
       <button class="button" aria-label="incantation" class:active={creating === "incantation"} onclick={()=> { creating = "incantation"; resetForm();}}>Create Incantation</button>
     </div>
     {#if profile?.is_admin}
-      <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={resetForm}>
+      <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data">
         {#if creating === "minion"}
           <input type="hidden" id="type" name="type" value="1" required>
         {:else if creating === "mana"}
@@ -186,19 +186,19 @@ const decrement = (name: string) => {
         <div class="quad">
           <div class="upload">
             <label for="file-upload" class="file-upload">
-              <span>{@html getIcon("new")}</span>
+              <span>{@html getIcon("photoPlus")}</span>
             </label>
             <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />     
           </div>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="unload" onclick={() => { cardImage = null; }}>
-            <span>{@html getIcon("new")}</span>
+            <span>{@html getIcon("photoMinus")}</span>
           </div>
           <div class="tips"></div>
           <div class="buttons">
             <button type="submit" class="button primary">Create Card</button>
-            <button type="reset" class="button secondary" onclick={resetForm}>Reset</button>
+            <button type="button" class="button secondary" onclick={resetForm}>Reset</button>
           </div>
         </div>
       </form>
