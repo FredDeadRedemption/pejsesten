@@ -5,7 +5,7 @@
   let { data } = $props()
   let { profile} = $derived(data)
 
-  type creatingT = "minion" | "mana" | "spell";
+  type creatingT = "minion" | "mana" | "spell" | "incantation";
 
   let creating: creatingT = $state("minion");
   let cardImage : string | null = $state(null);
@@ -28,10 +28,11 @@
 
 <main class="main">
   <!-- CREATE FORM -->
-   <div class="buttons">
-    <button class="button primary" aria-label="minion" onclick={()=> { creating = "minion"; cardImage = null;}}>Create Minion</button>
-    <button class="button primary" aria-label="mana" onclick={()=> { creating = "mana"; cardImage = null;}}>Create Mana</button>
-    <button class="button primary" aria-label="spell" onclick={()=> { creating = "spell"; cardImage = null;}}>Create Spell</button>
+   <div class="form-selector">
+    <button class="button" aria-label="minion" class:active={creating === "minion"} onclick={()=> { creating = "minion"; cardImage = null;}}>Create Minion</button>
+    <button class="button" aria-label="mana" class:active={creating === "mana"} onclick={()=> { creating = "mana"; cardImage = null;}}>Create Mana</button>
+    <button class="button" aria-label="spell" class:active={creating === "spell"} onclick={()=> { creating = "spell"; cardImage = null;}}>Create Spell</button>
+    <button class="button" aria-label="incantation" class:active={creating === "incantation"} onclick={()=> { creating = "incantation"; cardImage = null;}}>Create Spell</button>
    </div>
   {#if profile?.is_admin}
   {#if creating === "minion"}
@@ -180,16 +181,43 @@
 
 <style lang="scss">
   .main{
+    align-self: center;
+    max-width: 800px;
     margin: 30px;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    justify-content: center;
-    gap: 25px;
-  }
-  .buttons{
     display: flex;
-    gap: 10px;
     flex-direction: column;
+    gap: 10px;
+  }
+  .form-selector{
+    min-width: 800px;
+    padding: 10px;
+    background-color: $grey-light;
+    border-radius: 10px;
+    display: flex;
+    button{
+      border: 1px solid $grey-mid;
+      border-left: none;
+      border: right 1px solid $grey-mid;
+      background-color: $grey-ultralight;
+      color: $grey-dark;
+      padding: 8px;
+      &.active{
+        color: $white;
+        background-color: $secondary;
+      }
+      &:hover{
+        cursor: pointer;
+      }
+      width: 100%;
+      &:first-child{
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+      }
+      &:last-child{
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+      }
+    }
   }
   #create{
     border-radius: 6px;
