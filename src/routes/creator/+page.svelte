@@ -183,16 +183,24 @@ const decrement = (name: string) => {
             <textarea bind:value={description} id="description" name="description" placeholder="Description"></textarea>
         </div>
 
-        <label for="file-upload" class="file-upload">
-  
-          {#if cardImage}
-            <img class="image" src={cardImage} alt="" draggable="false">
-          {/if}
-          <span>{@html getIcon("new")}</span>
-        
-        </label>
-        <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />   
-        <button type="submit" class="button primary">Create Card</button>
+        <div class="quad">
+          <div class="upload">
+            <label for="file-upload" class="file-upload">
+              <span>{@html getIcon("new")}</span>
+            </label>
+            <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />     
+          </div>
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="unload" onclick={() => { cardImage = null; }}>
+            <span>{@html getIcon("new")}</span>
+          </div>
+          <div class="tips"></div>
+          <div class="buttons">
+            <button type="submit" class="button primary">Create Card</button>
+            <button type="reset" class="button secondary" onclick={resetForm}>Reset</button>
+          </div>
+        </div>
       </form>
     {:else}
       <h1>Only admin users can use this page :(</h1>
@@ -370,8 +378,13 @@ const decrement = (name: string) => {
       display: flex;
       justify-content: space-between;
     }
+    .quad{
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+    }
   }
-  input, textarea, .file-upload{
+  input, textarea {
     background-color: $grey-ultralight;
     border: 1px solid $grey-mid;
     padding: 10px;
@@ -381,17 +394,6 @@ const decrement = (name: string) => {
     }
   }
 
-  textarea{
-    resize: none;
-    height: 70px;
-  }
-  .grp{
-    display: flex;
-    flex-direction: column;
-  }
-  label{
-    align-self: center;
-  }
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none; /* WebKit browsers */
@@ -402,32 +404,28 @@ const decrement = (name: string) => {
     display: none;
   }
 
-  .file-upload {
+  .file-upload, .unload {
     width: 100%;
-
-    min-height: 10rem;
-    padding: 0px;
-
+    aspect-ratio: 1;
+    background-color: $grey-ultralight;
+    border: 1px solid $grey-mid;
+    border-radius: 5px;
     display: flex;
-    flex-direction: row;
-    justify-content: space-evenly;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
-    color: $grey-black;
-    transition: 250ms ease all;
+    color: $grey-mid;
     &:hover{
-      color: $grey-dark;
+      color: $secondary;
+      border-color: $secondary;
     }
   }
-  .image {
-    z-index: 1;
-    height: 80%;
-    width: 50%;
-    object-fit: cover;
-    border: none;
-    border-radius: 3px;
-    filter: drop-shadow(2px 2px 2px $grey-dark);
-    
+  .tips{
+    aspect-ratio: 1;
+    padding: 0px;
+    background-color: $grey-ultralight;
+    border: 1px solid $grey-mid;
+    border-radius: 5px;
   }
     .green {
       &.active {
