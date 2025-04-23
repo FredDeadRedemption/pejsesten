@@ -3,6 +3,7 @@
 	import { getIcon } from '$lib/icons.js';
   import type { Database } from '$lib/database.types'; 
 	import Card from '$lib/components/card.svelte';
+	import CardSmall from '$lib/components/cardSmall.svelte';
   type CardT = Database['public']['Tables']['cards']['Row'];
 
   let { data } = $props()
@@ -23,7 +24,8 @@
     { color: "#474ea7", icon: "manaPurple", name: "purple" }, 
     { color: "#434343", icon: "manaBlack", name: "black" }, 
     { color: "#cc0000", icon: "manaRed", name: "red" },
-    { color: "#bc874f", icon: "manaOrange", name: "orange" }
+    { color: "#bc874f", icon: "manaOrange", name: "orange" },
+    { color: "#6e7f80", icon: "manaNeutral", name: "neutral" }
   ];
 
   type x = {
@@ -37,7 +39,23 @@
     purple: 0,
     white: 0,
     black: 0,
+    neutral: 0,
   });
+
+  const resetForm = () => {
+    manaCounts.green = 0;
+    manaCounts.orange = 0;
+    manaCounts.red = 0;
+    manaCounts.purple = 0;
+    manaCounts.white = 0;
+    manaCounts.black = 0;
+    manaCounts.neutral = 0;
+    cardImage = null;
+    name = "";
+    attack = null;
+    defence = null;
+    description = "";
+  };
 
   let name = $state("");
   let attack = $state(null);
@@ -58,7 +76,7 @@
 	  black: manaCounts.black,
 	  image_url: cardImage ?? "",
 	  type: creating === "minion" ? 1 : creating === "mana" ? 2 : creating === "spell" ? 3 : 4,
-	  neutral: 0,
+	  neutral: manaCounts.neutral,
 	  race: null
   })
 
@@ -76,19 +94,46 @@
   }
 }
 
+const increment = (name: string) => {
+  if(name === "neutral"){
+    if(manaCounts[name] < 15){
+      manaCounts[name]++ 
+    }
+  } else if (manaCounts[name] < 3){
+    manaCounts[name]++ 
+  }
+};
+
+const chooseMana = (name: string) => {
+  manaCounts.green = 0;
+  manaCounts.orange = 0;
+  manaCounts.red = 0;
+  manaCounts.purple = 0;
+  manaCounts.white = 0;
+  manaCounts.black = 0;
+  manaCounts[name] = 1;
+};
+
+const decrement = (name: string) => {
+  if(manaCounts[name] > 0){
+      manaCounts[name]-- 
+    }
+};
+
+
 </script>
 
 <main class="main">
   <!-- CREATE FORM -->
   <div class="create-wrap">
     <div class="form-selector">
-      <button class="button" aria-label="minion" class:active={creating === "minion"} onclick={()=> { creating = "minion"; cardImage = null;}}>Create Minion</button>
-      <button class="button" aria-label="mana" class:active={creating === "mana"} onclick={()=> { creating = "mana"; cardImage = null;}}>Create Mana</button>
-      <button class="button" aria-label="spell" class:active={creating === "spell"} onclick={()=> { creating = "spell"; cardImage = null;}}>Create Spell</button>
-      <button class="button" aria-label="incantation" class:active={creating === "incantation"} onclick={()=> { creating = "incantation"; cardImage = null;}}>Create Incantation</button>
+      <button class="button" aria-label="minion" class:active={creating === "minion"} onclick={()=> { creating = "minion"; resetForm();}}>Create Minion</button>
+      <button class="button" aria-label="mana" class:active={creating === "mana"} onclick={()=> { creating = "mana"; resetForm();}}>Create Mana</button>
+      <button class="button" aria-label="spell" class:active={creating === "spell"} onclick={()=> { creating = "spell"; resetForm();}}>Create Spell</button>
+      <button class="button" aria-label="incantation" class:active={creating === "incantation"} onclick={()=> { creating = "incantation"; resetForm();}}>Create Incantation</button>
     </div>
     {#if profile?.is_admin}
-      <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={()=>(cardImage=null)}>
+      <form id="create" method="POST" action="?/createCard" use:enhance enctype="multipart/form-data" onsubmit={resetForm}>
         {#if creating === "minion"}
           <input type="hidden" id="type" name="type" value="1" required>
         {:else if creating === "mana"}
@@ -111,24 +156,29 @@
 
         <div class="manas-description">
             {#each manas as mana}
-              <div class="mana">
-                <div class="mana-switch">
-                  <button type="button" class="add" onclick={() => { 
-                    if(manaCounts[mana.name] < 3){
-                       manaCounts[mana.name]++ 
-                      }
-                  }}>+</button>
-                  <div class="icon-wrap">
-                    <span class="icon" style="color: {mana.color};">{@html getIcon(mana.icon)}</span>
+              {#if creating === "mana" && mana.name !== "neutral"}
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div class="mana">
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <div class="mana-select  {mana.name}" class:active={manaCounts[mana.name] === 1} onclick={() => chooseMana(mana.name)}>
+                    <div class="icon-wrap">
+                      <span class="icon" style="color: {mana.color};">{@html getIcon(mana.icon)}</span>
+                    </div>
                   </div>
-                  <button type="button" class="sub" onclick={() => { 
-                    if(manaCounts[mana.name] > 0){
-                       manaCounts[mana.name]-- 
-                      }
-                  }}>-</button>
+                  <input bind:value={manaCounts[mana.name]} defaultValue="0" type="hidden" id={mana.name} name={mana.name} />
                 </div>
-                <input bind:value={manaCounts[mana.name]} defaultValue="0" type="hidden" id={mana.name} name={mana.name} />
-              </div>
+              {:else if mana.name !== "neutral" || creating !== "mana"}
+                <div class="mana">
+                  <div class="mana-switch">
+                    <button type="button" class="add" onclick={() => increment(mana.name)}>+</button>
+                    <div class="icon-wrap">
+                      <span class="icon" style="color: {mana.color};">{@html getIcon(mana.icon)}</span>
+                    </div>
+                    <button type="button" class="sub" onclick={() => decrement(mana.name)}>-</button>
+                  </div>
+                  <input bind:value={manaCounts[mana.name]} defaultValue="0" type="hidden" id={mana.name} name={mana.name} />
+                </div>
+              {/if}
             {/each} 
             <textarea bind:value={description} id="description" name="description" placeholder="Description"></textarea>
         </div>
@@ -150,6 +200,9 @@
   </div>
   <div class="showcase">
     <Card card={testCard} />
+    {#if creating ==="minion" || creating === "mana"}
+      <CardSmall card={testCard} />
+    {/if}
   </div>
 </main>
 
@@ -170,7 +223,10 @@
       background-color: $grey-light;
       border-radius: 10px;
       height: 100%;
-
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      align-items: center;
     }
   }
   .form-selector{
@@ -201,6 +257,31 @@
         border-top-right-radius: 5px;
         border-bottom-right-radius: 5px;
       }
+    }
+  }
+  .mana-select{
+    background-color: $grey-ultralight;
+    border-radius: 5px;
+    border: 1px solid $grey-mid;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 105px;
+    width: 35px;
+    &:hover{
+      cursor: pointer;
+    }
+    .icon-wrap{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 35px;
+      width: 35px;  
+      background-color: $grey-ultralight;
+    }
+    .icon{
+      color: $white;
+      scale: 2;
     }
   }
   .mana-switch{
@@ -348,4 +429,70 @@
     filter: drop-shadow(2px 2px 2px $grey-dark);
     
   }
+    .green {
+      &.active {
+        background-color: $mana-green;
+        .icon-wrap { 
+          background-color: $mana-green;
+          .icon{
+            color: $white !important;
+          }
+        }
+      }
+    }
+    .orange {
+      &.active {
+        background-color: $mana-orange;
+        .icon-wrap { 
+          background-color: $mana-orange;
+          .icon{
+            color: $white !important;
+          }
+        }
+      }
+    }
+    .red {
+      &.active {
+        background-color: $mana-red;
+        .icon-wrap { 
+          background-color: $mana-red;
+          .icon{
+            color: $white !important;
+          }
+        }
+      }
+    }
+    .purple {
+      &.active {
+        background-color: $mana-purple;
+        .icon-wrap { 
+          background-color: $mana-purple;
+          .icon{
+            color: $white !important;
+          }
+        }
+      }
+    }
+    .white {
+      &.active {
+        background-color: $white;
+        .icon-wrap { 
+          background-color: $white;
+          .icon{
+            color: $mana-black !important;
+          }
+        }
+      }
+    }
+    .black {
+      &.active {
+        background-color: $mana-black;
+        .icon-wrap { 
+          background-color: $mana-black;
+          .icon{
+            color: $white !important;
+          }
+        }
+      }
+    }
 </style>

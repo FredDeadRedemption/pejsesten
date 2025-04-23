@@ -16,24 +16,22 @@
     purple: { color: "#474ea7", icon: "manaPurple", iconColor: "#f3f3f3" }, // Dream
     black: { color: "#434343", icon: "manaBlack", iconColor: "#f3f3f3" }, // Death
     red: { color: "#cc0000", icon: "manaRed", iconColor: "#f3f3f3" },
-    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" }
+    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" },
+    neutral: { color: "#6e7f80", icon: "manaNeutral", iconColor: "#f3f3f3" },
   };
 
-  let primaryCost = Object.entries({
+  let primaryCost = $derived(Object.entries({
     green: card.green,
     purple: card.purple,
     black: card.black,
     white: card.white,
     red: card.red,
     orange: card.orange,
-  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0]);
   //let primaryCost = "standard";
 
-
-  let costs: Array<{ color: string, icon: string, iconColor: string }> = [];
-
   type x = {
-    name: string, count: number,
+    color: string, icon: string, iconColor: string,
   }
 
   let manaCosts = $derived([
@@ -42,7 +40,8 @@
     { name: "red", count: Array(card.red).fill(null) },
     { name: "purple", count: Array(card.purple).fill(null) },
     { name: "white", count: Array(card.white).fill(null) },
-    { name: "black", count: Array(card.black).fill(null) }
+    { name: "black", count: Array(card.black).fill(null) },
+    { name: "neutral", count: Array(card.neutral).fill(null) },
   ]);
 
 </script>
@@ -58,7 +57,11 @@
     <div class="costs {primaryCost}">
       {#if card.type !== 2}
         {#each manaCosts as mana}
-          {#if mana.count.length > 0}
+          {#if mana.name === "neutral" && mana.count.length > 0}
+            <div class="cost" style="background-color: {costMap[mana.name].color};">
+              <span class="icon" style="color: {costMap[mana.name].iconColor}">{mana.count.length}</span>
+            </div>  
+          {:else if mana.count.length > 0}
             {#each mana.count as _}
               <div class="cost" style="background-color: {costMap[mana.name].color};">
                 <span class="icon" style="color: {costMap[mana.name].iconColor}">{@html getIcon(costMap[mana.name].icon)}</span>
@@ -75,14 +78,17 @@
           {card.attack} | {card.defence}
         </div>
       {/if}
-      {#if card.type === 2 && costs.length > 0} <!-- IF CARD IS MANA DISPLAY COSTS -->
-        <span class="icon-big" style="color: {costs[0].color}">{@html getIcon(costs[0].icon)}</span>
+      {#if card.type === 2 && primaryCost} <!-- IF CARD IS MANA DISPLAY COSTS -->
+        <span class="icon-big" style="color: {costMap[primaryCost].color}">{@html getIcon(costMap[primaryCost].icon)}</span>
       {/if}
     </div>
   </div>
 </div>
 
 <style lang="scss">
+  .icon{
+    font-size: 0.6rem;
+  }
   .icon-big{
     scale: 6;
     transform: translateY(-50%);
@@ -143,6 +149,7 @@
       .title{
         text-align: left;
         width: 100%;
+        height: 23.33px;
         border: 2px solid $black;
         border-radius: 3px;
         padding: 2px;
@@ -176,7 +183,7 @@
         align-items: center;
         gap: 2px;
         width: 100%;
-        //background-color: $grey-light;
+        height: 22px;
         padding: 2px;
         .cost{
           color: $white;

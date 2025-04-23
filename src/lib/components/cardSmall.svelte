@@ -19,14 +19,14 @@
     orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" }
   };
 
-  let primaryCost = Object.entries({
+  let primaryCost = $derived(Object.entries({
     green: card.green,
     purple: card.purple,
     black: card.black,
     white: card.white,
     red: card.red,
     orange: card.orange,
-  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0]);
 
   let costs: Array<{ color: string, icon: string, iconColor: string }> = [];
 
@@ -51,7 +51,7 @@
   
       </div>
       <div class="mana-logo">
-        <span class="icon" style="color: {costs[0]?.color};">{@html getIcon(costs[0]?.icon)}</span>
+        <span class="icon" style="color: {costMap[primaryCost].color};">{@html getIcon(costMap[primaryCost].icon)}</span>
       </div>
     {:else}
       <div class="costs {primaryCost}">
@@ -123,6 +123,7 @@
         white-space: nowrap;     
         text-align: left;
         width: 100%;
+        height: 23.33px;
         border: 2px solid $black;
         border-radius: 3px;
         padding: 2px;
