@@ -88,7 +88,7 @@
           if(deck.length >= 30) return; // deck cant have more than 30 cards
           if(deck.filter((c) => c === card.id).length >= 2) return; // deck cant have more than 2 of each
 
-          deck.push(card.id)
+          deck.push(card.id) 
         }}>
           <Card card={card}></Card>
         </button>
@@ -99,16 +99,18 @@
     <!-- RENDER CARDS IN SELECTED DECK -->
     {#if inspectingDeck}
       <input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName}>
-      {#each deckUniques as id}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div transition:slide={{ axis: "x", duration: 250 }} class="card-in-deck-view" style="background-image: url({getCardData(id)?.image_url});" onclick={()=>{
-          const cardIndex = deck.findIndex((c) => c === id);
-          if (cardIndex !== -1) deck.splice(cardIndex, 1);
-        }}>
-          <span class="name">{getCardData(id)?.name}</span><span class="count">x {deck.filter((c) => c === id).length}</span>
-        </div>
-      {/each}
+      <div class="cards">
+        {#each deckUniques as id}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div transition:slide={{ axis: "x", duration: 250 }} class="card-in-deck-view" style="background-image: url({getCardData(id)?.image_url});" onclick={()=>{
+            const cardIndex = deck.findIndex((c) => c === id);
+            if (cardIndex !== -1) deck.splice(cardIndex, 1);
+          }}>
+            <span class="name">{getCardData(id)?.name}</span><span class="count">x {deck.filter((c) => c === id).length}</span>
+          </div>
+        {/each}
+      </div>
       <div class="back-delete-btn-grp">
         <form id="back-form" action="?/createDeck" method="POST" use:enhance={() => {
           return async ({ result }: any) => {
@@ -164,10 +166,13 @@
   .deck{
     background-color: $grey-light;
     border-radius: 3px;
-    overflow: hidden;
+    overflow: scroll;
     display: flex;    
     height: 500px;
     flex-direction: column;
+    .cards{
+      overflow: scroll;
+    }
     .card-in-deck-view{
       display: flex;
       justify-content: space-between;
