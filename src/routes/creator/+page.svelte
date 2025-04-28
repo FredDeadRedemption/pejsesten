@@ -184,23 +184,39 @@ const decrement = (name: string) => {
         </div>
 
         <div class="quad">
-          <div class="upload">
-            <label for="file-upload" class="file-upload">
-              <span>{@html getIcon("photoPlus")}</span>
-            </label>
-            <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />     
-          </div>
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="unload" onclick={() => { cardImage = null; }}>
-            <span>{@html getIcon("photoMinus")}</span>
+          <div class="img-model-animation">
+            <div class="img">
+              <div class="upload">
+                <label for="file-upload" class="file-upload">
+                  <span>{@html getIcon("photoPlus")}</span>
+                </label>
+                <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />     
+              </div>
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="unload" onclick={() => { cardImage = null; }}>
+                <span>{@html getIcon("photoMinus")}</span>
+              </div>
+            </div>
+            <div class="inputs">
+              <input type="text" id="model" name="model" placeholder="Model" />
+              <select id="animation" name="animation" placeholder="Animation">
+                <option value="null">No animation</option>
+                <option value="melee">Melee</option>
+                <option value="range">Ranged</option>
+            </div>
           </div>
           <div class="tips"></div>
-          <div class="buttons">
-            <button type="submit" class="button primary" onclick={() => setTimeout(()=>{
-              resetForm();
-            }, 350)}>Create Card</button>
-            <button type="button" class="button secondary" onclick={resetForm}>Reset</button>
+          <div class="buttons-debug">
+            <div class="buttons">
+              <button type="submit" class="button primary" onclick={() => setTimeout(()=>{
+                resetForm();
+              }, 350)}>Create Card</button>
+              <button type="button" class="button" onclick={resetForm}>Reset</button>
+            </div>
+            <div class="debug">
+              debug console
+            </div>
           </div>
         </div>
       </form>
@@ -371,6 +387,7 @@ const decrement = (name: string) => {
       flex-direction: row;
       gap: 10px;
       textarea{
+        resize: none;
         flex: 1;
         height: 100%;
       }
@@ -381,11 +398,11 @@ const decrement = (name: string) => {
     }
     .quad{
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-columns: 1fr 2fr 1fr;
       gap: 10px;
     }
   }
-  input, textarea {
+  input, textarea, select {
     background-color: $grey-ultralight;
     border: 1px solid $grey-mid;
     padding: 10px;
@@ -405,9 +422,23 @@ const decrement = (name: string) => {
     display: none;
   }
 
-  .file-upload, .unload {
-    width: 100%;
+  .img-model-animation{
+    display: grid;
+    gap: 10px;
+    grid-template-rows: 1fr 1fr;
     aspect-ratio: 1;
+  }
+  .img{
+    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .inputs{
+    display: grid;
+    gap: 10px;
+    grid-template-rows: 1fr 1fr;
+  }
+  .file-upload, .upload, .unload {
     background-color: $grey-ultralight;
     border: 1px solid $grey-mid;
     border-radius: 5px;
@@ -419,13 +450,47 @@ const decrement = (name: string) => {
     &:hover{
       color: $secondary;
       border-color: $secondary;
+      .file-upload{
+        color: $secondary;
+      }
     }
   }
+  .file-upload{
+    border: none;
+  }
   .tips{
-    aspect-ratio: 1;
     padding: 0px;
-    background-color: $grey-ultralight;
+    background-color: $grey-light;
     border: 1px solid $grey-mid;
+    border-radius: 5px;
+  }
+  .buttons-debug{
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+  }
+  .buttons{
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+    button{
+      border-radius: 5px;
+      &:last-child{
+        transition: ease all 250ms;
+        background-color: $grey-dark;
+        color: $white;
+        border: none;
+        &:hover{
+          cursor: pointer;
+          background-color: $grey-mid;
+        }
+      }
+    }
+  }
+  .debug{
+    padding: 10px;
+    background-color: $grey-mid;
+    color: $info;
     border-radius: 5px;
   }
     .green {
