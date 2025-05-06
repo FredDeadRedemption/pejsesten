@@ -186,8 +186,8 @@ const decrement = (name: string) => {
         <div class="quad">
           <div class="img-model-animation">
             <div class="img">
-              <div class="upload">
-                <label for="file-upload" class="file-upload">
+              <div class="upload" >
+                <label for="file-upload" class="file-upload x">
                   <span>{@html getIcon("photoPlus")}</span>
                 </label>
                 <input type="file" id="file-upload" name="image" accept="image/*" onchange={handleImgUpdate} />     
@@ -233,6 +233,10 @@ const decrement = (name: string) => {
 </main>
 
 <style lang="scss">
+  .x{
+    width: 100%;
+    height: 100%;   
+  }
   .main{
     align-self: center;
     margin: 30px;
