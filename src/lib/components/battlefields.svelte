@@ -45,7 +45,7 @@
     e.stopPropagation() // so it doesnt also trigger cancelAttack prevent event bubbling
     tryAttack(-1, true);
   }}><span class="hp">{enemyHP}</span></div>
-  {#each enemyBattleField as card, index (card.id)}
+  {#each enemyBattleField as card, index (`${card.id}-${index}`)}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="card-container" style="--i: {index}; --total: {enemyBattleField.length}" onclick={(e) => {
@@ -60,7 +60,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="self-battlefield" onclick={cancelAttack}>
   <div class="hero self"><span class="hp">{selfHP}</span></div>
-  {#each selfBattleField as card, index}
+  {#each selfBattleField as card, index (`${card.id}-${index}`)}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="card-container" style="--i: {index}; --total: {selfBattleField.length}" onclick={(e) => {
