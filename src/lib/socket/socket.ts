@@ -29,6 +29,10 @@ export const connectSocket = (url: string) => {
     console.log("Card drawn:", card);
   });
 
+  socket.on("mana", (manas: any) => {
+    console.log(manas);
+  });
+
   // Listen for connection events
   socket.on('connect', () => {
     console.log('Connected to socket server:', socket?.id);
