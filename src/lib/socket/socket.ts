@@ -30,7 +30,7 @@ export const connectSocket = (url: string) => {
   });
 
   socket.on("mana", (manas: any) => {
-    console.log(manas);
+    console.log("MANAS: " + manas);
   });
 
   // Listen for connection events
