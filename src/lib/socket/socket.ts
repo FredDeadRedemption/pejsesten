@@ -39,7 +39,12 @@ export const connectSocket = (url: string) => {
   });
 
   socket.on("mana", (manas: manas) => {
-    console.log("MANAS: " + manas);
+    console.log("MANAS red: " + manas.red);
+    console.log("MANAS purple: " + manas.purple);
+    console.log("MANAS black: " + manas.black);
+    console.log("MANAS white: " + manas.white);
+    console.log("MANAS orange: " + manas.orange);
+    console.log("MANAS green: " + manas.green);
   });
 
   // Listen for connection events
