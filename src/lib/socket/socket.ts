@@ -9,6 +9,15 @@ let socket: Socket | null = null;
 
 export const gameState = writable<GameState>();
 
+type manas = {
+  green: number,
+  orange: number,
+  red: number,
+  purple: number,
+  black: number,
+  white: number,
+}
+
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
   if (socket) return
@@ -29,7 +38,7 @@ export const connectSocket = (url: string) => {
     console.log("Card drawn:", card);
   });
 
-  socket.on("mana", (manas: any) => {
+  socket.on("mana", (manas: manas) => {
     console.log("MANAS: " + manas);
   });
 
