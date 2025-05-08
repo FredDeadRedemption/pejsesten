@@ -11,12 +11,15 @@ type Board = {
   hp: number,
 }
 
+type state = "draw" | "play" | "attack" | "inactive";
+
 export type GameState = {
   self: Board,
   enemy: Board,
   whitePlayerID: string; // used for validation turn
   blackPlayerID: string; // used for validation turn
   yourTurn: boolean, // used for processing the actual game 
+  state: state,
   turnCount: number,
 }
 
