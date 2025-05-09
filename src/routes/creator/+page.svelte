@@ -77,7 +77,9 @@
 	  image_url: cardImage ?? "media/cards/missing-texture.jpg",
 	  type: creating === "minion" ? 1 : creating === "mana" ? 2 : creating === "spell" ? 3 : 4,
 	  neutral: manaCounts.neutral,
-	  race: null
+	  race: null,
+    animation: 0,
+    model: ""
   })
 
   const handleImgUpdate = (event : Event) => {

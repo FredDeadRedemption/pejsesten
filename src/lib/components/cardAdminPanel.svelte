@@ -176,10 +176,13 @@
           purple: card.purple,
           green: card.green,
           red: card.red,
+          neutral: card.neutral,
           orange: card.orange,
           description: card.description,
           race: card.race,
-          image_url: card.image_url
+          image_url: card.image_url,
+          model: card.model,
+          animation: card.animation
         })
         .eq('id', card.id)
         .select(); 
@@ -260,13 +263,35 @@
           <label for="orangeCost">Orange</label>
           <input type="number" id="orangeCost" name="orangeCost" bind:value={cardToUpdate!.orange}/>
         </div>
+
+        <div class="grp">
+          <label for="neutralCost">Neutral</label>
+          <input type="number" id="neutralCost" name="neutralCost" bind:value={cardToUpdate!.neutral}/>
+        </div>
       </div>
 
-      <div class="grp">
-        <label for="description">Description</label>
-        <textarea id="description" name="description" bind:value={cardToUpdate!.description}></textarea>
-      </div>
+      <div class="three-grid">
+        <div class="grp">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" bind:value={cardToUpdate!.description}></textarea>
+        </div>
+  
+        <div class="grp">
+          <label for="attack">Attack</label>
+          <input id="attack" type="number" name="attack" bind:value={cardToUpdate!.attack} />
+        </div>
+  
+        <div class="grp">
+          <label for="defence">Defence</label>
+          <input id="defence" type="number" name="defence" bind:value={cardToUpdate!.defence} />
+        </div>
 
+        <div class="grp">
+          <label for="model">Model</label>
+          <input id="model" name="model" bind:value={cardToUpdate!.model} />
+        </div>
+      </div>
+      
       <div class="grp">
         <label for="image">Image</label>
 
@@ -354,7 +379,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 100;
-    width: 20rem;
+    width: 600px;
   }
 
   #update{
@@ -380,7 +405,7 @@
   }
   textarea{
     resize: none;
-    height: 70px;
+    height: 50px;
   }
   .grp{
     display: flex;
@@ -389,11 +414,16 @@
   
   .grp-side-by-side-four{
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
     gap: 15px;
     input{
       width: 100%;
     }
+  }
+  .three-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
   }
   label{
     align-self: center;
@@ -423,8 +453,8 @@
   }
   .image {
     z-index: 1;
-    height: 50%;
-    width: 50%;
+    height: 20%;
+    width: 20%;
     object-fit: cover;
     border: none;
     border-radius: 3px;

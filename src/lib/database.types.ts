@@ -9,6 +9,21 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      animations: {
+        Row: {
+          id: number
+          name: string | null
+        }
+        Insert: {
+          id?: number
+          name?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string | null
+        }
+        Relationships: []
+      }
       card_type_enums: {
         Row: {
           id: number
@@ -26,6 +41,7 @@ export type Database = {
       }
       cards: {
         Row: {
+          animation: number | null
           attack: number | null
           black: number
           defence: number | null
@@ -33,6 +49,7 @@ export type Database = {
           green: number
           id: number
           image_url: string
+          model: string | null
           name: string
           neutral: number
           orange: number
@@ -43,6 +60,7 @@ export type Database = {
           white: number
         }
         Insert: {
+          animation?: number | null
           attack?: number | null
           black?: number
           defence?: number | null
@@ -50,6 +68,7 @@ export type Database = {
           green?: number
           id?: number
           image_url?: string
+          model?: string | null
           name?: string
           neutral?: number
           orange?: number
@@ -60,6 +79,7 @@ export type Database = {
           white?: number
         }
         Update: {
+          animation?: number | null
           attack?: number | null
           black?: number
           defence?: number | null
@@ -67,6 +87,7 @@ export type Database = {
           green?: number
           id?: number
           image_url?: string
+          model?: string | null
           name?: string
           neutral?: number
           orange?: number
@@ -77,6 +98,13 @@ export type Database = {
           white?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "cards_animation_fkey"
+            columns: ["animation"]
+            isOneToOne: false
+            referencedRelation: "animations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cards_race_fkey"
             columns: ["race"]
