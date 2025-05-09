@@ -67,6 +67,10 @@ const authGuard: Handle = async ({ event, resolve }) => {
   event.locals.session = session
   event.locals.user = user
 
+  if (event.url.pathname.startsWith('/api/')) {
+    return resolve(event);
+  } 
+
   // if no session only allow "/"
   if (!event.locals.session && event.url.pathname != "/") {
     redirect(303, '/')
@@ -80,4 +84,27 @@ const authGuard: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-export const handle: Handle = sequence(supabase, authGuard)
+const corsHandler: Handle = async ({ event, resolve }) => {
+  // Check if this is an API request
+  if (event.url.pathname.startsWith('/api/')) {
+    const response = await resolve(event);
+    
+    // Add CORS headers to all API responses
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...response.headers,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin',
+      }
+    });
+  }
+  
+  // For non-API requests, just proceed normally
+  return await resolve(event);
+};
+
+export const handle: Handle = sequence(corsHandler, supabase, authGuard)
+
