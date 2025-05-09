@@ -21,6 +21,8 @@ export const actions: Actions = {
     const orange = parseInt(formData.get('orange') as string);
     const description = formData.get('description') as string;
     const imageFile = formData.get('image') as File;
+    const model = formData.get("model") as string;
+    const animation = parseInt(formData.get("animation") as string);
 
     // Validate required fields
     if (!name) {
@@ -83,7 +85,9 @@ export const actions: Actions = {
           red,
           orange,
           description, 
-          image_url: imageUrl 
+          image_url: imageUrl,
+          animation: animation,
+          model: model,
         }])
         .select(); // Use .select() to return the inserted data
 

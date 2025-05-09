@@ -202,8 +202,8 @@ const decrement = (name: string) => {
               <input type="text" id="model" name="model" placeholder="Model" />
               <select id="animation" name="animation" placeholder="Animation">
                 <option value="null">No animation</option>
-                <option value="melee">Melee</option>
-                <option value="range">Ranged</option>
+                <option value="1">Melee</option>
+                <option value="2">Ranged</option>
             </div>
           </div>
           <div class="tips"></div>
