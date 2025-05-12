@@ -24,6 +24,8 @@
   <div class="DEBUG">
     <!-- svelte-ignore a11y_consider_explicit_label -->
     <button disabled={ !$gameState.yourTurn } onclick={()=>{
+      console.log($gameState.self.manas)
+      console.log($gameState.enemy.manas)
       endTurn();
     }}>END TURN</button>
     <p>Game ID: {page.params.gameId}</p>
