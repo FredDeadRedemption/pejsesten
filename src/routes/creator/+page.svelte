@@ -101,7 +101,7 @@ const increment = (name: string) => {
     if(manaCounts[name] < 15){
       manaCounts[name]++ 
     }
-  } else if (manaCounts[name] < 3){
+  } else if (manaCounts[name] < 10){
     manaCounts[name]++ 
   }
 };
