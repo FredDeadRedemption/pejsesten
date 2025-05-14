@@ -28,6 +28,12 @@
       console.log($gameState.enemy.manas)
       endTurn();
     }}>END TURN</button>
+    <span class="mana g">{ $gameState.self.manas.green }</span>
+    <span class="mana o">{ $gameState.self.manas.orange }</span>
+    <span class="mana r">{ $gameState.self.manas.red }</span>
+    <span class="mana p">{ $gameState.self.manas.purple }</span>
+    <span class="mana b">{ $gameState.self.manas.black }</span>
+    <span class="mana w">{ $gameState.self.manas.white }</span>
     <p>Game ID: {page.params.gameId}</p>
     <button onclick={()=> {enterFullscreen("game-frame")}}>Go Fullscreen</button>
 
@@ -72,7 +78,30 @@
 </div>
 
 <style lang="scss">
+  .mana{
+    padding: 5px;
+    &.g{
+      background-color: $mana-green;
+    }
+    &.o{
+      background-color: $mana-orange;
+    }
+    &.r{
+      background-color: $mana-red;
+    }
+    &.p{
+      background-color: $mana-purple;
+    }
+    &.b{
+      background-color: $mana-black;
+    }
+    &.w{
+      background-color: $mana-white;
+      color: $mana-black;
+    }
+  }
   .DEBUG{
+    z-index: 99;
     position: absolute;
     background-color: $black;
     color: $white;
