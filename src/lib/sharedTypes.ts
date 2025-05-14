@@ -1,6 +1,8 @@
 import type { Database } from '$lib/database.types'; 
 type Card = Database['public']['Tables']['cards']['Row'];
 
+
+
 // this is types that is shared with the backend only!!! :D
 type Board = {
   deck: Card[], 
@@ -9,6 +11,16 @@ type Board = {
   battlefield: Card[], // Bellum
   land: Card[], // Terra
   hp: number,
+  manas: Manas,
+}
+
+type Manas = {
+  green: number,
+  orange: number,
+  red: number,
+  purple: number,
+  black: number,
+  white: number
 }
 
 type state = "draw" | "play" | "attack" | "inactive";
