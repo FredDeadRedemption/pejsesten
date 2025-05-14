@@ -85,8 +85,8 @@
          <!-- svelte-ignore a11y_consider_explicit_label -->
         <button class="invisible" onclick={()=>{
           if(!deck){ deck = [] }; // form submission makes deck null? so redefine it (TODO: remove later)
-          if(deck.length >= 30) return; // deck cant have more than 30 cards
-          if(deck.filter((c) => c === card.id).length >= 2) return; // deck cant have more than 2 of each
+          if(deck.length >= 50) return; // deck cant have more than 30 cards
+          //if(deck.filter((c) => c === card.id).length >= 2) return; // deck cant have more than 2 of each
 
           deck.push(card.id) 
         }}>
@@ -98,7 +98,10 @@
   <div class="deck">
     <!-- RENDER CARDS IN SELECTED DECK -->
     {#if inspectingDeck}
-      <input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName}>
+      <div class="name-length">
+        <input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName}>
+        <span class="length">{deck.length} / 50</span>
+      </div>
       <div class="cards">
         {#each deckUniques as id}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -158,6 +161,18 @@
 
 
 <style lang="scss">
+  .name-length{
+    display: grid;
+    grid-template-columns: 1fr 40px;
+    .length{
+      display: flex;
+      font-size: 0.8rem;
+      align-items: center;
+      justify-content: center;
+      background-color: $secondary;
+      color: $white;
+    }
+  }
   .catalog-search-wrapper{
     display: flex;
     flex-direction: column;
