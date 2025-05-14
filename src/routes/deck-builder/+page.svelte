@@ -98,7 +98,10 @@
   <div class="deck">
     <!-- RENDER CARDS IN SELECTED DECK -->
     {#if inspectingDeck}
-      <input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName}>
+      <div class="name-length">
+        <input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName}>
+        <span class="length">{deck.length} / 50</span>
+      </div>
       <div class="cards">
         {#each deckUniques as id}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -158,6 +161,18 @@
 
 
 <style lang="scss">
+  .name-length{
+    display: grid;
+    grid-template-columns: 1fr 40px;
+    .length{
+      display: flex;
+      font-size: 0.8rem;
+      align-items: center;
+      justify-content: center;
+      background-color: $secondary;
+      color: $white;
+    }
+  }
   .catalog-search-wrapper{
     display: flex;
     flex-direction: column;
