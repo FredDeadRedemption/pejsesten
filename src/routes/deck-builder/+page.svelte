@@ -86,7 +86,7 @@
         <button class="invisible" onclick={()=>{
           if(!deck){ deck = [] }; // form submission makes deck null? so redefine it (TODO: remove later)
           if(deck.length >= 50) return; // deck cant have more than 30 cards
-          if(deck.filter((c) => c === card.id).length >= 2) return; // deck cant have more than 2 of each
+          //if(deck.filter((c) => c === card.id).length >= 2) return; // deck cant have more than 2 of each
 
           deck.push(card.id) 
         }}>
