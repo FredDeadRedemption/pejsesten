@@ -205,7 +205,8 @@ const decrement = (name: string) => {
               <select id="animation" name="animation" placeholder="Animation">
                 <option value="null">No animation</option>
                 <option value="1">Melee</option>
-                <option value="2">Ranged</option>
+                <option value="2">Ranged(thunder)</option>
+                <option value="3">Ranged(fireball)</option>
             </div>
           </div>
           <div class="tips"></div>
