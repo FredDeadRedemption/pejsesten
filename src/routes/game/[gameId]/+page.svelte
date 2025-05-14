@@ -9,7 +9,7 @@
 	import Graveyard from "$lib/components/graveyard.svelte";
 	import { setCards } from "$lib/cards.js";
 	import { enterFullscreen } from "$lib/util.js";
-
+   
   let { data } = $props()
   let { cards } = $derived(data);
 
