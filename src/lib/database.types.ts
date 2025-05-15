@@ -152,7 +152,7 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_url: string | null
+          avatar: string | null
           created_at: string | null
           is_admin: boolean
           updated_at: string | null
@@ -160,7 +160,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
-          avatar_url?: string | null
+          avatar?: string | null
           created_at?: string | null
           is_admin?: boolean
           updated_at?: string | null
@@ -168,7 +168,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
-          avatar_url?: string | null
+          avatar?: string | null
           created_at?: string | null
           is_admin?: boolean
           updated_at?: string | null
