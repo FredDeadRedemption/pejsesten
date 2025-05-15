@@ -39,7 +39,7 @@ export const actions: Actions = {
     }
 
     // Validate the deck
-    if (deck.length > 30) {
+    if (deck.length > 50) {
       return { success: false, error: "Deck must contain less than 30 cards" };
     }
 
