@@ -35,7 +35,7 @@
 
   const resetProd = async () => {
     const res = await fetch("https://matrixz-gs.up.railway.app/resetGame");
-  
+   
     console.log(res);
   }
 </script>
