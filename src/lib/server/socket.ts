@@ -1,9 +1,9 @@
-import { Server, type Socket } from 'socket.io';
+import { type Socket } from 'socket.io-client';
 import type { GameStateResponse } from './gamestate';
 import { endTurn, setGameState, getGameState, drawCard, playCard, attack } from './gamestate';
-import { coinFlip, broadcastGameState, validateTurn } from './lib';
-import { deckToCards, fetchAllCards } from './cards';
-import type { PlayerMetaData, AttackData } from '$lib/sharedTypes';
+import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
+import { deckToCards } from '$lib/shared/cards';
+import type { PlayerMetaData } from '$lib/shared/types';
 
 type ActiveGame = {
   socket1 : Socket;

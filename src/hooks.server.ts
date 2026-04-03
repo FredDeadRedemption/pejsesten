@@ -3,7 +3,7 @@ import { Server, type Handle } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { setupSocketIO } from '$lib/server/socket';
 
-let io: Server;
+export let io: Server;
 
 export const handle: Handle = async ({ event, resolve }) => {
   if (!io && !building) {
