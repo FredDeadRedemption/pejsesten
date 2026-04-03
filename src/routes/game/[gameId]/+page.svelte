@@ -11,11 +11,10 @@
 	import { enterFullscreen } from "$lib/util.js";
    
   let { data } = $props()
-  let { cards } = $derived(data);
 
   // Pre-load all cards in existence
   onMount(()=>{
-    setCards(cards);
+    setCards([]);
   })
 </script>
 

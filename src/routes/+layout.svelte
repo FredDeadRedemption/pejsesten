@@ -8,22 +8,12 @@
 	import ProgressBar from "$lib/components/progressBar.svelte";
 
   let { data, children } = $props()
-  let { session, supabase } = $derived(data)
-
-  onMount(() => {
-    const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
-      if (newSession?.expires_at !== session?.expires_at) {
-        invalidate('supabase:auth')
-      }
-    })
-
-    return () => data.subscription.unsubscribe()
-  })
+ 
 </script>
 
 {#if page.url.pathname !== "/"}
   <ProgressBar></ProgressBar>
-  <Nav supabase={supabase}> </Nav>
+  <Nav> </Nav>
   <Dock></Dock>
   <main>
     {@render children()}

@@ -1,21 +1,11 @@
 <script>
 	import { goto } from "$app/navigation";
 
-  let { supabase } = $props();
-  
-  const logout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error(error)
-    } else{
-      goto("/")
-    }
-  }
 </script>
 
 <nav id="nav">
   <a class="home button ghost" href="/dashboard">HOME</a>
-  <button class="signin-out button ghost" onclick={logout}>LOGOUT</button>
+  <button class="signin-out button ghost">LOGOUT</button>
   <!-- svelte-ignore a11y_consider_explicit_label -->
   <a href="/profile"><div class="avatar"></div></a>
 </nav>

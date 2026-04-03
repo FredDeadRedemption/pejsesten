@@ -1,18 +1,5 @@
 <script lang="ts">
   let { data } = $props()
-  let { profile } = $derived(data)
-
-  // TODO FIX DET HER LORT
-  $effect(() => {
-    if (profile == null) {
-      reload();
-    }
-  });
-
-  const reload = () => {
-    if (!browser) return;
-    window.location.reload();
-  }
 
   import { invalidate } from '$app/navigation';
   import { onMount } from 'svelte';
@@ -31,7 +18,7 @@
 
 <main class="main">
   <h1>dashboard</h1>
-  <p>Greetings, <strong>{profile?.username}!</strong> 
+  <p>Greetings, <strong>user!</strong> 
     Take a look at the <a href="/catalog">Catalog</a> 
   or browse the <a href="/deck-builder">Deck Builder</a>,
   you have <span class="wins">0</span> wins!&nbsp;(noob)</p>

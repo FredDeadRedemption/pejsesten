@@ -6,7 +6,8 @@
   type Deck = Database['public']['Tables']['decks']['Row'];
 
   let { data } = $props()
-  let { profile, decks } = $derived(data)
+
+  let decks: any[] = []
     
   let dev = $state(false)
 
@@ -23,7 +24,7 @@
   );
 
   let playerMetaData: PlayerMetaData = $derived({
-    username: profile?.username ?? "Out-of-Towner",
+    username: "Out-of-Towner",
     choosenDeck: choosenDeck, 
     avatar: "uaogidsogijsogij"
   })
@@ -42,7 +43,7 @@
 
 <main class="main">
   <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong> change in <a href="/settings">settings</a></p>
-  <p>Playin as <strong>{profile?.username}</strong></p>
+  <p>Playin as <strong>{"fsm"}</strong></p>
   <button onclick={resetProd}>reset prod gamestate & queueu</button>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
 
