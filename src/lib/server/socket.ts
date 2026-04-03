@@ -1,4 +1,4 @@
-import { type Socket } from 'socket.io-client';
+import { Server, type Socket } from 'socket.io'
 import type { GameStateResponse } from './gamestate';
 import { endTurn, setGameState, getGameState, drawCard, playCard, attack } from './gamestate';
 import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';

@@ -1,7 +1,8 @@
 
-import { Server, type Handle } from '@sveltejs/kit';
+import { type Handle } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { setupSocketIO } from '$lib/server/socket';
+import { Server } from 'socket.io';
 
 export let io: Server;
 
