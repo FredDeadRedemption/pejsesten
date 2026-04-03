@@ -191,9 +191,6 @@
         border-bottom: 2px solid $black;
         font-size: 0.7rem;
         flex-grow: 1;
-        .text{
-          padding: 5px;
-        }
       }
       .bottom{  
         font-weight: 800;

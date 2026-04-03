@@ -2,21 +2,24 @@
 	import { enhance } from '$app/forms';
 	import Card from '$lib/components/card.svelte';
 	import Filter from '$lib/components/filter.svelte';
-	import type { Json } from '$lib/database.types.js';
 	import { getIcon } from '$lib/icons.js';
 	import { getRandomDeckName, getRandomString } from '$lib/util.js';
 	import { slide } from 'svelte/transition';
-  import type { Database } from '$lib/database.types'; 
-  type CardT = Database['public']['Tables']['cards']['Row'];
-
-  let { data } = $props()
-  let { cards, supabase } = $state(data);
+  import type { Card as CardT } from '$lib/shared/types';
 
   let filteredCards = $state<CardT[]>([]);
 
+  type Deck = {
+    id: number;
+    name: string;
+    cards: number[]; // array of card id's
+  }
+
+  let cards = $state<CardT[]>([]); // TODO: move this to a load function and make it so it only fetches id and name for better performance
+
   const getCardData = (id: number) => cards.find((card) => card.id === id);
 
-  let decks = $state(data?.decks);
+  let decks = $state<Deck[]>([]);
   let selectedDeckID: number | null = $state(null);
   let deck: number[] = $state([]); // contains id's of all cards
   let deckUniques: number[] = $derived([...new Set(deck)]);; // contains id's of all cards (no duplicates)
@@ -29,23 +32,8 @@
     deckJSON = JSON.stringify(deck);
   });
 
-  const deleteDeck = async (id: number | null) => {
-    if(!id){ // if deck is not yey saved but deleted instantly
-      selectedDeckID = null;
-      selectedDeckName = null;
-      inspectingDeck = false;
-    }
-
-    const { error } = await supabase
-      .from("decks")
-      .delete()
-      .eq("id", id);
-
-    if(error) { console.error(error); return }
-
-    decks = decks?.filter(d => d.id !== id);
-    selectedDeckID = null;
-    inspectingDeck = false;
+  const deleteDeck = (deckId: number | null) => {
+    // TODO: implement
   }
 
   const loadExistingDeck = (selectedDeckId: number) => {
@@ -55,7 +43,7 @@
       selectedDeckName = selectedDeck.name;
       inspectingDeck = true;
       if (Array.isArray(selectedDeck.cards)) {
-        deck = selectedDeck.cards.map((cardId) => Number(cardId)); // Convert each item to a number
+        deck = selectedDeck.cards.map((cardId: number) => Number(cardId)); // Convert each item to a number
       } else {
         deck = []; // Fallback to an empty array if `cards` is not an array
       }
