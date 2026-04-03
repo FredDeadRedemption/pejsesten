@@ -1,5 +1,5 @@
 import type { GameStateClient, GameState } from "$lib/shared/types";
-import type { Socket } from "socket.io-client";
+import type { Socket } from "socket.io";
 
 /**
  * Simulates a coin flip (50/50 chance)

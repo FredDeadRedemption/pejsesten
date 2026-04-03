@@ -1,7 +1,7 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
-import type { PlayerMetaData, GameState, AttackData } from "$lib/sharedTypes.js";
+import type { PlayerMetaData, GameState, AttackData } from "$lib/shared/types";
 
 let socket: Socket | null = null;
 
@@ -53,15 +53,6 @@ export const connectSocket = (url: string) => {
     console.log("ATK:" + data.attackerDied)
     console.log("ATK:" + data.attackData)
   })
-
-  socket.on("mana", (manas: manas) => {
-    console.log("MANAS red: " + manas.red);
-    console.log("MANAS purple: " + manas.purple);
-    console.log("MANAS black: " + manas.black);
-    console.log("MANAS white: " + manas.white);
-    console.log("MANAS orange: " + manas.orange);
-    console.log("MANAS green: " + manas.green);
-  });
 
   // Listen for connection events
   socket.on('connect', () => {
