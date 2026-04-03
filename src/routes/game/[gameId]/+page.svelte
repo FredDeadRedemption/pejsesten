@@ -7,15 +7,8 @@
 	import Battlefields from "$lib/components/battlefields.svelte";
 	import Deck from "$lib/components/deck.svelte";
 	import Graveyard from "$lib/components/graveyard.svelte";
-	import { setCards } from "$lib/cards.js";
 	import { enterFullscreen } from "$lib/util.js";
    
-  let { data } = $props()
-
-  // Pre-load all cards in existence
-  onMount(()=>{
-    setCards([]);
-  })
 </script>
 
 <div id="game-frame">

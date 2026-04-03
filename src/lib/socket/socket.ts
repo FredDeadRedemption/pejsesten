@@ -1,22 +1,13 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
 import { writable } from 'svelte/store';
-import type { PlayerMetaData, GameState, AttackData } from "$lib/shared/types";
+import type { PlayerMetaData, GameStateClient, AttackData } from "$lib/shared/types";
 
 let socket: Socket | null = null;
 
 // Function to invalidate (disconnect) the socket
 
-export const gameState = writable<GameState>();
-
-type manas = {
-  green: number,
-  orange: number,
-  red: number,
-  purple: number,
-  black: number,
-  white: number,
-}
+export const gameState = writable<GameStateClient>();
 
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
@@ -29,7 +20,7 @@ export const connectSocket = (url: string) => {
     goto(`/game/${URL}`);
   })
 
-  socket.on("newGameState", (newGameState: GameState) => {
+  socket.on("newGameState", (newGameState: GameStateClient) => {
     gameState.set(newGameState);
     console.log(newGameState) // log fra helvede
   })

@@ -1,13 +1,11 @@
 <script lang="ts">
   import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
-  import type { Database, Json } from '$lib/database.types'; 
-  import type { PlayerMetaData } from "$lib/sharedTypes.js";
-	import { fly, slide } from "svelte/transition";
-  type Deck = Database['public']['Tables']['decks']['Row'];
-
-  let { data } = $props()
+  import type { PlayerMetaData } from "$lib/shared/types";
+	import { fly } from "svelte/transition";
 
   let decks: any[] = []
+
+  let choosenDeckJson = $state([1,2,3,4,5,6,7,8,9,10]);
     
   let dev = $state(false)
 
@@ -18,14 +16,9 @@
     invalidateSocket();
   })
 
-  let choosenDeckJson: Json | null = $state(null)
-  let choosenDeck: number[] = $derived(
-    choosenDeckJson ?? []
-  );
-
   let playerMetaData: PlayerMetaData = $derived({
     username: "Out-of-Towner",
-    choosenDeck: choosenDeck, 
+    choosenDeck: choosenDeckJson, 
     avatar: "uaogidsogijsogij"
   })
 
