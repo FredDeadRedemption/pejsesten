@@ -1,6 +1,5 @@
 <script lang="ts">
 	import CardSmall from "./cardSmall.svelte";
-  import { getCardByID } from "$lib/cards";
   import { attack } from "$lib/socket/socket";
 
   let { selfBattleField = $bindable(), enemyBattleField = $bindable(), selfHP = $bindable(), enemyHP = $bindable()} = $props();

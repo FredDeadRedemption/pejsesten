@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { scale, fly } from "svelte/transition";
-  import type { Database } from '$lib/database.types'; 
+	import { scale } from "svelte/transition";
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
-  import { getCardByID } from "$lib/cards";
   import { playCard } from "$lib/socket/socket";
-  type CardT = Database['public']['Tables']['cards']['Row'];
+  import type { Card as CardT } from "$lib/shared/types";
 
   let handElement: HTMLElement;
 

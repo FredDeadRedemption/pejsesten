@@ -1,8 +1,7 @@
 <script lang="ts">
-  import type { Database } from '$lib/database.types'; 
 	import { getIcon } from '$lib/icons';
-	import { get } from 'svelte/store';
-  type Card = Database['public']['Tables']['cards']['Row'];
+	import type { Card } from '$lib/shared/types';
+
 
   let { card } = $props<{ card: Card }>();
 
