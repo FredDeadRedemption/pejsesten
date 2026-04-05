@@ -77,7 +77,7 @@ li{
 		pointer-events: none;
 		opacity: 0.6;
 		&:hover {
-			background-color: white; // Ensures no hover effect
+			background-color: white;
 			color: $primary;
 		}
 	}
@@ -91,13 +91,4 @@ li{
 ::-ms-input-placeholder {
 	color: inherit;
 	opacity: 0.8; /* Edge 12 - 18 */
-}
-
-// fix auto-zooming on input fields
-@media (max-width: $breakpoint-mobile) {
-	input,
-	select:focus,
-	textarea {
-		font-size: 16px !important;
-	}
 }
