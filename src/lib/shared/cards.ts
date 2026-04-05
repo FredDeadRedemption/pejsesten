@@ -18,7 +18,7 @@ export const cards: Card[] = [
 		race: 'human',
 		attack: 2,
 		defence: 3,
-		image_url: '/cards/sunforge-paladin.png'
+		image_url: ''
 	},
 	{
 		id: 2,
@@ -30,7 +30,7 @@ export const cards: Card[] = [
 		race: 'human',
 		attack: 2,
 		defence: 4,
-		image_url: '/cards/dawn-priest.png'
+		image_url: ''
 	},
 	{
 		id: 3,
@@ -42,7 +42,7 @@ export const cards: Card[] = [
 		race: 'human',
 		attack: 3,
 		defence: 5,
-		image_url: '/cards/silverguard-knight.png'
+		image_url: ''
 	},
 	{
 		id: 4,
@@ -54,7 +54,7 @@ export const cards: Card[] = [
 		race: 'elf',
 		attack: 4,
 		defence: 6,
-		image_url: '/cards/radiant-sentinel.png'
+		image_url: ''
 	},
 	{
 		id: 5,
@@ -66,7 +66,7 @@ export const cards: Card[] = [
 		race: 'elf',
 		attack: 6,
 		defence: 5,
-		image_url: '/cards/herald-of-the-sun.png'
+		image_url: ''
 	},
 
 	// ── BLACK MINIONS ────────────────────────────────────────
@@ -80,7 +80,7 @@ export const cards: Card[] = [
 		race: 'human',
 		attack: 3,
 		defence: 2,
-		image_url: '/cards/duskblade-rogue.png'
+		image_url: ''
 	},
 	{
 		id: 7,
@@ -92,7 +92,7 @@ export const cards: Card[] = [
 		race: 'human',
 		attack: 4,
 		defence: 2,
-		image_url: '/cards/cursed-hexblade.png'
+		image_url: ''
 	},
 	{
 		id: 8,
@@ -104,7 +104,7 @@ export const cards: Card[] = [
 		race: 'elf',
 		attack: 5,
 		defence: 3,
-		image_url: '/cards/void-stalker.png'
+		image_url: ''
 	},
 	{
 		id: 9,
@@ -116,7 +116,7 @@ export const cards: Card[] = [
 		race: 'human',
 		attack: 3,
 		defence: 5,
-		image_url: '/cards/grave-warden.png'
+		image_url: ''
 	},
 	{
 		id: 10,
@@ -128,7 +128,7 @@ export const cards: Card[] = [
 		race: 'elf',
 		attack: 7,
 		defence: 4,
-		image_url: '/cards/soulreaper.png'
+		image_url: ''
 	},
 
 	// ── WHITE INCANTATIONS ───────────────────────────────────
@@ -139,7 +139,7 @@ export const cards: Card[] = [
 		description: 'Wraps an ally in impenetrable holy light.',
 		cost: 2,
 		type: 'incantation',
-		image_url: '/cards/divine-shield.png'
+		image_url: ''
 	},
 	{
 		id: 12,
@@ -148,7 +148,7 @@ export const cards: Card[] = [
 		description: 'Calls down judgement on the unworthy.',
 		cost: 3,
 		type: 'incantation',
-		image_url: '/cards/holy-wrath.png'
+		image_url: ''
 	},
 
 	// ── BLACK INCANTATIONS ───────────────────────────────────
@@ -159,7 +159,7 @@ export const cards: Card[] = [
 		description: 'Power freely given always has a price.',
 		cost: 2,
 		type: 'incantation',
-		image_url: '/cards/dark-blessing.png'
+		image_url: ''
 	},
 	{
 		id: 14,
@@ -168,6 +168,6 @@ export const cards: Card[] = [
 		description: 'Rips the life force from a target.',
 		cost: 3,
 		type: 'incantation',
-		image_url: '/cards/soul-drain.png'
+		image_url: ''
 	}
 ];

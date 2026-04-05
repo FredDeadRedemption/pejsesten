@@ -11,7 +11,7 @@
 <div id="card" class={theme.bg}>
   <div id="content">
     <div class="img-wrap">
-      <img src={card.image_url} alt="" draggable="false">
+      <img src={card.image_url === "" ? "/media/cards/missing-texture.jpg" : card.image_url} alt="" draggable="false">
     </div>
     <div class="costs {theme.title}">
      <span>{card.name}</span>
