@@ -1,61 +1,30 @@
 <script lang="ts">
-	import { getIcon } from '$lib/icons';
-	import type { Card } from '$lib/shared/types';
+  import { getIcon } from '$lib/icons';
+  import type { Card } from '$lib/shared/types';
+	import { colorMap } from '$lib/util';
 
-  let { card } = $props<{ card: Card }>();
+  let { card }: { card: Card } = $props();
 
-  type CostMap = {
-    [key: string]: { color: string; icon: string, iconColor: string };
-  };
-
-  const costMap: CostMap = {
-    green: { color: " #38761d", icon: "manaGreen", iconColor: "#f3f3f3" }, // Earth
-    white: { color: "#d2d2d2", icon: "manaWhite", iconColor: "#434343" }, // Holys
-    purple: { color: "#474ea7", icon: "manaPurple", iconColor: "#f3f3f3" }, // Dream
-    black: { color: "#434343", icon: "manaBlack", iconColor: "#f3f3f3" }, // Death
-    red: { color: "#cc0000", icon: "manaRed", iconColor: "#f3f3f3" },
-    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" }
-  };
-
-  let primaryCost = $derived(Object.entries({
-    green: card.green,
-    purple: card.purple,
-    black: card.black,
-    white: card.white,
-    red: card.red,
-    orange: card.orange,
-  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0]);
-
-  let costs: Array<{ color: string, icon: string, iconColor: string }> = [];
-
-  Object.entries(costMap).forEach(([costType, costData]) => {
-    const value = card[costType as keyof typeof card];
-    if (typeof value === "number") {
-      costs.push(...Array(value).fill(costData));
-    }
-  });
+  let theme = $derived(colorMap[card.color]);
 </script>
 
-<div id="card" class="{primaryCost}-bg">
+<div id="card" class="{card.color}-bg">
   <div id="content">
-    <div class="title {primaryCost}">
-      {card.name}
-    </div>
+    <div class="title {card.color}">{card.name}</div>
     <div class="img-wrap">
       <img src={card.image_url} alt="" draggable="false">
     </div>
-    {#if card.type === 2}
-      <div class="costs-mana {primaryCost}">
-  
-      </div>
-      <div class="mana-logo">
-        <span class="icon" style="color: {costMap[primaryCost].color};">{@html getIcon(costMap[primaryCost].icon)}</span>
-      </div>
-    {:else}
-      <div class="costs {primaryCost}">
-        
-      </div>
-      <div class="bottom {primaryCost}">
+    <div class="costs {card.color}">
+      {#each Array(card.cost) as _}
+        <div class="cost" style="background-color: {theme.color};">
+          <span class="icon" style="color: {theme.iconColor}">
+            {@html getIcon(theme.icon)}
+          </span>
+        </div>
+      {/each}
+    </div>
+    {#if card.type === "minion"}
+      <div class="bottom {card.color}">
         {card.attack} | {card.defence}
       </div>
     {/if}
