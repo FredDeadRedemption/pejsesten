@@ -1,84 +1,28 @@
 <script lang="ts">
-	import { getIcon } from '$lib/icons';
-	import type { Card } from '$lib/shared/types';
+  import { getIcon } from '$lib/icons';
+  import { colorMap } from '$lib/util';
+  import type { Card } from '$lib/shared/types';
 
+  let { card }: { card: Card } = $props();
 
-  let { card } = $props<{ card: Card }>();
-
-  type CostMap = {
-    [key: string]: { color: string; icon: string, iconColor: string };
-  };
-
-  const costMap: CostMap = {
-    green: { color: " #38761d", icon: "manaGreen", iconColor: "#f3f3f3" }, // Earth
-    white: { color: "#e9e9e9", icon: "manaWhite", iconColor: "#434343" }, // Holys
-    purple: { color: "#474ea7", icon: "manaPurple", iconColor: "#f3f3f3" }, // Dream
-    black: { color: "#434343", icon: "manaBlack", iconColor: "#f3f3f3" }, // Death
-    red: { color: "#cc0000", icon: "manaRed", iconColor: "#f3f3f3" },
-    orange: { color: "#bc874f", icon: "manaOrange", iconColor: "#f3f3f3" },
-    neutral: { color: "#6e7f80", icon: "manaNeutral", iconColor: "#f3f3f3" },
-  };
-
-  let primaryCost = $derived(Object.entries({
-    green: card.green,
-    purple: card.purple,
-    black: card.black,
-    white: card.white,
-    red: card.red,
-    orange: card.orange,
-  }).reduce((a, b) => (a[1] > b[1] ? a : b))[0]);
-  //let primaryCost = "standard";
-
-  type x = {
-    color: string, icon: string, iconColor: string,
-  }
-
-  let manaCosts = $derived([
-    { name: "green", count: Array(card.green).fill(null) },
-    { name: "orange", count: Array(card.orange).fill(null) },
-    { name: "red", count: Array(card.red).fill(null) },
-    { name: "purple", count: Array(card.purple).fill(null) },
-    { name: "white", count: Array(card.white).fill(null) },
-    { name: "black", count: Array(card.black).fill(null) },
-    { name: "neutral", count: Array(card.neutral).fill(null) },
-  ]);
-
+  let theme = $derived(colorMap[card.color]);
 </script>
 
-<div id="card" class="{primaryCost}-bg">
+<div id="card" class={theme.bg}>
   <div id="content">
-    <div class="title {primaryCost}">
-      {card.name}
-    </div>
     <div class="img-wrap">
       <img src={card.image_url} alt="" draggable="false">
     </div>
-    <div class="costs {primaryCost}">
-      {#if card.type !== 2}
-        {#each manaCosts as mana}
-          {#if mana.name === "neutral" && mana.count.length > 0}
-            <div class="cost" style="background-color: {costMap[mana.name].color};">
-              <span class="icon" style="color: {costMap[mana.name].iconColor}">{mana.count.length}</span>
-            </div>  
-          {:else if mana.count.length > 0}
-            {#each mana.count as _}
-              <div class="cost" style="background-color: {costMap[mana.name].color};">
-                <span class="icon" style="color: {costMap[mana.name].iconColor}">{@html getIcon(costMap[mana.name].icon)}</span>
-              </div>              
-            {/each}
-          {/if}
-        {/each}
-      {/if}
+    <div class="costs {theme.title}">
+     <span>{card.name}</span>
     </div>
-    <div class="description {primaryCost}-desc">
+    <div class="description {theme.desc}">
       <span class="text">{card.description}</span>
-      {#if card.type === 1}<!-- IF CARD IS MINION DISPLAY ATTACK -->
-        <div class="bottom {primaryCost}">
+      <span class="icon-big" style="color: {theme.color}">{@html getIcon(theme.icon)}</span>
+      {#if card.type === "minion"}
+        <div class="bottom {theme.title}">
           {card.attack} | {card.defence}
         </div>
-      {/if}
-      {#if card.type === 2 && primaryCost} <!-- IF CARD IS MANA DISPLAY COSTS -->
-        <span class="icon-big" style="color: {costMap[primaryCost].color}">{@html getIcon(costMap[primaryCost].icon)}</span>
       {/if}
     </div>
   </div>

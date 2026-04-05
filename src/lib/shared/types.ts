@@ -1,34 +1,35 @@
+type Colors = "white" | "black"
+
 type CardBase = {
   id: number
   name: string
   description: string | null
+  color: Colors
   cost: number
   image_url: string
 }
 
+type Races = "human" | "elf"
+
 // Subtypes
-export type CreatureCard = CardBase & {
-  type: "creature"
+export type MinionCard = CardBase & {
+  type: "minion"
   attack: number
   defence: number
-  race: "human" | "elf" | "dwarf" | "undead" | "dragon" | "beast" | "orc"
-}
-
-export type SpellCard = CardBase & {
-  type: "spell"
+  race: Races
 }
 
 export type IncantationCard = CardBase & {
   type: "incantation"
 }
 
-export type Card = CreatureCard | SpellCard | IncantationCard
+export type Card = MinionCard | IncantationCard
 
 export type Board = {
   deck: Card[], 
   hand: Card[], 
   graveyard: Card[], 
-  battlefield: CreatureCard[],
+  battlefield: MinionCard[],
   hp: number,
   mana: number,
 }

@@ -35,3 +35,8 @@ export const getRandomDeckName = () => {
 
   return names[Math.floor(Math.random() * names.length)];
 }
+
+export const colorMap = {
+  white: { bg: "white-bg", title: "white", desc: "white-desc", color: "#e9e9e9", iconColor: "#434343", icon: "manaWhite" },
+  black: { bg: "black-bg", title: "black", desc: "black-desc", color: "#434343", iconColor: "#f3f3f3", icon: "manaBlack" },
+} as const;
