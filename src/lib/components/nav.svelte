@@ -11,7 +11,7 @@
 		padding: 5px;
     display: flex;
     gap: 5px;
-    border: 1px solid $grey-dark;
+    border: 1px solid $grey-mid;
     border-radius: 2px;
 	}
 </style>

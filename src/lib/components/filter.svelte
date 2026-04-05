@@ -245,7 +245,7 @@
 		border: 1px solid $grey-mid;
 		background-color: $grey-ultralight;
 		outline: none;
-		color: $grey-ultradark;
+		color: $grey-dark;
 		border-radius: 5px;
 		padding: 10px;
 	}
