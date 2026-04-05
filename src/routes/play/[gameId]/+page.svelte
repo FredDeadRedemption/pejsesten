@@ -115,7 +115,6 @@
 	}
 	.enemy-hand,
 	.enemy-deck {
-		//TODO: det her er måske kun temporary fix
 		pointer-events: none;
 	}
 </style>
