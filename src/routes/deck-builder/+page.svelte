@@ -19,6 +19,9 @@
 
   let cards = $derived(data.cards); // TODO: move this to a load function and make it so it only fetches id and name for better performance
 
+  console.log(cards)
+  console.log(filteredCards)
+
   const getCardData = (id: number) => cards.find((card) => card.id === id);
 
   let decks = $state<Deck[]>([]);

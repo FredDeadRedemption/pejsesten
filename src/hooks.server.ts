@@ -2,17 +2,22 @@
 // src/hooks.server.ts
 import type { Handle } from '@sveltejs/kit';
 import { Server } from 'socket.io';
+import { createServer } from 'net';
 import { setupSocketIO } from '$lib/server/socket';
 
-declare global {
-  var __socketio__: Server | undefined;
-}
+const isPortInUse = (port: number): Promise<boolean> =>
+  new Promise((resolve) => {
+    const tester = createServer()
+      .once('error', () => resolve(true))
+      .once('listening', () => tester.close(() => resolve(false)))
+      .listen(port);
+  });
 
-// prevent re-binding on hot reload
-if (!global.__socketio__) {
+if (!(await isPortInUse(3002))) {
+  const { Server } = await import('socket.io');
+  const { setupSocketIO } = await import('$lib/server/socket');
   const io = new Server(3002, { cors: { origin: '*' } });
   setupSocketIO(io);
-  global.__socketio__ = io;
   console.log("Socket.IO server running on port 3002");
 }
 
