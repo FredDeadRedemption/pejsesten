@@ -1,12 +1,10 @@
-export const deckToCards = (deck: number[]) => {
-  return deck.map(id => getCardByID(id)).filter((card): card is Card => card !== undefined);
-}
-
-export const getCardByID = (id: number) => {
-  return cards.find(card => card.id === id);
-}
-
 import type { Card } from "./types";
+
+export const getCardByID = (id: number) => cards.find(card => card.id === id);
+
+export const getCards = () => cards;
+
+export const deckToCards = (deck: number[]) => deck.map(id => getCardByID(id)!);
 
 export const cards: Card[] = [
   // ── HUMANS ──────────────────────────────────────────────

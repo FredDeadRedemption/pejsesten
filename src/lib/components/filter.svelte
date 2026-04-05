@@ -26,7 +26,7 @@
   let showBlack: boolean = $state(false);
 
   const filter = () => {
-    filteredCards = cards.filter((card: any) => {
+    filteredCards = cards?.filter((card: any) => {
       const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase());
       const a = showGreen ? card.green > 0 : true;
       const b = showOrange ? card.orange > 0 : true;

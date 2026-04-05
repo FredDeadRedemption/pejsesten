@@ -15,7 +15,9 @@
     cards: number[]; // array of card id's
   }
 
-  let cards = $state<CardT[]>([]); // TODO: move this to a load function and make it so it only fetches id and name for better performance
+  let data = $props() as { cards: CardT[] };
+
+  let cards = $derived(data.cards); // TODO: move this to a load function and make it so it only fetches id and name for better performance
 
   const getCardData = (id: number) => cards.find((card) => card.id === id);
 
