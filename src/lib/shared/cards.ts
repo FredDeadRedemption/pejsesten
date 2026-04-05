@@ -1,4 +1,4 @@
-import type { Card, CardEntity } from './types';
+import type { Card, CardEntity, IncantationEntity, MinionEntity } from './types';
 
 export const getCardByID = (id: number) => cards.find((card) => card.id === id);
 
@@ -14,12 +14,12 @@ export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => ge
 				defence: card.baseDefence,
 				cost: card.baseCost,
 				exhausted: false
-			} as CardEntity;
+			} as MinionEntity;
 		} else {
 			return {
 				...card,
 				cost: card.baseCost
-			} as CardEntity;
+			} as IncantationEntity;
 		}
 	}
 );
@@ -29,13 +29,13 @@ export const cards: Card[] = [
 	{
 		id: 1,
 		color: 'white',
-		name: 'Sunforge Paladin',
+		name: 'Guy with a Stick',
 		description: 'Blessed by the light at birth.',
 		baseCost: 2,
 		type: 'minion',
 		race: 'human',
-		baseAttack: 2,
-		baseDefence: 3,
+		baseAttack: 1,
+		baseDefence: 2,
 		image_url: ''
 	},
 	{
