@@ -1,6 +1,6 @@
 import type { Card, CardEntity, IncantationEntity, MinionEntity } from './types';
 
-export const getCardByID = (id: number) => cards.find((card) => card.id === id);
+const getCardByID = (id: number) => cards.find((card) => card.id === id);
 
 export const getCards = () => cards;
 
@@ -24,7 +24,7 @@ export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => ge
 	}
 );
 
-export const cards: Card[] = [
+const cards: Card[] = [
 	// ── WHITE MINIONS ────────────────────────────────────────
 	{
 		id: 1,
