@@ -47,20 +47,37 @@
 <svelte:window onclick={cancelAttack} onmousemove={handleMouseMove} />
 
 {#if origin !== null && originRect}
+	{@const x1 = originRect.left + originRect.width / 2}
+	{@const y1 = originRect.top + originRect.height / 2}
+	{@const dx = mouseX - x1}
+	{@const dy = mouseY - y1}
+	{@const dist = Math.hypot(dx, dy)}
+	{@const bend = dist * 0.2}
+	{@const cx = (x1 + mouseX) / 2 - (dy / dist) * bend}
+	{@const cy = (y1 + mouseY) / 2 + (dx / dist) * bend}
 	<svg class="attack-line">
 		<defs>
+			<linearGradient
+				id="arrow-gradient"
+				gradientUnits="userSpaceOnUse"
+				{x1}
+				{y1}
+				x2={mouseX}
+				y2={mouseY}
+			>
+				<stop offset="0%" stop-color="#3B130C" />
+				<stop offset="100%" stop-color="#E05236" />
+			</linearGradient>
 			<marker id="arrow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-				<path d="M0,0 L0,6 L6,3 z" fill="red" />
+				<path d="M0,0 L0,6 L6,3 z" fill="#E05236" />
 			</marker>
 		</defs>
-		<line
-			x1={originRect.left + originRect.width / 2}
-			y1={originRect.top + originRect.height / 2}
-			x2={mouseX}
-			y2={mouseY}
-			stroke="red"
+		<path
+			d="M {x1} {y1} Q {cx} {cy} {mouseX} {mouseY}"
+			stroke="url(#arrow-gradient)"
 			stroke-width="2"
 			stroke-dasharray="6,3"
+			fill="none"
 			marker-end="url(#arrow)"
 		/>
 	</svg>
