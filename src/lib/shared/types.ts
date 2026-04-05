@@ -14,15 +14,15 @@ type Races = "human" | "elf"
 
 // Base Minion Card
 export type MinionCard = CardBase & {
-  type: "minion"
+  readonly type: "minion"
   readonly baseAttack: number
   readonly baseDefence: number
-  race: Races
+  readonly race: Races
 }
 
 // Base Incantation Card
 export type IncantationCard = CardBase & {
-  type: "incantation"
+  readonly type: "incantation"
 }
 
 // Metadata mostly for ui
@@ -32,7 +32,7 @@ export type Card = MinionCard | IncantationCard
 export type MinionEntity = MinionCard & {
   attack: number
   defence: number
-  const: number
+  cost: number
   exhausted: boolean
 }
 

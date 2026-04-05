@@ -4,6 +4,7 @@ export const getCardByID = (id: number) => cards.find((card) => card.id === id);
 
 export const getCards = () => cards;
 
+// Transform Deck: [1, 2, 3] to (actual)Deck: [CardEntity, CardEntity, CardEntity]
 export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => getCardByID(id)!).map(
 	(card) => {
 		if (card.type === 'minion') {
@@ -11,7 +12,7 @@ export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => ge
 				...card,
 				attack: card.baseAttack,
 				defence: card.baseDefence,
-				const: card.baseCost,
+				cost: card.baseCost,
 				exhausted: false
 			} as CardEntity;
 		} else {
