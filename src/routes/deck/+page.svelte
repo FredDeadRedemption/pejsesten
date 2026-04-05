@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import Card from '$lib/components/card.svelte';
 	import Filter from '$lib/components/filter.svelte';
 	import { getIcon } from '$lib/icons.js';
-	import { getRandomDeckName, getRandomString } from '$lib/util.js';
+	import { getRandomDeckName } from '$lib/util.js';
 	import { slide } from 'svelte/transition';
 	import type { Card as CardT } from '$lib/shared/types';
 	import { getCards } from '$lib/shared/cards.js';
