@@ -1,9 +1,5 @@
-
-// src/hooks.server.ts
 import type { Handle } from '@sveltejs/kit';
-import { Server } from 'socket.io';
 import { createServer } from 'net';
-import { setupSocketIO } from '$lib/server/socket';
 
 const isPortInUse = (port: number): Promise<boolean> =>
   new Promise((resolve) => {
