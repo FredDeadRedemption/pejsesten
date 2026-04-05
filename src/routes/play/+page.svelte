@@ -36,7 +36,7 @@
 
 <main class="main">
   <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong></p>
-  <p>Playin as <strong>{"fsm"}</strong></p>
+  <p>Playin as <strong>{"random troldmayn"}</strong></p>
   <button onclick={resetProd}>reset prod gamestate & queueu</button>
   <input type="checkbox" name="url" id="" bind:checked={dev}>
 
