@@ -167,12 +167,12 @@
 		&.self {
 			align-self: flex-end;
 			transform: translateY(30px);
-			background-color: blue;
+			background-color: rgb(102, 102, 174);
 		}
 		&.enemy {
 			align-self: flex-start;
 			transform: translateY(-30px);
-			background-color: red;
+			background-color: rgb(192, 86, 86);
 		}
 	}
 	.attack-line {

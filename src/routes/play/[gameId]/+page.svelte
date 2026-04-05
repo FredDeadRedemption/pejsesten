@@ -133,24 +133,24 @@
 	}
 	.self-deck,
 	.self-graveyard {
-		background-color: red;
+		background-color: rgb(88, 64, 64);
 	}
 	.enemy-deck,
 	.enemy-graveyard {
-		background-color: goldenrod;
+		background-color: rgb(79, 66, 87);
 	}
 	.hand-battlefield-zone {
 		display: grid;
 		grid-template-rows: 18% 1fr 18%;
 	}
 	.battlefield {
-		background-color: burlywood;
+		background-color: rgb(70, 65, 74);
 		display: grid;
 		grid-template-rows: 1fr 1fr;
 	}
 	.self-hand,
 	.enemy-hand {
-		background-color: blueviolet;
+		background-color: rgb(77, 71, 83);
 	}
 	.enemy-hand,
 	.enemy-deck {
