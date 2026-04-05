@@ -169,10 +169,10 @@
 		&.green {
 			background-color: $grey-ultralight;
 			.icon {
-				color: $mana-green;
+				color: $green;
 			}
 			&.active {
-				background-color: $mana-green;
+				background-color: $green;
 				.icon {
 					color: $white;
 				}
@@ -193,10 +193,10 @@
 		&.red {
 			background-color: $grey-ultralight;
 			.icon {
-				color: $mana-red;
+				color: $red;
 			}
 			&.active {
-				background-color: $mana-red;
+				background-color: $red;
 				.icon {
 					color: $white;
 				}

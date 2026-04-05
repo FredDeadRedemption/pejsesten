@@ -6,6 +6,11 @@
 	let { card }: { card: MinionEntity } = $props();
 
 	let theme = $derived(colorMap[card.color]);
+
+	let attackBuffed = $derived(card.attack > card.baseAttack);
+	let attackDebuffed = $derived(card.attack < card.baseAttack);
+	let defenceBuffed = $derived(card.defence > card.baseDefence);
+	let defenceDebuffed = $derived(card.defence < card.baseDefence);
 </script>
 
 <div id="card" class="{card.color}-bg">
@@ -19,8 +24,14 @@
 			/>
 		</div>
 		{#if card.type === 'minion'}
-			<div class="bottom {card.color}">
-				{card.attack} | {card.defence}
+			<div
+				class="bottom {card.color}"
+				class:attackBuffed
+				class:attackDebuffed
+				class:defenceBuffed
+				class:defenceDebuffed
+			>
+				<span class="attack">{card.attack}</span>|<span class="defence">{card.defence}</span>
 			</div>
 		{/if}
 	</div>
@@ -28,11 +39,11 @@
 
 <style lang="scss">
 	.red-bg {
-		outline: 1px solid $mana-red;
+		outline: 1px solid $red;
 		background-image: url('/media/cards/card-bg-red.webp');
 	}
 	.green-bg {
-		outline: 1px solid $mana-green;
+		outline: 1px solid $green;
 		background-image: url('/media/cards/card-bg-green.webp');
 	}
 	.white-bg {
@@ -169,6 +180,18 @@
 				border-radius: 3px;
 				padding: 3px;
 				justify-content: space-between;
+				&.attackBuffed .attack {
+					color: $green;
+				}
+				&.attackDebuffed .attack {
+					color: $red;
+				}
+				&.defenceBuffed .defence {
+					color: $green;
+				}
+				&.defenceDebuffed .defence {
+					color: $red;
+				}
 			}
 		}
 	}

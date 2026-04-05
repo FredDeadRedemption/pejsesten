@@ -63,11 +63,11 @@
 		font-size: 0.6rem;
 	}
 	.red-bg {
-		outline: 1px solid $mana-red;
+		outline: 1px solid $red;
 		background-image: url('/media/cards/card-bg-red.webp');
 	}
 	.green-bg {
-		outline: 1px solid $mana-green;
+		outline: 1px solid $green;
 		background-image: url('/media/cards/card-bg-green.webp');
 	}
 	.white-bg {
