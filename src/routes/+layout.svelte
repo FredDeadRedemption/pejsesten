@@ -1,10 +1,10 @@
 <script>
-  import '$lib/array.extensions';
-  import "../style.scss";
+	import '$lib/array.extensions';
+	import Nav from '$lib/components/nav.svelte';
+	import '../style.scss';
 
-  let { children } = $props();
+	let { children } = $props();
 </script>
 
-<a href="/play">play</a>&nbsp;&nbsp;&nbsp;<a href="/deck">deck</a>
-
+<Nav />
 {@render children()}
