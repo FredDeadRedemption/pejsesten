@@ -23,17 +23,16 @@
 				draggable="false"
 			/>
 		</div>
-		{#if card.type === 'minion'}
-			<div
-				class="bottom {card.color}"
-				class:attackBuffed
-				class:attackDebuffed
-				class:defenceBuffed
-				class:defenceDebuffed
-			>
-				<span class="attack">{card.attack}</span>|<span class="defence">{card.defence}</span>
-			</div>
-		{/if}
+
+		<div
+			class="bottom {card.color}"
+			class:attackBuffed
+			class:attackDebuffed
+			class:defenceBuffed
+			class:defenceDebuffed
+		>
+			<span class="attack">{card.attack}</span>|<span class="defence">{card.defence}</span>
+		</div>
 	</div>
 </div>
 
