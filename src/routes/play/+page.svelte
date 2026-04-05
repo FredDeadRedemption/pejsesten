@@ -3,7 +3,12 @@
   import type { PlayerMetaData } from "$lib/shared/types";
 	import { fly } from "svelte/transition";
 
-  let decks: any[] = []
+  let decks: any[] = [
+    {
+      name: "Deck 1",
+      cards: [1,2,3,4,5,6,7,8,9,10]
+    }
+  ]
 
   let choosenDeckJson = $state([1,2,3,4,5,6,7,8,9,10]);
     
@@ -65,9 +70,6 @@
 </main>
 
 <style lang="scss">
-  a{
-    color: $primary;
-  }
   .queuedUp{
     background-color: $grey-mid;
     &:hover{
