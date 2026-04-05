@@ -2,15 +2,23 @@
   import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
   import type { PlayerMetaData } from "$lib/shared/types";
 	import { fly } from "svelte/transition";
+	import { onMount } from "svelte";
 
-  let decks: any[] = [
-    {
-      name: "Deck 1",
-      cards: [1,2,3,4,5,6,7,8,9,10]
-    }
-  ]
+  type Deck = {
+		id: number;
+		name: string;
+		cards: number[]; // array of card id's
+	};
 
-  let choosenDeckJson = $state([1,2,3,4,5,6,7,8,9,10]);
+  let decks: Deck[] = $state([]);
+  let choosenDeckJson = $state<number[]>([]);
+
+
+  onMount(() =>{
+    decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
+    choosenDeckJson = decks[0]?.cards ?? [];
+  })
+
     
   let dev = $state(false)
 
