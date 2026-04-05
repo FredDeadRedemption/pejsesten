@@ -129,8 +129,6 @@
 		display: flex;
 	}
 	.minion-trigger,
-	.mana-trigger,
-	.spell-trigger,
 	.incantation-trigger {
 		border: 1px solid $grey-mid;
 		border-right: none;
