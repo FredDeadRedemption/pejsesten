@@ -17,7 +17,7 @@ export const connectSocket = (url: string) => {
   socket = io(url);
 
   socket.on("redirect", (URL) => {
-    goto(`/game/${URL}`);
+    goto(`/play/${URL}`);
   })
 
   socket.on("newGameState", (newGameState: GameStateClient) => {
