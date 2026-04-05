@@ -11,11 +11,13 @@ type ActiveGame = {
   isPlayer1White : boolean;
 }
 const LOGGING = true;
+export let ioHandle: Server | null = null;
 let queue: string[] = [];
 let playerMetaDataMap: Map<string, PlayerMetaData> = new Map<string, PlayerMetaData>();
 export let activeGame: ActiveGame | null = null;
 // Paste your existing io.on("connection") logic here verbatim
 export const setupSocketIO = (io: Server) => {
+  ioHandle = io; // Store the io instance for later use if needed
   io.on("connection", (socket: Socket) => {
 
   // this funtion takes in a function (from the gameState module) with the signature (id: string, data?: any) 

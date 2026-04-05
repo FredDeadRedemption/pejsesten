@@ -1,7 +1,7 @@
 import { switchTurn } from "$lib/server/lib";
 import type { AttackData, GameState } from "$lib/shared/types";
 import { activeGame } from "$lib/server/socket";
-import { io } from "../../hooks.server";
+import { ioHandle as io } from "$lib/server/socket";
 import type { Card } from "$lib/shared/types";
 
 let gameState: GameState;
@@ -51,8 +51,8 @@ export const setGameState = (player1ID: string, player2ID: string, isPlayer1Whit
     let startingHandWhite: Card[] = whiteDeck.splice(0, 5);
     let startingHandBlack: Card[] = blackDeck.splice(0, 5);
 
-    const socket1 = io.sockets.sockets.get(player1ID);
-    const socket2 = io.sockets.sockets.get(player2ID);
+    const socket1 = io?.sockets.sockets.get(player1ID);
+    const socket2 = io?.sockets.sockets.get(player2ID);
     if (socket1 && socket2) {
         socket1.emit("cardDrawn", isPlayer1White ? startingHandWhite[0] : startingHandBlack[0]);
         socket2.emit("cardDrawn", isPlayer1White ? startingHandBlack[0] : startingHandWhite[0]);
@@ -96,7 +96,7 @@ export const endTurn = (socketID: string): GameStateResponse => {
         gameState.turnCount++;
     
         
-        const socket = io.sockets.sockets.get(socketID);
+        const socket = io?.sockets.sockets.get(socketID);
         // if (!socket) console.log("socket is null during emit mana")
         // socket && socket.emit("mana", manas);
 
@@ -138,7 +138,7 @@ export const drawCard = (socketID: string): GameStateResponse => {
     }
 
     if (succes) {
-        const socket = io.sockets.sockets.get(socketID);
+        const socket = io?.sockets.sockets.get(socketID);
         if (socket) {
             socket.emit("cardDrawn", card);
         } else {
@@ -163,14 +163,14 @@ export const playCard = (socketID: string, index: number): GameStateResponse => 
         return null
     }
 
-    if(card.type === "creature"){
+    if(card.type === "minion"){
 
         battlefield.push(card);
     }
 
 
     const otherSocketID = gameState.whiteTurn ? gameState.blackPlayerID : gameState.whitePlayerID;
-    const socket = io.sockets.sockets.get(otherSocketID);
+    const socket = io?.sockets.sockets.get(otherSocketID);
     if (socket) {
         socket.emit("playCard", card);
     } else {
@@ -233,7 +233,7 @@ export const attack = (socketID: string, attackData: AttackData): GameStateRespo
         }
     }
 
-    const socket = io.sockets.sockets.get(socketID);
+    const socket = io?.sockets.sockets.get(socketID);
     if (socket) {
         attackerAttack = attacker.attack;
         

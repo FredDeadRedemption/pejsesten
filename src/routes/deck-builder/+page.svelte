@@ -18,10 +18,6 @@
   let { data } = $props();
   let cards = $derived(data.cards);
 
-  $inspect(cards)
-  console.log(cards)
-  console.log(filteredCards)
-
   const getCardData = (id: number) => cards.find((card) => card.id === id);
 
   let decks = $state<Deck[]>([]);
