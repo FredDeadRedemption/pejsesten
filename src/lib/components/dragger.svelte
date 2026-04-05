@@ -1,10 +1,15 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-
-	let { x = $bindable(100), y = $bindable(100), moving = $bindable(false), children } = $props()
-	onMount(()=>{
-		console.log("in BUSINESS")
-	})
+	let {
+		x = $bindable(100),
+		y = $bindable(100),
+		moving = $bindable(false),
+		children
+	}: {
+		x: number;
+		y: number;
+		moving: boolean;
+		children: any;
+	} = $props();
 
 </script>
 

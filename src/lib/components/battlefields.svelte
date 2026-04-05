@@ -17,24 +17,17 @@
 
 	let origin: number | null = $state(null);
 
-	const beginAttack = (index: number) => {
-		console.log('ATTACKING WITH INDEX: ', index);
-		origin = index;
-	};
+	const beginAttack = (index: number) => origin = index;
+
+	const cancelAttack = () => origin = null;
 
 	const tryAttack = (index: number, face: boolean) => {
 		if (origin === null) return;
-		console.log('TRYING TO ATTACK INDEX: ', index, 'FACE: ', face);
 		attack({
 			origin: origin,
 			target: index,
 			face: face
 		});
-		origin = null;
-	};
-
-	const cancelAttack = () => {
-		console.log('CANCEL ATTACK');
 		origin = null;
 	};
 </script>

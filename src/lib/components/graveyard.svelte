@@ -1,5 +1,7 @@
 <script lang="ts">
-  let { graveyard = $bindable() } = $props();
+	import type { Card } from "$lib/shared/types";
+
+  let { graveyard = $bindable() }: { graveyard: Card[] } = $props();
 
 </script>
 

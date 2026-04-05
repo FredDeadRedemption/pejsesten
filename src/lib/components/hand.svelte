@@ -7,7 +7,7 @@
 
   let handElement: HTMLElement;
 
-  let { hand = $bindable() } = $props();
+  let { hand = $bindable() }: { hand: CardT[] } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged

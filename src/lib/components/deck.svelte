@@ -1,31 +1,32 @@
 <script lang="ts">
-  import { drawCard } from "$lib/socket/socket";
+	import type { Card } from '$lib/shared/types';
+	import { drawCard } from '$lib/socket/socket';
 
-  let { deck = $bindable() } = $props();
+	let { deck = $bindable() }: { deck: Card[] } = $props();
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div id="wrapper">
-  <div id="deck" onclick={() => drawCard()}>
-    DECK | {deck.length}
-  </div>
+	<div id="deck" onclick={() => drawCard()}>
+		DECK | {deck.length}
+	</div>
 </div>
 
 <style lang="scss">
-  #wrapper{ 
-    height: 100%;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    #deck{
-      height: 147px;
-      border: 3px solid grey;
-      width: 100px;
-      &:hover{
-        cursor: pointer;
-      }
-    }
-  }
+	#wrapper {
+		height: 100%;
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		#deck {
+			height: 147px;
+			border: 3px solid grey;
+			width: 100px;
+			&:hover {
+				cursor: pointer;
+			}
+		}
+	}
 </style>
