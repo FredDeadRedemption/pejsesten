@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { Card } from '$lib/shared/types';
+	import type { CardEntity } from '$lib/shared/types';
 
-	let { deck = $bindable() }: { deck: Card[] } = $props();
+	let { deck = $bindable() }: { deck: CardEntity[] } = $props();
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->

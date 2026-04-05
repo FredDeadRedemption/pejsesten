@@ -1,7 +1,7 @@
 <script lang="ts">
 	import CardSmall from './cardSmall.svelte';
 	import { attack } from '$lib/socket/socket';
-	import type { MinionCard } from '$lib/shared/types';
+	import type { MinionEntity } from '$lib/shared/types';
 
 	let {
 		selfBattleField = $bindable(),
@@ -9,8 +9,8 @@
 		selfHP = $bindable(),
 		enemyHP = $bindable()
 	}: {
-    selfBattleField: MinionCard[];
-    enemyBattleField: MinionCard[];
+    selfBattleField: MinionEntity[];
+    enemyBattleField: MinionEntity[];
     selfHP: number;
     enemyHP: number;
   } = $props();
@@ -57,7 +57,7 @@
 				tryAttack(index, false);
 			}}
 		>
-			<CardSmall card={card!}></CardSmall>
+			<CardSmall card={card}></CardSmall>
 		</div>
 	{/each}
 </div>
@@ -77,7 +77,7 @@
 				beginAttack(index);
 			}}
 		>
-			<CardSmall card={card!}></CardSmall>
+			<CardSmall card={card}></CardSmall>
 		</div>
 	{/each}
 </div>

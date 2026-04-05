@@ -1,8 +1,5 @@
 import { switchTurn } from '$lib/server/lib';
-import type { AttackData, GameStateServer } from '$lib/shared/types';
-import { activeGame } from '$lib/server/socket';
-import { ioHandle as io } from '$lib/server/socket';
-import type { Card } from '$lib/shared/types';
+import type { AttackData, CardEntity, GameStateServer } from '$lib/shared/types';
 
 let gameState: GameStateServer;
 
@@ -34,8 +31,8 @@ export const setGameState = (
 	player1ID: string,
 	player2ID: string,
 	isPlayer1White: boolean,
-	player1Deck: Card[],
-	player2Deck: Card[]
+	player1Deck: CardEntity[],
+	player2Deck: CardEntity[]
 ) => {
 	// Assign decks
 	const whiteDeck = isPlayer1White ? player1Deck : player2Deck;

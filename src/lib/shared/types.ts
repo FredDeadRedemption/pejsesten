@@ -1,40 +1,57 @@
 type Colors = "white" | "black"
 
+// Base Card
 type CardBase = {
-  id: number
-  name: string
-  description: string | null
-  color: Colors
-  cost: number
-  image_url: string
+  readonly id: number
+  readonly name: string
+  readonly description: string | null
+  readonly color: Colors
+  readonly baseCost: number
+  readonly image_url: string
 }
 
 type Races = "human" | "elf"
 
-// Subtypes
+// Base Minion Card
 export type MinionCard = CardBase & {
   type: "minion"
-  attack: number
-  defence: number
+  readonly baseAttack: number
+  readonly baseDefence: number
   race: Races
 }
 
+// Base Incantation Card
 export type IncantationCard = CardBase & {
   type: "incantation"
 }
 
+// Metadata mostly for ui
 export type Card = MinionCard | IncantationCard
 
+// Minion Entity
+export type MinionEntity = MinionCard & {
+  attack: number
+  defence: number
+  const: number
+  exhausted: boolean
+}
+
+// Encantation Entity
+export type IncantationEntity = IncantationCard & {
+  cost: number
+}
+
+// Card Entity
+export type CardEntity = MinionEntity | IncantationEntity
+
 export type Board = {
-  deck: Card[], 
-  hand: Card[], 
-  graveyard: Card[], 
-  battlefield: MinionCard[],
+  deck: CardEntity[], 
+  hand: CardEntity[], 
+  graveyard: MinionEntity[], 
+  battlefield: MinionEntity[],
   hp: number,
   mana: number,
 }
-
-type state = "draw" | "play" | "attack" | "inactive";
 
 export type GameStateServer = {
   white: Board,

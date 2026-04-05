@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
-	import type { Card } from '$lib/shared/types';
+	import type { MinionEntity } from '$lib/shared/types';
 	import { colorMap } from '$lib/util';
 
-	let { card }: { card: Card } = $props();
+	let { card }: { card: MinionEntity } = $props();
 
 	let theme = $derived(colorMap[card.color]);
 </script>

@@ -1,10 +1,27 @@
-import type { Card } from './types';
+import type { Card, CardEntity } from './types';
 
 export const getCardByID = (id: number) => cards.find((card) => card.id === id);
 
 export const getCards = () => cards;
 
-export const deckToCards = (deck: number[]) => deck.map((id) => getCardByID(id)!);
+export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => getCardByID(id)!).map(
+	(card) => {
+		if (card.type === 'minion') {
+			return {
+				...card,
+				attack: card.baseAttack,
+				defence: card.baseDefence,
+				const: card.baseCost,
+				exhausted: false
+			} as CardEntity;
+		} else {
+			return {
+				...card,
+				cost: card.baseCost
+			} as CardEntity;
+		}
+	}
+);
 
 export const cards: Card[] = [
 	// ── WHITE MINIONS ────────────────────────────────────────
@@ -13,11 +30,11 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Sunforge Paladin',
 		description: 'Blessed by the light at birth.',
-		cost: 2,
+		baseCost: 2,
 		type: 'minion',
 		race: 'human',
-		attack: 2,
-		defence: 3,
+		baseAttack: 2,
+		baseDefence: 3,
 		image_url: ''
 	},
 	{
@@ -25,11 +42,11 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Dawn Priest',
 		description: 'Heals with one hand, smites with the other.',
-		cost: 3,
+		baseCost: 3,
 		type: 'minion',
 		race: 'human',
-		attack: 2,
-		defence: 4,
+		baseAttack: 2,
+		baseDefence: 4,
 		image_url: ''
 	},
 	{
@@ -37,11 +54,11 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Silverguard Knight',
 		description: 'His armour has never been tarnished.',
-		cost: 4,
+		baseCost: 4,
 		type: 'minion',
 		race: 'human',
-		attack: 3,
-		defence: 5,
+		baseAttack: 3,
+		baseDefence: 5,
 		image_url: ''
 	},
 	{
@@ -49,11 +66,11 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Radiant Sentinel',
 		description: 'Light pours from every crack in her armour.',
-		cost: 5,
+		baseCost: 5,
 		type: 'minion',
 		race: 'elf',
-		attack: 4,
-		defence: 6,
+		baseAttack: 4,
+		baseDefence: 6,
 		image_url: ''
 	},
 	{
@@ -61,11 +78,11 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Herald of the Sun',
 		description: 'Arrives before the dawn. Leaves after the victory.',
-		cost: 6,
+		baseCost: 6,
 		type: 'minion',
 		race: 'elf',
-		attack: 6,
-		defence: 5,
+		baseAttack: 6,
+		baseDefence: 5,
 		image_url: ''
 	},
 
@@ -75,11 +92,11 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Duskblade Rogue',
 		description: 'Strikes when the candles go out.',
-		cost: 2,
+		baseCost: 2,
 		type: 'minion',
 		race: 'human',
-		attack: 3,
-		defence: 2,
+		baseAttack: 3,
+		baseDefence: 2,
 		image_url: ''
 	},
 	{
@@ -87,11 +104,11 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Cursed Hexblade',
 		description: 'Every wound he deals festers.',
-		cost: 3,
+		baseCost: 3,
 		type: 'minion',
 		race: 'human',
-		attack: 4,
-		defence: 2,
+		baseAttack: 4,
+		baseDefence: 2,
 		image_url: ''
 	},
 	{
@@ -99,11 +116,11 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Void Stalker',
 		description: 'Hunts in the space between thoughts.',
-		cost: 4,
+		baseCost: 4,
 		type: 'minion',
 		race: 'elf',
-		attack: 5,
-		defence: 3,
+		baseAttack: 5,
+		baseDefence: 3,
 		image_url: ''
 	},
 	{
@@ -111,11 +128,11 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Grave Warden',
 		description: 'Chosen to guard what should stay buried.',
-		cost: 4,
+		baseCost: 4,
 		type: 'minion',
 		race: 'human',
-		attack: 3,
-		defence: 5,
+		baseAttack: 3,
+		baseDefence: 5,
 		image_url: ''
 	},
 	{
@@ -123,11 +140,11 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Soulreaper',
 		description: 'Collects what death is owed.',
-		cost: 6,
+		baseCost: 6,
 		type: 'minion',
 		race: 'elf',
-		attack: 7,
-		defence: 4,
+		baseAttack: 7,
+		baseDefence: 4,
 		image_url: ''
 	},
 
@@ -137,7 +154,7 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Divine Shield',
 		description: 'Wraps an ally in impenetrable holy light.',
-		cost: 2,
+		baseCost: 2,
 		type: 'incantation',
 		image_url: ''
 	},
@@ -146,7 +163,7 @@ export const cards: Card[] = [
 		color: 'white',
 		name: 'Holy Wrath',
 		description: 'Calls down judgement on the unworthy.',
-		cost: 3,
+		baseCost: 3,
 		type: 'incantation',
 		image_url: ''
 	},
@@ -157,7 +174,7 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Dark Blessing',
 		description: 'Power freely given always has a price.',
-		cost: 2,
+		baseCost: 2,
 		type: 'incantation',
 		image_url: ''
 	},
@@ -166,7 +183,7 @@ export const cards: Card[] = [
 		color: 'black',
 		name: 'Soul Drain',
 		description: 'Rips the life force from a target.',
-		cost: 3,
+		baseCost: 3,
 		type: 'incantation',
 		image_url: ''
 	}

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { Card } from "$lib/shared/types";
+	import type { MinionEntity } from "$lib/shared/types";
 
-  let { graveyard = $bindable() }: { graveyard: Card[] } = $props();
+  let { graveyard = $bindable() }: { graveyard: MinionEntity[] } = $props();
 
 </script>
 

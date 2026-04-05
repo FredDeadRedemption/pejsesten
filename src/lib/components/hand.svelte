@@ -3,16 +3,16 @@
 	import Card from "./card.svelte";
 	import CardSmall from "./cardSmall.svelte";
   import { playCard } from "$lib/socket/socket";
-  import type { Card as CardT } from "$lib/shared/types";
+  import type { CardEntity } from "$lib/shared/types";
 
   let handElement: HTMLElement;
 
-  let { hand = $bindable() }: { hand: CardT[] } = $props();
+  let { hand = $bindable() }: { hand: CardEntity[] } = $props();
 
   let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
   let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
   let dragCoords = $state({ x: 0, y: 0}); 
-  let dragCard: CardT | null = $state(null);
+  let dragCard: CardEntity | null = $state(null);
 
   const setHover = (index: number) =>hoverIndex = index;
   const clearHover = () => hoverIndex = null;
@@ -90,7 +90,7 @@
         </div>
       {:else if draggerIndex !== index}
         <div class="default-card">
-            <CardSmall card={cardInHand!}/>
+            <Card compact card={cardInHand}/>
         </div>
       {/if}
     </div>
@@ -98,7 +98,7 @@
   {#if draggin && dragCard}
       <div class="dragger" style="position: abosolute; left: {dragCoords.x}px; top: {dragCoords.y}px;"
       >
-        <CardSmall card={dragCard}></CardSmall>
+        <Card compact card={dragCard}></Card>
       </div>
   {/if}
 </div>

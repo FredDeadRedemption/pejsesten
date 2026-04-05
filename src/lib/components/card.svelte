@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
 	import { colorMap } from '$lib/util';
-	import type { Card } from '$lib/shared/types';
+	import type { Card, CardEntity } from '$lib/shared/types';
 
-	let { card }: { card: Card } = $props();
+	// Card is for ui representation, CardEntity is for rendering game state.
+	let { card, compact = false }: { card: CardEntity | Card; compact: boolean } = $props();
 
 	let theme = $derived(colorMap[card.color]);
 </script>
 
-<div id="card" class={theme.bg}>
+<div id="card" class={theme.bg} class:compact>
 	<div id="content">
 		<div class="img-wrap">
 			<img
@@ -27,7 +28,7 @@
 			</div>
 			{#if card.type === 'minion'}
 				<div class="bottom {theme.title}">
-					{card.attack} | {card.defence}
+					{card.baseAttack} | {card.baseDefence}
 				</div>
 			{/if}
 		</div>
@@ -41,20 +42,20 @@
 		flex: 1;
 		width: 100%;
 
-		.icon-big{
-      align-self: center;
-      justify-self: center;
-      transform: translateY(5px);
-			grid-area: 1 / 1; 
+		.icon-big {
+			align-self: center;
+			justify-self: center;
+			transform: translateY(5px);
+			grid-area: 1 / 1;
 		}
 
 		.icon-big {
 			scale: 6;
-			opacity: 0.5; 
+			opacity: 0.5;
 		}
 
 		.text {
-			padding: 5px;;
+			padding: 5px;
 			z-index: 1;
 		}
 	}
@@ -103,6 +104,9 @@
 		padding: 3px 1px;
 		background-size: cover;
 		background-repeat: no-repeat;
+		&.compact {
+			scale: 0.6;
+		}
 		#content {
 			// overflow: hidden;
 			background-size: cover;
