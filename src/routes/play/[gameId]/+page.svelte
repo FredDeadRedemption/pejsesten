@@ -18,8 +18,6 @@
 	}}
 />
 
-
-
 <div id="game-frame">
 {#if targeting.active}
 	<svg
@@ -122,9 +120,9 @@
 		justify-content: space-between;
 	}
 	#game-frame {
+		overflow: hidden;
 		min-width: 100%;
-		min-height: calc(100vh - 50px);
-		max-height: calc(100vh - 50px);
+		height: 100vh;
 		display: grid;
 		grid-template-columns: 15% 1fr 15%;
 	}
