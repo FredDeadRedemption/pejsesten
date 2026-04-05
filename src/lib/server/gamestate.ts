@@ -54,9 +54,16 @@ export const endTurn = (): GameStateResponse => {
 
     switchTurn(gameState);
 
+    // draw a card at the start of the turn
 	gameState.whiteTurn
 		? (gameState.white.hand.push(...gameState.white.deck.draw(1)))
 		: (gameState.black.hand.push(...gameState.black.deck.draw(1)));
+    
+    // unexhaust minions at the start of the turn
+    const battlefield = gameState.whiteTurn ? gameState.white.battlefield : gameState.black.battlefield;
+    battlefield.forEach((card) => {
+        if (card.type === 'minion') card.exhausted = false; // unexhaust minions at the start of the turn
+    });  
 
 	return gameState;
 };
