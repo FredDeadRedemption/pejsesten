@@ -90,7 +90,7 @@
         </div>
       {:else if draggerIndex !== index}
         <div class="default-card">
-            <Card compact card={cardInHand}/>
+            <Card compact={true} card={cardInHand}/>
         </div>
       {/if}
     </div>
@@ -98,7 +98,7 @@
   {#if draggin && dragCard}
       <div class="dragger" style="position: abosolute; left: {dragCoords.x}px; top: {dragCoords.y}px;"
       >
-        <Card compact card={dragCard}></Card>
+        <Card compact={true} card={dragCard}></Card>
       </div>
   {/if}
 </div>

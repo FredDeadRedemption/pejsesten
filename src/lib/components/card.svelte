@@ -4,7 +4,7 @@
 	import type { Card, CardEntity } from '$lib/shared/types';
 
 	// Card is for ui representation, CardEntity is for rendering game state.
-	let { card, compact = false }: { card: CardEntity | Card; compact: boolean } = $props();
+	let { card, compact = false }: { card: CardEntity | Card; compact?: boolean } = $props();
 
 	let theme = $derived(colorMap[card.color]);
 </script>
