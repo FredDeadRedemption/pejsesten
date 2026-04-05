@@ -29,22 +29,6 @@ export const connectSocket = (url: string) => {
     console.log("Card drawn:", card);
   });
 
-  type atk = { 
-    targetAttack: number,
-    attackerAttack: number,
-    targetDied: boolean,
-    attackerDied: boolean,
-    attackData: AttackData,
-  }
-
-  socket.on("attacked", (data: atk) => {
-    console.log("ATK:" + data.attackerAttack)
-    console.log("ATK:" + data.targetAttack)
-    console.log("ATK:" + data.targetDied)
-    console.log("ATK:" + data.attackerDied)
-    console.log("ATK:" + data.attackData)
-  })
-
   // Listen for connection events
   socket.on('connect', () => {
     console.log('Connected to socket server:', socket?.id);

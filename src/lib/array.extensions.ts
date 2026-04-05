@@ -2,20 +2,13 @@ export {};
 
 declare global {
   interface Array<T> {
-      getRandomValue(): T;
       shuffle(): Array<T>;
       draw(n: number): Array<T>;
-      drawFromBottom(n: number): Array<T>;
-      removeRandom(): T;
+      dredge(n: number): Array<T>;
   }
 }
 
-// Returns a random value from the array
-Array.prototype.getRandomValue = function<T>(): T {
-  return this[Math.floor(Math.random() * this.length)];
-}
-
-// Returns a shuffled array
+// returns a shuffled array ( fisher-yates algorithm )
 Array.prototype.shuffle = function() {
   for (let i = this.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -30,13 +23,6 @@ Array.prototype.draw = function<T>(n: number): Array<T> {
 };
 
 // removes n elements from the end of the array and returns them
-Array.prototype.drawFromBottom = function<T>(n: number): Array<T> {
+Array.prototype.dredge = function<T>(n: number): Array<T> {
   return this.splice(-n, n);
-};
-
-// removes a random element from the array and returns it
-Array.prototype.removeRandom = function<T>(): T {
-  const index = Math.floor(Math.random() * this.length);
-  const [removed] = this.splice(index, 1);
-  return removed;
 };

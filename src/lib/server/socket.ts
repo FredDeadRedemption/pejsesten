@@ -1,6 +1,6 @@
 import { Server, type Socket } from 'socket.io'
 import type { GameStateResponse } from './gamestate';
-import { endTurn, setGameState, getGameState, drawCard, playCard, attack } from './gamestate';
+import { endTurn, setGameState, getGameState, playCard, attack } from './gamestate';
 import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
 import { deckToCards } from '$lib/shared/cards';
 import type { PlayerMetaData } from '$lib/shared/types';
@@ -77,7 +77,6 @@ export const setupSocketIO = (io: Server) => {
 
   // Attach the handlers to events
   socket.on("endTurn", fire(endTurn));
-  socket.on("drawCard", fire(drawCard));
   socket.on("playCard", fire(playCard));
   socket.on("attack", fire(attack));
 

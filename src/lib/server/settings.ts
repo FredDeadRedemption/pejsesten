@@ -1,0 +1,3 @@
+const STARTING_HP = 30;
+const STARTING_MANA = 1;
+const STARTING_HAND_SIZE = 5;

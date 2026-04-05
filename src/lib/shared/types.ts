@@ -36,13 +36,12 @@ export type Board = {
 
 type state = "draw" | "play" | "attack" | "inactive";
 
-export type GameState = {
+export type GameStateServer = {
   white: Board,
   black: Board,
   whitePlayerID: string; // used for validation turn
   blackPlayerID: string; // used for validation turn
   whiteTurn: boolean, // used for processing the actual game 
-  state: state,
   turnCount: number,
 }
 
@@ -52,8 +51,6 @@ export type GameStateClient = {
   whitePlayerID: string; // used for validation turn
   blackPlayerID: string; // used for validation turn
   yourTurn: boolean, // used for processing the actual game 
-  state: state, // used for processing the actual game
-  stateEnemy: state,
   turnCount: number,
 }
 
