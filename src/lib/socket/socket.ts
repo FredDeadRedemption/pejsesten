@@ -71,14 +71,10 @@ export const invalidateSocket = () => { socket?.disconnect(); socket = null; con
 
 export const queueUp = (data: PlayerMetaData) => fire(socket, "queueUp", data)
 
+export const leaveQueue = () => fire(socket, "leaveQueue")
+
 export const playCard = (index: number) => fire(socket, "playCard", index);
 
 export const attack = (data: AttackData) => fire(socket, "attack", data);
 
-export const leaveQueue = () => fire(socket, "leaveQueue")
-
 export const endTurn = () => fire(socket, "endTurn")
- 
-export const drawCard = () => fire(socket, "drawCard")
-
-
