@@ -4,6 +4,7 @@
 	import CardSmall from "./cardSmall.svelte";
   import { playCard } from "$lib/socket/socket";
   import type { CardEntity } from "$lib/shared/types";
+	import { beginTargeting } from "$lib/targeting.svelte";
 
   let handElement: HTMLElement;
 
@@ -20,17 +21,23 @@
   let draggin: boolean = $state(false);
   $effect(()=>{console.log(draggin)})
 
-  const beginDrag = (index: number, event: MouseEvent) => {
-    event.preventDefault();
-    console.log("draggin")
-    draggin = true;
-    draggerIndex = index;
-    dragCoords = {
-      x: event.clientX -50, // normalize to so client is draggin in the middle of the card
-      y: event.clientY -73 // normalize to so client is draggin in the middle of the card
-    };
-    dragCard = (hand[index])!;
+ const beginDrag = (index: number, event: MouseEvent) => {
+  event.preventDefault();
+  const card = hand[index]!;
+
+  if (card.type === 'incantation') {
+    beginTargeting(card, index);
+    return; // don't do normal drag
   }
+
+  draggin = true;
+  draggerIndex = index;
+  dragCoords = {
+    x: event.clientX - 50,
+    y: event.clientY - 73
+  };
+  dragCard = card;
+}
   const endDrag = () => {
     console.log("chilling")
     draggin = false;
