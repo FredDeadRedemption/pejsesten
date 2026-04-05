@@ -1,23 +1,13 @@
 
-import { type Handle } from '@sveltejs/kit';
-import { building } from '$app/environment';
-import { setupSocketIO } from '$lib/server/socket';
+// src/hooks.server.ts
+import type { Handle } from '@sveltejs/kit';
 import { Server } from 'socket.io';
+import { setupSocketIO } from '$lib/server/socket';
 
-export let io: Server;
+export const io = new Server(3002, { cors: { origin: '*' } });
+setupSocketIO(io);
+console.log("Socket.IO server running on port 3002");
 
 export const handle: Handle = async ({ event, resolve }) => {
-  if (!io && !building) {
-    // @ts-ignore — grab the underlying Node HTTP server
-    const httpServer = event.platform?.server ?? globalThis.__socketio_server__;
-    
-    if (httpServer) {
-      io = new Server(httpServer);
-      setupSocketIO(io);
-    } else {
-      console.error('Failed to initialize Socket.IO: No HTTP server found.');
-    }
-  }
-
   return resolve(event);
 };

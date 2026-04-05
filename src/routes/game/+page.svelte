@@ -9,7 +9,7 @@
     
   let dev = $state(false)
 
-  let url = $derived(dev ? "http://localhost:3000/" : "https://matrixz-gs.up.railway.app/");
+  let url = $derived("http://localhost:3002/");
 
   $effect(()=>{
     console.log("url changed invalidating socket " + url) 
