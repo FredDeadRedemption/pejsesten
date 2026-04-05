@@ -3,27 +3,7 @@ import type { AttackData, CardEntity, GameStateServer } from '$lib/shared/types'
 
 let gameState: GameStateServer;
 
-type flags = {
-	hasDrawn: boolean;
-	exhaustedIndexes: number[];
-};
-
 export type GameStateResponse = GameStateServer | null;
-
-/*
- * EXPORTED FUNCTIONS
- */
-
-// FLAGS
-const flags: flags = {
-	hasDrawn: false,
-	exhaustedIndexes: []
-};
-
-const resetFlags = () => {
-	flags.hasDrawn = false;
-	flags.exhaustedIndexes = [];
-};
 
 export const getGameState = (): GameStateServer => gameState;
 
@@ -64,14 +44,12 @@ export const setGameState = (
 		whiteTurn: true,
 		turnCount: 0
 	};
-	resetFlags();
 	console.log(`Game started! First turn: ${gameState.whitePlayerID}`);
 	return gameState;
 };
 
 export const endTurn = (): GameStateResponse => {
 
-	resetFlags(); // reset flags for the next turn
 	gameState.turnCount++;
 
     switchTurn(gameState);
@@ -99,6 +77,7 @@ export const playCard = (_socketID: string, index: number): GameStateResponse =>
 	}
 
 	if (card.type === 'minion') {
+        card.exhausted = true; // minions enter the battlefield exhausted
 		battlefield.push(card);
 	}
 
@@ -106,9 +85,6 @@ export const playCard = (_socketID: string, index: number): GameStateResponse =>
 };
 
 export const attack = (_socketID: string, attackData: AttackData): GameStateResponse => {
-	if (flags.exhaustedIndexes.includes(attackData.origin)) return null; // early return if already attacked this turn
-	flags.exhaustedIndexes.push(attackData.origin); // fill flags for the attacked card
-
 	const originBattlefield = gameState.whiteTurn
 		? gameState.white.battlefield
 		: gameState.black.battlefield;
@@ -123,6 +99,10 @@ export const attack = (_socketID: string, attackData: AttackData): GameStateResp
 		: gameState.white.graveyard;
 
 	const attacker = originBattlefield[attackData.origin];
+
+    if (attacker.exhausted) return null;
+    attacker.exhausted = true;
+
 	const target = targetBattlefield[attackData.target];
 
 	if (attackData.face) {

@@ -13,7 +13,7 @@
 	let defenceDebuffed = $derived(card.defence < card.baseDefence);
 </script>
 
-<div id="card" class="{card.color}-bg">
+<div id="card" class="{card.color}-bg" class:exhausted={card.exhausted}>
 	<div id="content">
 		<div class="title {card.color}">{card.name}</div>
 		<div class="img-wrap">
@@ -23,7 +23,6 @@
 				draggable="false"
 			/>
 		</div>
-
 		<div
 			class="bottom {card.color}"
 			class:attackBuffed
@@ -79,6 +78,9 @@
 		padding-bottom: 6px;
 		background-size: cover;
 		background-repeat: no-repeat;
+		&.exhausted {
+			outline: 2px solid $red;
+		}
 		#content {
 			// overflow: hidden;
 			background-size: cover;
