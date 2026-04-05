@@ -113,17 +113,6 @@
 			flex-direction: column;
 			align-items: center;
 
-			.title {
-				text-align: left;
-				width: 100%;
-				height: 23.33px;
-				border: 2px solid $black;
-				border-radius: 3px;
-				padding: 2px;
-				font-style: oblique;
-				font-size: 0.8rem;
-			}
-
 			.img-wrap {
 				border: 2px solid $black;
 				border-bottom: none;

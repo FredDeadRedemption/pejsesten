@@ -248,7 +248,7 @@
     background-color: transparent;
     border-radius: 5px;
     &:hover{
-      scale: 1.04;
+      outline: 2px solid $secondary;
       z-index: 3;
       cursor: pointer;
     }
