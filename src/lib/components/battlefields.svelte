@@ -52,7 +52,7 @@
 	{@const dx = mouseX - x1}
 	{@const dy = mouseY - y1}
 	{@const dist = Math.hypot(dx, dy)}
-	{@const bend = dist * 0.2}
+	{@const bend = dist * 0.1}
 	{@const cx = (x1 + mouseX) / 2 - (dy / dist) * bend}
 	{@const cy = (y1 + mouseY) / 2 + (dx / dist) * bend}
 	<svg class="attack-line">
