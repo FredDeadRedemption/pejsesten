@@ -15,10 +15,10 @@
     cards: number[]; // array of card id's
   }
 
-  let data = $props() as { cards: CardT[] };
+  let { data } = $props();
+  let cards = $derived(data.cards);
 
-  let cards = $derived(data.cards); // TODO: move this to a load function and make it so it only fetches id and name for better performance
-
+  $inspect(cards)
   console.log(cards)
   console.log(filteredCards)
 
