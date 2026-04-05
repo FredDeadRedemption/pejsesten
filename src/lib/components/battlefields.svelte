@@ -9,17 +9,29 @@
 		selfHP = $bindable(),
 		enemyHP = $bindable()
 	}: {
-    selfBattleField: MinionEntity[];
-    enemyBattleField: MinionEntity[];
-    selfHP: number;
-    enemyHP: number;
-  } = $props();
+		selfBattleField: MinionEntity[];
+		enemyBattleField: MinionEntity[];
+		selfHP: number;
+		enemyHP: number;
+	} = $props();
 
+	let mouseX = $state(0);
+	let mouseY = $state(0);
+	let originRect = $state<DOMRect | null>(null);
 	let origin: number | null = $state(null);
 
-	const beginAttack = (index: number) => origin = index;
+	const handleMouseMove = (e: MouseEvent) => {
+		mouseX = e.clientX;
+		mouseY = e.clientY;
+	};
 
-	const cancelAttack = () => origin = null;
+	const beginAttack = (index: number, e: MouseEvent) => {
+		origin = index;
+		const el = e.currentTarget as HTMLElement;
+		originRect = el.getBoundingClientRect();
+	};
+
+	const cancelAttack = () => (origin = null);
 
 	const tryAttack = (index: number, face: boolean) => {
 		if (origin === null) return;
@@ -32,7 +44,27 @@
 	};
 </script>
 
-<svelte:window onclick={cancelAttack} />
+<svelte:window onclick={cancelAttack} onmousemove={handleMouseMove} />
+
+{#if origin !== null && originRect}
+	<svg class="attack-line">
+		<defs>
+			<marker id="arrow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+				<path d="M0,0 L0,6 L6,3 z" fill="red" />
+			</marker>
+		</defs>
+		<line
+			x1={originRect.left + originRect.width / 2}
+			y1={originRect.top + originRect.height / 2}
+			x2={mouseX}
+			y2={mouseY}
+			stroke="red"
+			stroke-width="2"
+			stroke-dasharray="6,3"
+			marker-end="url(#arrow)"
+		/>
+	</svg>
+{/if}
 
 <div class="enemy-battlefield">
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -57,7 +89,7 @@
 				tryAttack(index, false);
 			}}
 		>
-			<CardSmall card={card}></CardSmall>
+			<CardSmall {card}></CardSmall>
 		</div>
 	{/each}
 </div>
@@ -71,20 +103,20 @@
 		<div
 			class="card-container"
 			style="--i: {index}; --total: {selfBattleField.length}"
-      class:selected={origin === index}
+			class:selected={origin === index}
 			onclick={(e) => {
 				e.stopPropagation(); // so it doesnt also trigger cancelAttack prevent event bubbling
-				beginAttack(index);
+				beginAttack(index, e);
 			}}
 		>
-			<CardSmall card={card}></CardSmall>
+			<CardSmall {card}></CardSmall>
 		</div>
 	{/each}
 </div>
 
 <style lang="scss">
 	.hp {
-    user-select: none;
+		user-select: none;
 		color: white;
 		font-size: 1.5rem;
 	}
@@ -102,10 +134,10 @@
 		/* Centered overlapping translation */
 		left: 50%;
 		transform: translateX(calc(-50% + (var(--i) - (var(--total) - 1) / 2) * 110px));
-    &.selected {
-      outline: 2px solid $secondary !important;
-      border-radius: 4px;
-    }
+		&.selected {
+			outline: 2px solid $secondary !important;
+			border-radius: 4px;
+		}
 	}
 	.hero {
 		display: flex;
@@ -125,5 +157,14 @@
 			transform: translateY(-30px);
 			background-color: red;
 		}
+	}
+	.attack-line {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		pointer-events: none;
+		z-index: 999;
 	}
 </style>
