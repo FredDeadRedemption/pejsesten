@@ -1,4 +1,3 @@
-// $lib/stores/targeting.ts
 import type { CardEntity } from '$lib/shared/types';
 
 type TargetingState = {
