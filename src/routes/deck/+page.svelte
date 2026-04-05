@@ -32,12 +32,6 @@
 	let selectedDeckName: string | null = $state(null);
 	let inspectingDeck: boolean = $state(false);
 
-	// Serialize the deck array to JSON whenever it changes
-	let deckJSON = $state('');
-	$effect(() => {
-		deckJSON = JSON.stringify(deck);
-	});
-
 	const deleteDeck = (deckId: number) => {
 		decks = decks.filter((d) => d.id !== deckId);
 		inspectingDeck = false;
@@ -47,7 +41,6 @@
 	};
 
 	const saveDeck = () => {
-		savingDeck = true;
 		const newDeck: Deck = {
 			id: selectedDeckID ?? Date.now(),
 			name: selectedDeckName ?? 'Unnamed Deck',
@@ -62,7 +55,6 @@
 		selectedDeckID = null;
 		selectedDeckName = null;
 		inspectingDeck = false;
-		savingDeck = false;
 		deck = [];
 	};
 
@@ -88,11 +80,6 @@
 		selectedDeckName = getRandomDeckName();
 		deck = [];
 	};
-
-	let ellipseVar = $state('.');
-	setInterval(() => (ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.'), 300);
-
-	let savingDeck: boolean = $state(false); // TODO: lav en loading ting så man kan se at den sletter et deck
 </script>
 
 <div class="main">
@@ -145,8 +132,8 @@
 				{/each}
 			</div>
 			<div class="back-delete-btn-grp">
-				<button class="button primary back" onclick={saveDeck} class:saving={savingDeck}>
-					{savingDeck ? `Saving Deck ${ellipseVar}` : 'Done'}
+				<button class="button primary back" onclick={saveDeck}>
+					Done
 				</button>
 				<button class="delete" onclick={() => deleteDeck(selectedDeckID!)}>
 					<span class="icon">{@html getIcon('delete')}</span>
@@ -281,9 +268,6 @@
 			cursor: pointer;
 		}
 	}
-	#back-form {
-		margin-top: auto;
-	}
 	#name-input {
 		height: 40px;
 		font-weight: bold;
@@ -305,13 +289,6 @@
 		border-top-left-radius: 0px;
 		border-bottom-right-radius: 0px;
 		border-top-right-radius: 0px;
-		&.saving {
-			background-color: $grey-mid;
-			&:hover {
-				background-color: $grey-mid;
-				cursor: auto;
-			}
-		}
 	}
 	.delete {
 		background-color: $secondary;
