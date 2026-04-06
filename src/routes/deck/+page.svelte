@@ -80,6 +80,25 @@
 		selectedDeckName = getRandomDeckName();
 		deck = [];
 	};
+
+	const exportDecks = () => {
+    const data = localStorage.getItem('decks') ?? '[]';
+    navigator.clipboard.writeText(data);
+    alert('Decks copied to clipboard!');
+};
+
+const importDecks = () => {
+    const input = prompt('Paste your deck data here:');
+    if (!input) return;
+    try {
+        const parsed = JSON.parse(input);
+        if (!Array.isArray(parsed)) throw new Error();
+        decks = parsed;
+        localStorage.setItem('decks', input);
+    } catch {
+        alert('Invalid deck data!');
+    }
+};
 </script>
 
 <div class="main">
@@ -127,9 +146,7 @@
 				{/each}
 			</div>
 			<div class="back-delete-btn-grp">
-				<button class="button primary back" onclick={saveDeck}>
-					Done
-				</button>
+				<button class="button primary back" onclick={saveDeck}> Done </button>
 				<button class="delete" onclick={() => deleteDeck(selectedDeckID!)}>
 					<span class="icon">{@html getIcon('delete')}</span>
 				</button>
@@ -152,8 +169,8 @@
 					</div>
 				{/each}
 			{:else}
-          <p>Seems you have no decks</p>
-      {/if}
+				<p>Seems you have no decks</p>
+			{/if}
 
 			<button
 				class="button primary new"
@@ -161,11 +178,28 @@
 					loadNewDeck();
 				}}>New Deck</button
 			>
+			<button
+				class="button primary import"
+				onclick={() => {
+					importDecks();
+				}}>Import Decks</button
+			>
+			<button
+				class="button primary export"
+				onclick={() => {
+					exportDecks();
+				}}>Export Decks</button
+			>
 		{/if}
 	</div>
 </div>
 
 <style lang="scss">
+	button.import,
+	button.export {
+		width: 100%;
+		margin-top: 10px;
+	}
 	.name-length {
 		display: grid;
 		grid-template-columns: 1fr 40px;
