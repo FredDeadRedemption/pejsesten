@@ -1,7 +1,7 @@
 import http from 'http';
 import { Server } from 'socket.io';
 import { handler } from './build/handler.js';
-import { setupSocketIO } from './lib/server/socket.js';
+import { setupSocketIO } from './src/lib/server/socket.js';
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(handler);
