@@ -173,12 +173,29 @@ const cards: Card[] = [
 	{
 		id: 11,
 		color: 'white',
-		name: 'Divine Shield',
+		name: 'Divine Power',
 		description: 'Wraps an ally in impenetrable holy light. Terms and conditions apply.',
 		baseCost: 2,
 		type: 'incantation',
 		image_url: '',
-		abilities: []
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: "buff",
+						attack: 4,
+						defence: 4,
+						conditions: [],
+						targetSpec: {
+							scope: "single",
+							side: "friendly",
+							entityType: "minion",
+						}
+					}
+				]
+			}
+		]
 	},
 	{
 		id: 12,

@@ -41,6 +41,22 @@ const enqueueTrigger = (trigger: Trigger) => {
 	});
 };
 
+//
+const checkForDeaths = () => {
+  const sourceBoard = getSourceBoard(gameState);
+  const enemyBoard = getEnemyBoard(gameState);
+
+  [sourceBoard, enemyBoard].forEach((board) => {
+    board.battlefield = board.battlefield.filter((minion) => {
+      if (minion.defence <= 0) {
+        board.graveyard.push(minion);
+        return false;
+      }
+      return true;
+    });
+  });
+};
+
 // Consume and apply one effect at a time
 const processEffectQueue = () => {
 	while (effectQueue.length > 0) {
@@ -183,6 +199,7 @@ export const playCard = (
 			});
 		});
 		processEffectQueue();
+		checkForDeaths();
 	}
 
 	return gameState;
@@ -212,17 +229,7 @@ export const attack = (_socketID: string, attackData: AttackData): GameStateResp
 		target.defence -= attacker.attack;
 		attacker.defence -= target.attack;
 
-		// check if attacked card died, if so move to graveyard
-		if (target.defence <= 0) {
-			const [deadCard] = enemyBoard.battlefield.splice(attackData.target, 1);
-
-			enemyBoard.graveyard.push(deadCard);
-		}
-		if (attacker.defence <= 0) {
-			const [deadCard] = sourceBoard.battlefield.splice(attackData.origin, 1);
-
-			sourceBoard.graveyard.push(deadCard);
-		}
+		checkForDeaths();
 	}
 
 	console.log('FROM: ' + attackData.origin);

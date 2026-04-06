@@ -59,6 +59,19 @@
 		endTargeting();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
+
+	const handleFriendlyTargetInteraction = (e: MouseEvent, index: number) => {
+		e.stopPropagation();
+		if (!targeting.active) return;
+		if (didFireTargeting) {
+			didFireTargeting = false;
+			return;
+		}
+		didFireTargeting = true;
+		playCard({ index: targeting.cardIndex!, target: index });
+		endTargeting();
+		setTimeout(() => (didFireTargeting = false), 50);
+	};
 </script>
 
 <svelte:window onclick={cancelAttack} onmousemove={handleMouseMove} />
@@ -148,9 +161,24 @@
 			class="card-container"
 			style="--i: {index}; --total: {selfBattleField.length}"
 			class:selected={origin === index}
+			onmouseenter={() => {
+				if (targeting.active) targeting.hoveredTarget = index;
+			}}
+			onmouseleave={() => {
+				if (targeting.active) targeting.hoveredTarget = null;
+			}}
+			onmouseup={(e) => {
+				e.stopPropagation();
+				if (targeting.active) {
+					handleFriendlyTargetInteraction(e, index);
+				} else {
+					beginAttack(index, e);
+				}
+			}}
 			onclick={(e) => {
-				e.stopPropagation(); // so it doesnt also trigger cancelAttack prevent event bubbling
-				beginAttack(index, e);
+				e.stopPropagation();
+				if (targeting.active) handleFriendlyTargetInteraction(e, index);
+				else beginAttack(index, e);
 			}}
 		>
 			<CardSmall {card}></CardSmall>
