@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import type { Handle } from '@sveltejs/kit';
 import { createServer } from 'net';
 
@@ -9,7 +10,7 @@ const isPortInUse = (port: number): Promise<boolean> =>
       .listen(port);
   });
 
-if (!(await isPortInUse(3002))) {
+if (dev && !(await isPortInUse(3002))) {
   const { Server } = await import('socket.io');
   const { setupSocketIO } = await import('$lib/server/socket');
   const io = new Server(3002, { cors: { origin: '*' } });
