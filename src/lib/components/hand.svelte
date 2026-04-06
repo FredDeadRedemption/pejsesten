@@ -30,6 +30,7 @@
 			const needsFriendlyMinion = card.abilities.some((a) =>
 				a.effects.some(
 					(e) =>
+						'targetSpec' in e &&
 						e.targetSpec.scope === 'single' &&
 						e.targetSpec.side === 'friendly' &&
 						e.targetSpec.entityType === 'minion'
@@ -38,8 +39,17 @@
 
 			if (needsFriendlyMinion && $gameState.self.battlefield.length === 0) return;
 
-			beginTargeting(card, index);
-			return;
+			// if it needs any kind of targeting, begin targeting
+			const needsTarget = card.abilities.some((a) =>
+				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
+			);
+
+			if (needsTarget) {
+				beginTargeting(card, index);
+				return; // return here so it doesn't fall through to normal drag
+			}
+
+			
 		}
 
 		// normal minion drag below

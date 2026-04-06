@@ -123,7 +123,7 @@ const applyEffect = (
 		});
 	}
 	if (effect.type === 'draw') {
-		sourceBoard.hand = sourceBoard.deck.draw(effect.drawAmount);
+		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
 	}
 };
 
