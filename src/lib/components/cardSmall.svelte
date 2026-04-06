@@ -18,7 +18,9 @@
 		<div class="title {card.color}">{card.name}</div>
 		<div class="img-wrap">
 			<img
-				src={card.image_url === '' ? '/media/cards/missing-texture.jpg' : card.image_url}
+				src={card.image_url === ''
+					? '/media/cards/missing-texture.jpg'
+					: `/media/${card.image_url}`}
 				alt=""
 				draggable="false"
 			/>

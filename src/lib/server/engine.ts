@@ -19,6 +19,7 @@ export type GameStateResponse = GameStateServer | null;
 
 export const getGameState = (): GameStateServer => gameState;
 
+// QueuedEffect. Stores refrence to the sourceBoard where the effect came from
 type QueuedEffect = {
 	effect: Effect;
 	targetID?: string;
@@ -36,10 +37,13 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 
 let effectQueue: QueuedEffect[] = [];
 
-// Instead of processing immediately, enqueue
+// enqueueTrigger scans the active player's battlefield 
+// for any minion that has an ability matching the given trigger, 
+// and pushes all those effects onto the queue. 
+// Then processEffectQueue consumes them.
 const enqueueTrigger = (trigger: Trigger) => {
-	const sourceBoard = gameState.whiteTurn ? gameState.white : gameState.black;
-	const enemyBoard = gameState.whiteTurn ? gameState.black : gameState.white;
+	const sourceBoard = getSourceBoard(gameState);
+	const enemyBoard = getEnemyBoard(gameState);
 
 	sourceBoard.battlefield.forEach((minion) => {
 		minion.abilities.forEach((ability) => {
@@ -119,7 +123,7 @@ const applyEffect = (
 		});
 	}
 	if (effect.type === 'draw') {
-		sourceBoard.hand = sourceBoard.deck.draw(effect.drawAmount);
+		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
 	}
 };
 

@@ -100,7 +100,7 @@
 			localStorage?.setItem('decks', decoded);
 		} catch {
 			alert('Invalid deck data!');
-		} 
+		}
 	};
 </script>
 
@@ -136,7 +136,7 @@
 					<div
 						transition:slide={{ axis: 'x', duration: 250 }}
 						class="card-in-deck-view"
-						style="background-image: url({getCardData(id)?.image_url});"
+						style="background-image: url('{getCardData(id)?.image_url ? `/media/${getCardData(id)?.image_url}` : '/media/cards/missing-texture.jpg'}');"
 						onclick={() => {
 							const cardIndex = deck.findIndex((c) => c === id);
 							if (cardIndex !== -1) deck.splice(cardIndex, 1);
@@ -193,8 +193,7 @@
 					exportDecks();
 				}}>Export Decks</button
 			>
-			<button class="button primary play"
-			onclick={() => goto("/")}>Play</button>
+			<button class="button primary play" onclick={() => goto('/')}>Play</button>
 		{/if}
 	</div>
 </div>
@@ -203,7 +202,6 @@
 	button.play {
 		width: 100%;
 		margin-top: 10px;
-
 	}
 	button.import,
 	button.export {
@@ -244,6 +242,7 @@
 			height: 40px;
 			width: 100%;
 			background-size: cover;
+			background-position: center;
 			color: $white;
 			user-select: none;
 			font-weight: 800;
