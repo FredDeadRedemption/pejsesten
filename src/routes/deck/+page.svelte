@@ -98,7 +98,7 @@
 			if (!Array.isArray(parsed)) throw new Error();
 			decks = parsed;
 			localStorage.setItem('decks', decoded);
-		} catch {
+		} catch { 
 			alert('Invalid deck data!');
 		}
 	};
