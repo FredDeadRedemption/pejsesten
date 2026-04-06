@@ -83,7 +83,8 @@
 
 	const exportDecks = () => {
 		const data = localStorage.getItem('decks') ?? '[]';
-		navigator.clipboard.writeText(data);
+		const base64 = btoa(data);
+		navigator.clipboard.writeText(base64);
 		alert('Decks copied to clipboard!');
 	};
 
@@ -91,10 +92,11 @@
 		const input = prompt('Paste your deck data here:');
 		if (!input) return;
 		try {
-			const parsed = JSON.parse(input);
+			const decoded = atob(input);
+			const parsed = JSON.parse(decoded);
 			if (!Array.isArray(parsed)) throw new Error();
 			decks = parsed;
-			localStorage.setItem('decks', input);
+			localStorage.setItem('decks', decoded);
 		} catch {
 			alert('Invalid deck data!');
 		}
