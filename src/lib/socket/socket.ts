@@ -57,7 +57,7 @@ export const queueUp = (data: PlayerMetaData) => fire(socket, "queueUp", data)
 
 export const leaveQueue = () => fire(socket, "leaveQueue")
 
-export const playCard = (data: { index: number, target?: number }) => fire(socket, "playCard", data);
+export const playCard = (data: { index: number, target?: string }) => fire(socket, "playCard", data);
 
 export const attack = (data: AttackData) => fire(socket, "attack", data);
 

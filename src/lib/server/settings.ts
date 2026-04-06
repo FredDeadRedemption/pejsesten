@@ -1,3 +1,3 @@
-const STARTING_HP = 30;
-const STARTING_MANA = 1;
-const STARTING_HAND_SIZE = 5;
+export const STARTING_HP = 30;
+export const STARTING_MANA = 1;
+export const STARTING_HAND_SIZE = 10;

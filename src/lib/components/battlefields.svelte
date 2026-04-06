@@ -46,7 +46,7 @@
 
 	let didFireTargeting = $state(false);
 
-	const handleTargetInteraction = (e: MouseEvent, index: number) => {
+	const handleTargetInteraction = (e: MouseEvent, entityID: string) => {
 		e.stopPropagation();
 		if (!targeting.active) return;
 		if (didFireTargeting) {
@@ -54,13 +54,14 @@
 			return;
 		}
 		didFireTargeting = true;
-		console.log('did fire targeting', didFireTargeting, targeting.cardIndex, index);
-		playCard({ index: targeting.cardIndex!, target: index });
+		playCard({ index: targeting.cardIndex!, target: entityID });
 		endTargeting();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
 
-	const handleFriendlyTargetInteraction = (e: MouseEvent, index: number) => {
+	const handleFriendlyTargetInteraction = (e: MouseEvent, entityID: string) => {
+		console.log('friendly target:', entityID);
+		console.log('cardIndex:', targeting.cardIndex, 'target:', entityID);
 		e.stopPropagation();
 		if (!targeting.active) return;
 		if (didFireTargeting) {
@@ -68,7 +69,7 @@
 			return;
 		}
 		didFireTargeting = true;
-		playCard({ index: targeting.cardIndex!, target: index });
+		playCard({ index: targeting.cardIndex!, target: entityID });
 		endTargeting();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
@@ -132,17 +133,17 @@
 			class="card-container"
 			style="--i: {index}; --total: {enemyBattleField.length}"
 			onmouseenter={() => {
-				if (targeting.active) targeting.hoveredTarget = index;
+				if (targeting.active) targeting.hoveredTarget = card.entityID;
 			}}
 			onmouseleave={() => {
 				if (targeting.active) targeting.hoveredTarget = null;
 			}}
 			onmouseup={(e) => {
-				if (targeting.active) handleTargetInteraction(e, index);
+				if (targeting.active) handleTargetInteraction(e, card.entityID);
 				else tryAttack(index, false);
 			}}
 			onclick={(e) => {
-				if (targeting.active) handleTargetInteraction(e, index);
+				if (targeting.active) handleTargetInteraction(e, card.entityID);
 				else tryAttack(index, false);
 			}}
 		>
@@ -162,22 +163,18 @@
 			style="--i: {index}; --total: {selfBattleField.length}"
 			class:selected={origin === index}
 			onmouseenter={() => {
-				if (targeting.active) targeting.hoveredTarget = index;
+				if (targeting.active) targeting.hoveredTarget = card.entityID;
 			}}
 			onmouseleave={() => {
 				if (targeting.active) targeting.hoveredTarget = null;
 			}}
 			onmouseup={(e) => {
 				e.stopPropagation();
-				if (targeting.active) {
-					handleFriendlyTargetInteraction(e, index);
-				} else {
-					beginAttack(index, e);
-				}
+				if (targeting.active) handleFriendlyTargetInteraction(e, card.entityID);
 			}}
 			onclick={(e) => {
 				e.stopPropagation();
-				if (targeting.active) handleFriendlyTargetInteraction(e, index);
+				if (targeting.active) handleFriendlyTargetInteraction(e, card.entityID);
 				else beginAttack(index, e);
 			}}
 		>

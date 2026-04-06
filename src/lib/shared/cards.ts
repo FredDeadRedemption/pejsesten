@@ -10,6 +10,7 @@ export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => ge
 		if (card.type === 'minion') {
 			return {
 				...card,
+				entityID: crypto.randomUUID(),
 				attack: card.baseAttack,
 				defence: card.baseDefence,
 				cost: card.baseCost,
@@ -18,6 +19,7 @@ export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => ge
 		} else {
 			return {
 				...card,
+				entityID: crypto.randomUUID(),
 				cost: card.baseCost
 			} as IncantationEntity;
 		}
