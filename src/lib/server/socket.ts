@@ -116,6 +116,7 @@ export const setupSocketIO = (io: Server) => {
 		});
 
 		socket.on('queueBot', (playerMetaData: PlayerMetaData) => {
+			console.log(playerMetaData.choosenDeck)
 			const isPlayer1White = coinFlip();
 			const botIsWhite = !isPlayer1White;
 			activeGame = {

@@ -31,14 +31,14 @@ const cards: Card[] = [
 	{
 		id: 1,
 		color: 'white',
-		name: 'Guy With a Stick',
-		description: 'Nobody knows where he came from. Nobody asked.',
+		name: 'Macine Elf',
+		description: 'Appears in your peripheral vision. Gone when you look directly.',
 		baseCost: 1,
 		type: 'minion',
 		races: ['human'],
 		baseAttack: 1,
 		baseDefence: 2,
-		image_url: '',
+		image_url: 'Machine Elf.webp',
 		abilities: [],
 		attributes: []
 	},
@@ -46,14 +46,24 @@ const cards: Card[] = [
 		id: 2,
 		color: 'white',
 		name: 'Overzealous Priest',
-		description: 'He will heal you whether you like it or not.',
-		baseCost: 2,
+		description: 'Battlecry: Draw 2 cards',
+		baseCost: 3,
 		type: 'minion',
 		races: ['human'],
 		baseAttack: 2,
-		baseDefence: 4,
+		baseDefence: 1,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: "draw",
+						drawAmount: 2
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
@@ -179,7 +189,7 @@ const cards: Card[] = [
 		description: 'Give a friendly minion +4 +4',
 		baseCost: 2,
 		type: 'incantation',
-		image_url: '',
+		image_url: 'Divine Power.webp',
 		abilities: [
 			{
 				trigger: 'onPlay',
@@ -202,11 +212,11 @@ const cards: Card[] = [
 	{
 		id: 12,
 		color: 'white',
-		name: 'Agnostic Wrath',
+		name: 'Good Friday',
 		description: 'Deal 4 damage',
 		baseCost: 3,
 		type: 'incantation',
-		image_url: '',
+		image_url: 'Good Friday.webp',
 		abilities: [
 			{
 				trigger: 'onPlay',
@@ -224,10 +234,30 @@ const cards: Card[] = [
 			}
 		]
 	},
+	{
+		id: 13,
+		color: 'white',
+		name: 'Pot of Greed',
+		description: 'Deal 2 cards',
+		baseCost: 3,
+		type: 'incantation',
+		image_url: 'Pot of Greed.webp',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: 'draw',
+						drawAmount: 2
+					}
+				]
+			}
+		]
+	},
 
 	// ── BLACK INCANTATIONS ───────────────────────────────────
 	{
-		id: 13,
+		id: 14,
 		color: 'black',
 		name: 'Dark Blessing',
 		description: 'Give a friendly minion +3 +2',
@@ -254,7 +284,7 @@ const cards: Card[] = [
 		]
 	},
 	{
-		id: 14,
+		id: 15,
 		color: 'black',
 		name: 'Soul Drain',
 		description: 'Deal 2 damage',
