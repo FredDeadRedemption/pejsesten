@@ -24,7 +24,7 @@
 	let choosenDeckJson = $state<number[]>([]);
 
 	onMount(() => {
-		decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
+		decks = JSON.parse(localStorage?.getItem('decks') ?? '[]');
 		choosenDeckJson = decks[0]?.cards ?? [];
 	});
 
