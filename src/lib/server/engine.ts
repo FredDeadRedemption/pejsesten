@@ -19,6 +19,7 @@ export type GameStateResponse = GameStateServer | null;
 
 export const getGameState = (): GameStateServer => gameState;
 
+// QueuedEffect. Stores refrence to the sourceBoard where the effect came from
 type QueuedEffect = {
 	effect: Effect;
 	targetID?: string;
@@ -38,8 +39,8 @@ let effectQueue: QueuedEffect[] = [];
 
 // Instead of processing immediately, enqueue
 const enqueueTrigger = (trigger: Trigger) => {
-	const sourceBoard = gameState.whiteTurn ? gameState.white : gameState.black;
-	const enemyBoard = gameState.whiteTurn ? gameState.black : gameState.white;
+	const sourceBoard = getSourceBoard(gameState);
+	const enemyBoard = getEnemyBoard(gameState);
 
 	sourceBoard.battlefield.forEach((minion) => {
 		minion.abilities.forEach((ability) => {
