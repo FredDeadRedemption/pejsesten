@@ -18,10 +18,12 @@
 		cards: number[]; // array of card id's
 	};
 
+	let mounted = $state(false);
 	let cards = $state(getCards());
 
 	// Save decks to localStorage whenever they change
 	$effect(() => {
+		if (!mounted) return; // don't save before decks are loaded
 		localStorage?.setItem('decks', JSON.stringify(decks));
 	});
 
@@ -30,6 +32,7 @@
 	let decks = $state<Deck[]>([]);
 
 	onMount(() => {
+		mounted = true;
 		decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
 	});
 
