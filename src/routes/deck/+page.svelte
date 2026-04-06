@@ -7,6 +7,8 @@
 	import type { Card as CardT } from '$lib/shared/types';
 	import { getCards } from '$lib/shared/cards.js';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+
 
 	let filteredCards = $state<CardT[]>([]);
 
@@ -25,7 +27,11 @@
 
 	const getCardData = (id: number) => cards.find((card) => card.id === id);
 
-	let decks = $state<Deck[]>(JSON.parse(localStorage?.getItem('decks') ?? '[]'));
+	let decks = $state<Deck[]>([]);
+
+	onMount(() => {
+		decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
+	});
 
 	let selectedDeckID: number | null = $state(null);
 	let deck: number[] = $state([]); // contains id's of all cards
@@ -136,7 +142,9 @@
 					<div
 						transition:slide={{ axis: 'x', duration: 250 }}
 						class="card-in-deck-view"
-						style="background-image: url('{getCardData(id)?.image_url ? `/media/${getCardData(id)?.image_url}` : '/media/cards/missing-texture.jpg'}');"
+						style="background-image: url('{getCardData(id)?.image_url
+							? `/media/${getCardData(id)?.image_url}`
+							: '/media/cards/missing-texture.jpg'}');"
 						onclick={() => {
 							const cardIndex = deck.findIndex((c) => c === id);
 							if (cardIndex !== -1) deck.splice(cardIndex, 1);
