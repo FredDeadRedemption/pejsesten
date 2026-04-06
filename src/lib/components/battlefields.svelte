@@ -1,19 +1,19 @@
 <script lang="ts">
 	import CardSmall from './cardSmall.svelte';
 	import { attack, playCard } from '$lib/socket/socket';
-	import type { MinionEntity } from '$lib/shared/types';
+	import type { Hero, MinionEntity } from '$lib/shared/types';
 	import { endTargeting, targeting } from '$lib/targeting.svelte';
 
 	let {
 		selfBattleField = $bindable(),
 		enemyBattleField = $bindable(),
-		selfHP = $bindable(),
-		enemyHP = $bindable()
+		selfHero = $bindable(),
+		enemyHero = $bindable()
 	}: {
 		selfBattleField: MinionEntity[];
 		enemyBattleField: MinionEntity[];
-		selfHP: number;
-		enemyHP: number;
+		selfHero: Hero;
+		enemyHero: Hero;
 	} = $props();
 
 	let mouseX = $state(0);
@@ -34,12 +34,11 @@
 
 	const cancelAttack = () => (origin = null);
 
-	const tryAttack = (entityID: string, face: boolean) => {
+	const tryAttack = (entityID: string) => {
 		if (origin === null) return;
 		attack({
 			originID: origin,
-			targetID: entityID,
-			face: face
+			targetID: entityID
 		});
 		origin = null;
 	};
@@ -120,10 +119,14 @@
 		class="hero enemy"
 		onclick={(e) => {
 			e.stopPropagation();
-			tryAttack('face', true);
+			tryAttack('heroEnemy');
+		}}
+		onmouseup={(e) => {
+			if (targeting.active) handleTargetInteraction(e, 'heroEnemy');
+			else tryAttack('heroEnemy');
 		}}
 	>
-		<span class="hp">{enemyHP}</span>
+		<span class="hp">{enemyHero.defence}</span>
 	</div>
 	{#each enemyBattleField as card, index (`${card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -139,11 +142,11 @@
 			}}
 			onmouseup={(e) => {
 				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else tryAttack(card.entityID, false);
+				else tryAttack(card.entityID);
 			}}
 			onclick={(e) => {
 				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else tryAttack(card.entityID, false);
+				else tryAttack(card.entityID);
 			}}
 		>
 			<CardSmall {card}></CardSmall>
@@ -153,7 +156,14 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="self-battlefield" onclick={cancelAttack}>
-	<div class="hero self"><span class="hp">{selfHP}</span></div>
+	<div
+		class="hero self"
+		onmouseup={(e) => {
+			if (targeting.active) handleTargetInteraction(e, 'heroSelf');
+		}}
+	>
+		<span class="hp">{selfHero.defence}</span>
+	</div>
 	{#each selfBattleField as card, index (`${card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->

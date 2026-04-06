@@ -76,8 +76,8 @@
 			<Battlefields
 				bind:selfBattleField={$gameState.self.battlefield}
 				bind:enemyBattleField={$gameState.enemy.battlefield}
-				bind:selfHP={$gameState.self.hp}
-				bind:enemyHP={$gameState.enemy.hp}
+				bind:selfHero={$gameState.self.hero}
+				bind:enemyHero={$gameState.enemy.hero}
 			></Battlefields>
 		</div>
 		<div class="self-hand">
