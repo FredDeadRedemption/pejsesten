@@ -24,7 +24,7 @@ export const connectSocket = (url: string) => {
 	socket = io(url);
 
 	socket.on('redirect', (URL) => {
-		goto(`/play/${URL}`);
+		goto(`/${URL}`);
 	});
 
 	socket.on('newGameState', (newGameState: GameStateClient) => {
@@ -44,12 +44,6 @@ export const connectSocket = (url: string) => {
 	socket.on('connect_error', (err) => {
 		console.error('Socket connection error:', err);
 		invalidateSocket(); // Disconnect and reset the socket on error
-	});
-
-	socket.on('startGame', (gameId: string) => {
-		console.log(gameId);
-		console.log('gameID');
-		goto(`/game/${gameId}`);
 	});
 };
 

@@ -194,7 +194,7 @@
 				}}>Export Decks</button
 			>
 			<button class="button primary play"
-			onclick={() => goto("/play")}>Play</button>
+			onclick={() => goto("/")}>Play</button>
 		{/if}
 	</div>
 </div>
