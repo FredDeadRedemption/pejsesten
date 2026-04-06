@@ -1,23 +1,75 @@
-type Colors = "white" | "black"
+type Color = 
+  | "white" 
+  | "black"
+
+type Race = 
+  |"human" 
+  | "elf"
+
+export type Trigger = 
+  | "onPlay"      // when the card is played
+  | "onDeath"     // when the card dies
+  | "onTurnStart" // at the start of the turn
+  | "onTurnEnd"   // at the end of the turn
+  | "onAttack"    // when the card attacks
+  | "onAttacked"  // when the card is attacked
+  | "onDamage"    // when the card takes damage
+  | "onHeal"      // when the card is healed
+  | "onSummon"    // when the card is summoned to the battlefield
+  | "onDiscard"   // when the card is discarded from hand
+  | "onDraw"      // when the card is drawn from the deck
+
+export type TargetSpec = {
+  readonly scope: "single" | "all",
+  readonly side: "friendly" | "enemy" | "all",
+  readonly entityType: "minion" | "hero" | "all",
+}
+
+export type Condition = {
+  readonly type: "race",
+  readonly value: Race,
+}
+
+export type Effect = {
+  readonly type: "buff",
+  readonly targetSpec: TargetSpec,
+  attack: number,
+  defence: number,
+  readonly conditions: Condition[]
+} | {
+  readonly type: "damage",
+  readonly targetSpec: TargetSpec,
+  damage: number,
+}
+
+export type Ability = {
+  trigger: Trigger,
+  effects: Effect[],
+}
+
+type Attributes = 
+  | "charge" // can attack the turn it is played
+  | "taunt"  // must be attacked first
+  | "stealth" // cannot be targeted until it attacks or uses an ability
 
 // Base Card
 type CardBase = {
-  readonly id: number
+  id: number // also functions as runtime entity ID
   readonly name: string
   readonly description: string | null
-  readonly color: Colors
+  readonly color: Color
   readonly baseCost: number
   readonly image_url: string
+  abilities: Ability[]
 }
-
-type Races = "human" | "elf"
 
 // Base Minion Card
 export type MinionCard = CardBase & {
   readonly type: "minion"
   readonly baseAttack: number
   readonly baseDefence: number
-  readonly race: Races
+  readonly races: Race[]
+  attributes: Attributes[]
 }
 
 // Base Incantation Card

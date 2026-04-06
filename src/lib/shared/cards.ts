@@ -29,62 +29,72 @@ const cards: Card[] = [
 	{
 		id: 1,
 		color: 'white',
-		name: 'Guy with a Stick',
-		description: 'Blessed by the light at birth.',
+		name: 'Guy With a Stick',
+		description: 'Nobody knows where he came from. Nobody asked.',
 		baseCost: 2,
 		type: 'minion',
-		race: 'human',
+		races: ['human'],
 		baseAttack: 1,
 		baseDefence: 2,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 2,
 		color: 'white',
-		name: 'Dawn Priest',
-		description: 'Heals with one hand, smites with the other.',
+		name: 'Overzealous Priest',
+		description: 'He will heal you whether you like it or not.',
 		baseCost: 3,
 		type: 'minion',
-		race: 'human',
+		races: ['human'],
 		baseAttack: 2,
 		baseDefence: 4,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 3,
 		color: 'white',
 		name: 'Silverguard Knight',
-		description: 'His armour has never been tarnished.',
+		description: 'Has never actually been in a fight. Looks great though.',
 		baseCost: 4,
 		type: 'minion',
-		race: 'human',
+		races: ['human'],
 		baseAttack: 3,
 		baseDefence: 5,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 4,
 		color: 'white',
 		name: 'Radiant Sentinel',
-		description: 'Light pours from every crack in her armour.',
+		description: 'Light pours from every crack in her armour. Doctors are concerned.',
 		baseCost: 5,
 		type: 'minion',
-		race: 'elf',
+		races: ['elf'],
 		baseAttack: 4,
 		baseDefence: 6,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 5,
 		color: 'white',
 		name: 'Herald of the Sun',
-		description: 'Arrives before the dawn. Leaves after the victory.',
+		description: 'Arrives before the dawn. Leaves before doing the dishes.',
 		baseCost: 6,
 		type: 'minion',
-		race: 'elf',
+		races: ['elf'],
 		baseAttack: 6,
 		baseDefence: 5,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 
 	// ── BLACK MINIONS ────────────────────────────────────────
@@ -92,61 +102,71 @@ const cards: Card[] = [
 		id: 6,
 		color: 'black',
 		name: 'Duskblade Rogue',
-		description: 'Strikes when the candles go out.',
+		description: 'Strikes when the candles go out. Also steals your cutlery.',
 		baseCost: 2,
 		type: 'minion',
-		race: 'human',
+		races: ['human'],
 		baseAttack: 3,
 		baseDefence: 2,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 7,
 		color: 'black',
-		name: 'Cursed Hexblade',
-		description: 'Every wound he deals festers.',
+		name: 'Barry the Hexblade',
+		description: 'Every wound he deals festers. His name does not.',
 		baseCost: 3,
 		type: 'minion',
-		race: 'human',
+		races: ['human'],
 		baseAttack: 4,
 		baseDefence: 2,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 8,
 		color: 'black',
 		name: 'Void Stalker',
-		description: 'Hunts in the space between thoughts.',
+		description: 'Hunts in the space between thoughts. Probably behind you right now.',
 		baseCost: 4,
 		type: 'minion',
-		race: 'elf',
+		races: ['elf'],
 		baseAttack: 5,
 		baseDefence: 3,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 9,
 		color: 'black',
 		name: 'Grave Warden',
-		description: 'Chosen to guard what should stay buried.',
+		description: 'He was told to guard the grave. He did not ask whose.',
 		baseCost: 4,
 		type: 'minion',
-		race: 'human',
+		races: ['human'],
 		baseAttack: 3,
 		baseDefence: 5,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 	{
 		id: 10,
 		color: 'black',
 		name: 'Soulreaper',
-		description: 'Collects what death is owed.',
+		description: "Collecting souls since 1987. It's been a good year.",
 		baseCost: 6,
 		type: 'minion',
-		race: 'elf',
+		races: ['elf'],
 		baseAttack: 7,
 		baseDefence: 4,
-		image_url: ''
+		image_url: '',
+		abilities: [],
+		attributes: []
 	},
 
 	// ── WHITE INCANTATIONS ───────────────────────────────────
@@ -154,19 +174,36 @@ const cards: Card[] = [
 		id: 11,
 		color: 'white',
 		name: 'Divine Shield',
-		description: 'Wraps an ally in impenetrable holy light.',
+		description: 'Wraps an ally in impenetrable holy light. Terms and conditions apply.',
 		baseCost: 2,
 		type: 'incantation',
-		image_url: ''
+		image_url: '',
+		abilities: []
 	},
 	{
 		id: 12,
 		color: 'white',
-		name: 'Holy Wrath',
-		description: 'Calls down judgement on the unworthy.',
-		baseCost: 3,
+		name: 'Agnostic Wrath',
+		description: 'Calls down judgement. Not affiliated with any religion.',
+		baseCost: 4,
 		type: 'incantation',
-		image_url: ''
+		image_url: '',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: 'damage',
+						damage: 6,
+						targetSpec: {
+							scope: 'single',
+							side: 'enemy',
+							entityType: 'minion'
+						},
+					}
+				]
+			}
+		]
 	},
 
 	// ── BLACK INCANTATIONS ───────────────────────────────────
@@ -174,18 +211,20 @@ const cards: Card[] = [
 		id: 13,
 		color: 'black',
 		name: 'Dark Blessing',
-		description: 'Power freely given always has a price.',
+		description: 'Power freely given always has a price. Usually your weekends.',
 		baseCost: 2,
 		type: 'incantation',
-		image_url: ''
+		image_url: '',
+		abilities: []
 	},
 	{
 		id: 14,
 		color: 'black',
 		name: 'Soul Drain',
-		description: 'Rips the life force from a target.',
+		description: 'Rips the life force from a target. Not covered by insurance.',
 		baseCost: 3,
 		type: 'incantation',
-		image_url: ''
+		image_url: '',
+		abilities: []
 	}
 ];

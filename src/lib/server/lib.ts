@@ -18,6 +18,14 @@ export function validateTurn(playerID: string, gameState: GameStateServer): bool
           playerID === gameState.blackPlayerID && !gameState.whiteTurn)
 }
 
+export const getSourceBoard = (gameState: GameStateServer) => {
+  return gameState.whiteTurn ? gameState.white : gameState.black;
+}
+
+export const getEnemyBoard = (gameState: GameStateServer) => {
+  return gameState.whiteTurn ? gameState.black : gameState.white;
+}
+
 /**
  * Switches the turn between white and black players
  * @param {GameStateServer} gameState - Current game state (will be mutated)

@@ -1,6 +1,6 @@
 import { Server, type Socket } from 'socket.io'
-import type { GameStateResponse } from './gamestate';
-import { endTurn, setGameState, getGameState, playCard, attack } from './gamestate';
+import type { GameStateResponse } from './engine';
+import { endTurn, setGameState, getGameState, playCard, attack } from './engine';
 import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
 import { deckToCards } from '$lib/shared/cards';
 import type { PlayerMetaData } from '$lib/shared/types';

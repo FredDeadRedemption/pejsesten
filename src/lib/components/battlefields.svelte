@@ -1,7 +1,8 @@
 <script lang="ts">
 	import CardSmall from './cardSmall.svelte';
-	import { attack } from '$lib/socket/socket';
+	import { attack, playCard } from '$lib/socket/socket';
 	import type { MinionEntity } from '$lib/shared/types';
+	import { endTargeting, targeting } from '$lib/targeting.svelte';
 
 	let {
 		selfBattleField = $bindable(),
@@ -101,10 +102,34 @@
 		<div
 			class="card-container"
 			style="--i: {index}; --total: {enemyBattleField.length}"
-			onclick={(e) => {
-				e.stopPropagation(); // so it doesnt also trigger cancelAttack prevent event bubbling
-				tryAttack(index, false);
+			onmouseenter={() => {
+				if (targeting.active) targeting.cardIndex = index;
 			}}
+			onmouseleave={() => {
+				if (targeting.active) targeting.cardIndex = null;
+			}}
+			onmouseup={
+				(e) => {
+					e.stopPropagation(); // so it doesnt also trigger cancelAttack prevent event bubbling
+					if (targeting.active) {
+						// play the incantation with this target
+						playCard({ index: targeting.cardIndex!, target: index });
+						endTargeting();
+					} else {
+						tryAttack(index, false);
+					}
+				}
+			}
+			onclick={(e) => {
+      e.stopPropagation();
+      if (targeting.active) {
+        // play the incantation with this target
+        playCard({ index: targeting.cardIndex!, target: index });
+        endTargeting();
+      } else {
+        tryAttack(index, false);
+      }
+    }}
 		>
 			<CardSmall {card}></CardSmall>
 		</div>
