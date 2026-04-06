@@ -37,7 +37,10 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 
 let effectQueue: QueuedEffect[] = [];
 
-// Instead of processing immediately, enqueue
+// enqueueTrigger scans the active player's battlefield 
+// for any minion that has an ability matching the given trigger, 
+// and pushes all those effects onto the queue. 
+// Then processEffectQueue consumes them.
 const enqueueTrigger = (trigger: Trigger) => {
 	const sourceBoard = getSourceBoard(gameState);
 	const enemyBoard = getEnemyBoard(gameState);
