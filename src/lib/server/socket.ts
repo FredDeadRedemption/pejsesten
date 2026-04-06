@@ -1,9 +1,9 @@
 import { Server, type Socket } from 'socket.io'
-import type { GameStateResponse } from './engine';
-import { endTurn, setGameState, getGameState, playCard, attack } from './engine';
-import { coinFlip, broadcastGameState, validateTurn } from './lib';
-import { deckToCards } from '../shared/cards';
-import type { PlayerMetaData } from '../shared/types';
+import type { GameStateResponse } from '$lib/server/engine';
+import { endTurn, setGameState, getGameState, playCard, attack } from '$lib/server/engine';
+import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
+import { deckToCards } from '$lib/shared/cards';
+import type { PlayerMetaData } from '$lib/shared/types';
 
 type ActiveGame = {
   socket1 : Socket;
