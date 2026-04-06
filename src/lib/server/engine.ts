@@ -37,9 +37,9 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 
 let effectQueue: QueuedEffect[] = [];
 
-// enqueueTrigger scans the active player's battlefield 
-// for any minion that has an ability matching the given trigger, 
-// and pushes all those effects onto the queue. 
+// enqueueTrigger scans the active player's battlefield
+// for any minion that has an ability matching the given trigger,
+// and pushes all those effects onto the queue.
 // Then processEffectQueue consumes them.
 const enqueueTrigger = (trigger: Trigger) => {
 	const sourceBoard = getSourceBoard(gameState);
@@ -244,22 +244,20 @@ export const playCard = (
 		sourceBoard.battlefield.push(consumed);
 	}
 
-	if (consumed.type === 'incantation') {
-		consumed.abilities.forEach((ability) => {
-			if (ability.trigger !== 'onPlay') return;
-			ability.effects.forEach((effect) => {
-				effectQueue.push({
-					effect,
-					sourceBoard,
-					enemyBoard,
-					targetID:
-						'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
-				});
+	consumed.abilities.forEach((ability) => {
+		if (ability.trigger !== 'onPlay') return;
+		ability.effects.forEach((effect) => {
+			effectQueue.push({
+				effect,
+				sourceBoard,
+				enemyBoard,
+				targetID:
+					'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
 			});
 		});
-		processEffectQueue();
-		checkForDeaths();
-	}
+	});
+	processEffectQueue();
+	checkForDeaths();
 
 	return gameState;
 };
