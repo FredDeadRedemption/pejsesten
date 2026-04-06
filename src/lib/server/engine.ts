@@ -172,20 +172,17 @@ export const setGameState = (
 
 export const endTurn = (): GameStateResponse => {
 	gameState.turnCount++;
+	switchTurn(gameState); // flip first
 
-	switchTurn(gameState);
+	// getSourceBoard returns the NEW active player
+	const sourceBoard = getSourceBoard(gameState);
 
-	// draw a card at the start of the turn
-	gameState.whiteTurn
-		? gameState.white.hand.push(...gameState.white.deck.draw(1))
-		: gameState.black.hand.push(...gameState.black.deck.draw(1));
+	// draw for the new active player
+	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
 
-	// unexhaust minions at the start of the turn
-	const battlefield = gameState.whiteTurn
-		? gameState.white.battlefield
-		: gameState.black.battlefield;
-	battlefield.forEach((card) => {
-		if (card.type === 'minion') card.exhausted = false; // unexhaust minions at the start of the turn
+	// unexhaust the new active player's minions
+	sourceBoard.battlefield.forEach((card) => {
+		if (card.type === 'minion') card.exhausted = false;
 	});
 
 	enqueueTrigger('onDraw');
@@ -198,33 +195,59 @@ export const playCard = (
 	_socketID: string,
 	data: { index: number; target?: string }
 ): GameStateResponse => {
-	console.log('Playing Card in hand index: ' + data.index);
-
 	const sourceBoard = getSourceBoard(gameState);
 	const enemyBoard = getEnemyBoard(gameState);
 
-	const [card] = sourceBoard.hand.splice(data.index, 1);
-
-	if (card === null) {
-		console.log('Trying to play NULL card!');
-		return null;
-	}
-
-	if (card.type === 'minion') {
-		card.exhausted = true; // minions enter the battlefield exhausted
-		sourceBoard.battlefield.push(card);
-	}
+	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
+	if (!card) return null;
 
 	if (card.type === 'incantation') {
-		console.log('playing incantation target is: ', data.target);
-		card.abilities.forEach((ability) => {
+		// if card has effect with targetSpec that requires a
+		// single target and there is no target, return
+		const target = data.target ? findEntity(data.target) : undefined;
+		const needsValidation = card.abilities.some((a) =>
+			a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
+		);
+		if (needsValidation && !target) return null;
+
+		if (target) {
+			const isMinion = 'exhausted' in target;
+			const isOnFriendlyBoard =
+				sourceBoard.battlefield.some((m) => m.entityID === (target as MinionEntity).entityID) ||
+				sourceBoard.hero === target;
+
+			// validate the target against every effect's targetSpec —
+			// if ANY effect disagrees with the chosen target, the whole play is invalid
+			const invalidTarget = card.abilities.some((a) =>
+				a.effects.some((e) => {
+					if (!('targetSpec' in e)) return false;
+					if (e.targetSpec.entityType === 'minion' && !isMinion) return true; // spell wants minion, got hero
+					if (e.targetSpec.entityType === 'hero' && isMinion) return true; // spell wants hero, got minion
+					if (e.targetSpec.side === 'friendly' && !isOnFriendlyBoard) return true; // spell wants friendly, got enemy
+					if (e.targetSpec.side === 'enemy' && isOnFriendlyBoard) return true; // spell wants enemy, got friendly
+					return false;
+				})
+			);
+			if (invalidTarget) return null;
+		}
+	}
+
+	// validation passed, now consume the card
+	const [consumed] = sourceBoard.hand.splice(data.index, 1);
+
+	if (consumed.type === 'minion') {
+		consumed.exhausted = true;
+		sourceBoard.battlefield.push(consumed);
+	}
+
+	if (consumed.type === 'incantation') {
+		consumed.abilities.forEach((ability) => {
 			if (ability.trigger !== 'onPlay') return;
 			ability.effects.forEach((effect) => {
 				effectQueue.push({
 					effect,
 					sourceBoard,
 					enemyBoard,
-					// if a target is chosen for the effect push that
 					targetID:
 						'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
 				});
@@ -239,6 +262,8 @@ export const playCard = (
 
 export const attack = (_socketID: string, attackData: AttackData): GameStateResponse => {
 	const attacker = findEntity(attackData.originID);
+
+	// invalid input || not a minion || has attacked / just spawned
 	if (!attacker || !('exhausted' in attacker) || attacker.exhausted) return null;
 	attacker.exhausted = true;
 
