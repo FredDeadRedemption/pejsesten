@@ -51,8 +51,6 @@ export type Ability = {
 
 type Attributes =
 	| 'charge' // can attack the turn it is played
-	| 'taunt' // must be attacked first
-	| 'stealth'; // cannot be targeted until it attacks or uses an ability
 
 // Base Card
 type CardBase = {

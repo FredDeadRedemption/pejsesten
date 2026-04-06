@@ -240,7 +240,7 @@ export const playCard = (
 	const [consumed] = sourceBoard.hand.splice(data.index, 1);
 
 	if (consumed.type === 'minion') {
-		consumed.exhausted = true;
+		consumed.attributes.some(a => a === "charge") ? consumed.exhausted = false : consumed.exhausted = true;
 		sourceBoard.battlefield.push(consumed);
 	}
 

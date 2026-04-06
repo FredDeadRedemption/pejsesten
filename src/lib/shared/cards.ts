@@ -32,15 +32,15 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description: 'Appears in your peripheral vision. Gone when you look directly.',
+		description: 'Charge. Appears in your peripheral vision. Gone when you look directly.',
 		baseCost: 1,
 		type: 'minion',
-		races: ['human'],
+		races: ["elf"],
 		baseAttack: 1,
 		baseDefence: 2,
 		image_url: 'Machine Elf.webp',
 		abilities: [],
-		attributes: []
+		attributes: ["charge"]
 	},
 	{
 		id: 2,
