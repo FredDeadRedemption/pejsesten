@@ -163,7 +163,7 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			mana: 1
+			mana: 0
 		},
 		whitePlayerID: isPlayer1White ? player1ID : player2ID,
 		blackPlayerID: isPlayer1White ? player2ID : player1ID,
@@ -180,9 +180,14 @@ export const endTurn = (): GameStateResponse => {
 
 	// getSourceBoard returns the NEW active player
 	const sourceBoard = getSourceBoard(gameState);
+	const enemyBoard = getEnemyBoard(gameState);
 
 	// draw for the new active player
 	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
+
+	// add mana
+	sourceBoard.mana += 1
+	//enemyBoard.mana += 1
 
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {
