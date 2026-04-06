@@ -10,6 +10,7 @@ import type {
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
+import { STARTING_HAND_SIZE } from './settings';
 
 let gameState: GameStateServer;
 
@@ -19,10 +20,14 @@ export const getGameState = (): GameStateServer => gameState;
 
 type QueuedEffect = {
 	effect: Effect;
-	target?: number;
+	targetID?: string;
 	sourceBoard: Board;
 	enemyBoard: Board;
 };
+
+const findEntity = (id: string): MinionEntity | undefined =>
+  [...gameState.white.battlefield, ...gameState.black.battlefield]
+    .find(e => e.entityID === id);
 
 let effectQueue: QueuedEffect[] = [];
 
@@ -59,12 +64,11 @@ const checkForDeaths = () => {
 
 // Consume and apply one effect at a time
 const processEffectQueue = () => {
-	while (effectQueue.length > 0) {
-		const queued = effectQueue.shift()!;
-		const target =
-			queued.target !== undefined ? queued.enemyBoard.battlefield[queued.target] : undefined;
-		applyEffect(queued.effect, queued.sourceBoard, queued.enemyBoard, target);
-	}
+  while (effectQueue.length > 0) {
+    const queued = effectQueue.shift()!;
+    const target = queued.targetID ? findEntity(queued.targetID) : undefined;
+    applyEffect(queued.effect, queued.sourceBoard, queued.enemyBoard, target);
+  }
 };
 
 const resolveTargets = (
@@ -76,7 +80,7 @@ const resolveTargets = (
 	if (spec.side === 'friendly' || spec.side === 'all') pool.push(...activeBoard.battlefield);
 	if (spec.side === 'enemy' || spec.side === 'all') pool.push(...enemyBoard.battlefield);
 	// hero targeting handled separately
-	return spec.scope === 'single' ? [pool[0]] : pool; // single needs UI targeting still
+	return spec.scope === 'single' ? pool.slice(0, 1) : pool;
 };
 
 const applyEffect = (
@@ -112,8 +116,8 @@ export const setGameState = (
 	const blackDeck = isPlayer1White ? player2Deck : player1Deck;
 
 	// Draw 5 random cards from each deck
-	let startingHandWhite = whiteDeck.shuffle().draw(3);
-	let startingHandBlack = blackDeck.shuffle().draw(4);
+	let startingHandWhite = whiteDeck.shuffle().draw(STARTING_HAND_SIZE);
+	let startingHandBlack = blackDeck.shuffle().draw(STARTING_HAND_SIZE + 1);
 
 	gameState = {
 		white: {
@@ -167,9 +171,9 @@ export const endTurn = (): GameStateResponse => {
 
 export const playCard = (
 	_socketID: string,
-	data: { index: number; target?: number }
+	data: { index: number; target?: string }
 ): GameStateResponse => {
-	console.log('PLAYING CARD IN HAND: ' + data.index);
+	console.log('Playing Card in hand index: ' + data.index);
 
 	const sourceBoard = getSourceBoard(gameState);
 	const enemyBoard = getEnemyBoard(gameState);
@@ -187,6 +191,7 @@ export const playCard = (
 	}
 
 	if (card.type === 'incantation') {
+		console.log("playing incantation target is: ", data.target)
 		card.abilities.forEach((ability) => {
 			if (ability.trigger !== 'onPlay') return;
 			ability.effects.forEach((effect) => {
@@ -194,7 +199,7 @@ export const playCard = (
 					effect,
 					sourceBoard,
 					enemyBoard,
-					target: effect.targetSpec.scope === 'single' ? data.target : undefined
+					targetID: effect.targetSpec.scope === 'single' ? data.target : undefined
 				});
 			});
 		});
