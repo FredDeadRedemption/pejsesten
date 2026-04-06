@@ -1,8 +1,15 @@
 <script lang="ts">
-	import { queueUp, leaveQueue, invalidateSocket, connectSocket, resetServer } from '$lib/socket/socket';
+	import {
+		queueUp,
+		leaveQueue,
+		invalidateSocket,
+		connectSocket,
+		resetServer
+	} from '$lib/socket/socket';
 	import type { PlayerMetaData } from '$lib/shared/types';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	type Deck = {
 		id: number;
@@ -19,7 +26,7 @@
 	});
 
 	const DEV_URL = 'http://localhost:3002/';
-	const PRODUCTION_URL = 'pejsesten.finrod.dk';
+	const PRODUCTION_URL = 'https://pejsesten.finrod.dk';
 
 	let playerMetaData: PlayerMetaData = $derived({
 		username: 'Out-of-Towner',
@@ -33,23 +40,28 @@
 	let queuedUp = $state(false);
 
 	const handleReset = (prod: boolean) => {
-    invalidateSocket();
-    connectSocket(prod ? PRODUCTION_URL : DEV_URL);
-    resetServer();
-  }
+		invalidateSocket();
+		connectSocket(prod ? PRODUCTION_URL : DEV_URL);
+		resetServer();
+	};
 </script>
 
 <main class="main">
 	<p>Playin as <strong>{'random troldmayn'}</strong></p>
-	<select bind:value={choosenDeckJson}>
-		{#each decks as deck}
-			<option value={deck.cards}>{deck.name}</option>
-		{/each}
-	</select>
+
+	<div style="display: flex; flex-direction: row; gap: 10px;">
+		<select bind:value={choosenDeckJson}>
+			{#each decks as deck}
+				<option value={deck.cards}>{deck.name}</option>
+			{/each}
+		</select>
+		<button class="button primary" onclick={() => goto("/deck")}>Make Deck</button>
+	</div>
+
 	<div style="display: flex; flex-direction: row; gap: 10px;">
 		<div class="right" style="display: flex; flex-direction: column; gap: 10px;">
 			<p class="dev">Development</p>
-      <button class="button primary" onclick={() => handleReset(false)}>Reset Server</button>
+			<button class="button primary" onclick={() => handleReset(false)}>Reset Server</button>
 
 			<button
 				class="button primary"
@@ -66,8 +78,8 @@
 				{queuedUp ? `Queueing ${ellipseVar}` : 'Join Queue'}
 			</button>
 		</div>
-    <div class="left" style="display: flex; flex-direction: column; gap: 10px;">
-    <p class="prod">Production</p>
+		<div class="left" style="display: flex; flex-direction: column; gap: 10px;">
+			<p class="prod">Production</p>
 
 			<button class="button primary" onclick={() => handleReset(true)}>Reset Server</button>
 			<button
@@ -85,8 +97,6 @@
 				{queuedUp ? `Queueing ${ellipseVar}` : 'Join Queue'}
 			</button>
 		</div>
-
-		
 	</div>
 
 	{#if queuedUp}
@@ -105,28 +115,28 @@
 </main>
 
 <style lang="scss">
-  select{
-    padding: 10px;
-    background-color: $grey-light;
-    color: steelblue;
-    &:hover{
-      cursor: pointer;
-    }
-  }
+	select {
+		padding: 10px;
+		background-color: $grey-light;
+		color: steelblue;
+		&:hover {
+			cursor: pointer;
+		}
+	}
 	.left {
 		border: 1px dotted steelblue;
-    padding: 10px;
+		padding: 10px;
 	}
-  .right {
-		border: 1px dotted rgb(247, 125, 38); 
-    padding: 10px;
+	.right {
+		border: 1px dotted rgb(247, 125, 38);
+		padding: 10px;
 	}
-  .dev{
-    color: rgb(247, 125, 38); 
-  }
-  .prod{
-    color: steelblue;
-  }
+	.dev {
+		color: rgb(247, 125, 38);
+	}
+	.prod {
+		color: steelblue;
+	}
 	p {
 		color: $grey-ultralight;
 	}

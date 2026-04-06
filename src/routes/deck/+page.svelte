@@ -6,6 +6,7 @@
 	import { slide } from 'svelte/transition';
 	import type { Card as CardT } from '$lib/shared/types';
 	import { getCards } from '$lib/shared/cards.js';
+	import { goto } from '$app/navigation';
 
 	let filteredCards = $state<CardT[]>([]);
 
@@ -192,11 +193,18 @@
 					exportDecks();
 				}}>Export Decks</button
 			>
+			<button class="button primary play"
+			onclick={() => goto("/play")}>Play</button>
 		{/if}
 	</div>
 </div>
 
 <style lang="scss">
+	button.play {
+		width: 100%;
+		margin-top: 10px;
+
+	}
 	button.import,
 	button.export {
 		width: 100%;
