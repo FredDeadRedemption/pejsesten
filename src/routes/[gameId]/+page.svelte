@@ -41,23 +41,11 @@
 		</svg>
 	{/if}
 	<!-- DEBUGGING / LOGGIN -->
-	<div class="DEBUG">
-		<!-- svelte-ignore a11y_consider_explicit_label -->
-		<button
-			disabled={!$gameState.yourTurn}
-			onclick={() => {
-				endTurn();
-			}}>END TURN</button
-		>
-		<p>Game ID: {page.params.gameId}</p>
-		<button
+	<button id="fs"
 			onclick={() => {
 				enterFullscreen('game-frame');
 			}}>Go Fullscreen</button
 		>
-		<span>enemy mana</span>
-		<div>Your turn: {$gameState.yourTurn}</div>
-	</div>
 	<!-- GRAVEYARDS -->
 	<div class="graveyard-zone">
 		<div class="enemy-graveyard">
@@ -81,7 +69,7 @@
 			></Battlefields>
 		</div>
 		<div class="self-hand">
-			<Hand self={true} bind:hand={$gameState.self.hand} bind:mana={$gameState.self.mana}></Hand>
+			<Hand self={true} yourTurn={$gameState.yourTurn} bind:hand={$gameState.self.hand} bind:mana={$gameState.self.mana}></Hand>
 		</div>
 	</div>
 	<!-- DECKS -->
@@ -105,19 +93,10 @@
 		filter: drop-shadow(0 0 4px #645d5b);
 	}
 
-	.DEBUG {
-		z-index: 99;
+	#fs{
 		position: absolute;
-		background-color: $black;
-		color: $white;
-		border: 2px solid red;
-		top: 0;
-		width: 90%;
-		display: flex;
-		flex-direction: row;
-		transform: translateY(50px);
-		font-size: 1rem;
-		justify-content: space-between;
+		margin: 0 auto;
+		right: 50vw;
 	}
 	#game-frame {
 		overflow: hidden;

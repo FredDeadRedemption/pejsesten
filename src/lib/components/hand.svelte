@@ -1,13 +1,18 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import Card from './card.svelte';
-	import { gameState, playCard } from '$lib/socket/socket';
+	import { endTurn, gameState, playCard } from '$lib/socket/socket';
 	import type { CardEntity } from '$lib/shared/types';
 	import { beginTargeting } from '$lib/targeting.svelte';
 
 	let handElement: HTMLElement;
 
-	let { hand = $bindable(), mana = $bindable(), self = false }: { hand: CardEntity[]; mana: number, self?: boolean } = $props();
+	let {
+		hand = $bindable(),
+		mana = $bindable(),
+		self = false,
+		yourTurn = false
+	}: { hand: CardEntity[]; mana: number; self?: boolean; yourTurn?: boolean } = $props();
 
 	let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
 	let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
@@ -94,6 +99,9 @@
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
 
 <div id="hand" bind:this={handElement}>
+	{#if self}
+		<button class="end" class:self class:inactive={!yourTurn} onclick={() => endTurn()}>END TURN</button>
+	{/if}
 	<div class="mana" class:self>{mana}</div>
 	{#each hand as cardInHand, index}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -139,9 +147,10 @@
 		color: $white;
 		height: 45px;
 		width: 45px;
+		margin: 5px;
 		border-radius: 100px;
 		background-color: rgb(88, 120, 161);
-		&.self{
+		&.self {
 			align-self: flex-start;
 		}
 	}
@@ -150,6 +159,28 @@
 		z-index: 1000;
 		pointer-events: none;
 		cursor: grabbing;
+	}
+
+	button.end {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 45px;
+		padding: 15px;
+		margin: 5px;
+		color: $white;
+		font-size: large;
+		background-color: #61aabe;
+		border: none;
+		border-radius: 10px;
+		&:hover {
+			background-color: #5c9c97;
+			cursor: pointer;
+		}
+		&.inactive {
+			pointer-events: none;
+			background-color: #b7bfbe;
+		}
 	}
 
 	#hand {
