@@ -7,7 +7,7 @@
 
 	let handElement: HTMLElement;
 
-	let { hand = $bindable() }: { hand: CardEntity[] } = $props();
+	let { hand = $bindable(), mana = $bindable(), self = false }: { hand: CardEntity[]; mana: number, self?: boolean } = $props();
 
 	let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
 	let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
@@ -48,8 +48,6 @@
 				beginTargeting(card, index);
 				return; // return here so it doesn't fall through to normal drag
 			}
-
-			
 		}
 
 		// normal minion drag below
@@ -96,6 +94,7 @@
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
 
 <div id="hand" bind:this={handElement}>
+	<div class="mana" class:self>{mana}</div>
 	{#each hand as cardInHand, index}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -131,6 +130,21 @@
 </div>
 
 <style lang="scss">
+	.mana {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		align-self: flex-end;
+		font-size: x-large;
+		color: $white;
+		height: 45px;
+		width: 45px;
+		border-radius: 100px;
+		background-color: rgb(88, 120, 161);
+		&.self{
+			align-self: flex-start;
+		}
+	}
 	.dragger {
 		position: fixed; /* Use fixed for smooth dragging */
 		z-index: 1000;
@@ -140,7 +154,7 @@
 
 	#hand {
 		display: flex;
-		justify-content: center;
+		justify-content: flex-end;
 		margin: 0 auto;
 		width: fit-content;
 		position: relative;

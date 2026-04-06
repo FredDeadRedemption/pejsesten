@@ -162,7 +162,7 @@
 			if (targeting.active) handleTargetInteraction(e, 'heroSelf');
 		}}
 	>
-		<span class="hp">{selfHero.defence}</span>
+	<span class="hp">{selfHero.defence}</span>
 	</div>
 	{#each selfBattleField as card, index (`${card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
