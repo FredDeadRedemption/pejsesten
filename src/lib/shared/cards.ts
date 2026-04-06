@@ -216,7 +216,7 @@ const cards: Card[] = [
 						damage: 4,
 						targetSpec: {
 							scope: 'single',
-							side: 'enemy',
+							side: 'all',
 							entityType: "all"
 						},
 					}
