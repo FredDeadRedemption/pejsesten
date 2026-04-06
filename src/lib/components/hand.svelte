@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { scale } from "svelte/transition";
 	import Card from "./card.svelte";
-	import CardSmall from "./cardSmall.svelte";
   import { playCard } from "$lib/socket/socket";
   import type { CardEntity } from "$lib/shared/types";
 	import { beginTargeting } from "$lib/targeting.svelte";
@@ -39,7 +38,6 @@
   dragCard = card;
 }
   const endDrag = () => {
-    console.log("chilling")
     draggin = false;
     if (!dragCard || draggerIndex === null) return; // js moment 2
     tryPlaceCard(dragCoords.x, dragCoords.y, draggerIndex)
@@ -70,7 +68,7 @@
     if(isWithinHand) return;
     console.log("IS WITHIN HAND" + isWithinHand)
 
-    playCard(dragIndex) // HERE I NEED THE INDEX OF THE CARD NOT THE CARD ITSELF
+    playCard({ index: dragIndex }) // HERE I NEED THE INDEX OF THE CARD NOT THE CARD ITSELF
   }
 </script>
 

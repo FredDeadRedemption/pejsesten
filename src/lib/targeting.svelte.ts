@@ -1,15 +1,10 @@
 import type { CardEntity } from '$lib/shared/types';
 
-type TargetingState = {
-  active: boolean
-  card: CardEntity | null
-  cardIndex: number | null
-}
-
-export const targeting = $state<TargetingState>({
+export const targeting = $state({
   active: false,
-  card: null,
-  cardIndex: null,
+  card: null as CardEntity | null,
+  cardIndex: null as number | null,  // hand index — never changes after beginTargeting
+  hoveredTarget: null as number | null,  // enemy battlefield index
 })
 
 export const beginTargeting = (card: CardEntity, index: number) => {
@@ -22,4 +17,5 @@ export const endTargeting = () => {
   targeting.active = false;
   targeting.card = null;
   targeting.cardIndex = null;
+  targeting.hoveredTarget = null;
 }
