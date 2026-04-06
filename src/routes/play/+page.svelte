@@ -1,97 +1,149 @@
 <script lang="ts">
-  import { queueUp, leaveQueue, invalidateSocket, connectSocket } from "$lib/socket/socket";
-  import type { PlayerMetaData } from "$lib/shared/types";
-	import { fly } from "svelte/transition";
-	import { onMount } from "svelte";
+	import { queueUp, leaveQueue, invalidateSocket, connectSocket, resetServer } from '$lib/socket/socket';
+	import type { PlayerMetaData } from '$lib/shared/types';
+	import { fly } from 'svelte/transition';
+	import { onMount } from 'svelte';
 
-  type Deck = {
+	type Deck = {
 		id: number;
 		name: string;
 		cards: number[]; // array of card id's
 	};
 
-  let decks: Deck[] = $state([]);
-  let choosenDeckJson = $state<number[]>([]);
+	let decks: Deck[] = $state([]);
+	let choosenDeckJson = $state<number[]>([]);
 
+	onMount(() => {
+		decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
+		choosenDeckJson = decks[0]?.cards ?? [];
+	});
 
-  onMount(() =>{
-    decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
-    choosenDeckJson = decks[0]?.cards ?? [];
-  })
+	const DEV_URL = 'http://localhost:3002/';
+	const PRODUCTION_URL = 'pejsesten.finrod.dk';
 
-    
-  let dev = $state(false)
+	let playerMetaData: PlayerMetaData = $derived({
+		username: 'Out-of-Towner',
+		choosenDeck: choosenDeckJson,
+		avatar: 'uaogidsogijsogij'
+	});
 
-  let url = $derived("http://localhost:3002/");
+	let ellipseVar = $state('.');
+	setInterval(() => (ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.'), 300);
 
-  $effect(()=>{
-    console.log("url changed invalidating socket " + url) 
+	let queuedUp = $state(false);
+
+	const handleReset = (prod: boolean) => {
     invalidateSocket();
-  })
-
-  let playerMetaData: PlayerMetaData = $derived({
-    username: "Out-of-Towner",
-    choosenDeck: choosenDeckJson, 
-    avatar: "uaogidsogijsogij"
-  })
-
-  let ellipseVar = $state('.');
-  setInterval(() => ellipseVar = ellipseVar.length >= 3 ? '.' : ellipseVar + '.', 300);
-
-  let queuedUp = $state(false);
-
-  const resetProd = async () => {
-    const res = await fetch("https://matrixz-gs.up.railway.app/resetGame");
-   
-    console.log(res);
+    connectSocket(prod ? PRODUCTION_URL : DEV_URL);
+    resetServer();
   }
 </script>
 
 <main class="main">
-  <p>Runnin on <strong>{dev ? "Development" : "Production"}</strong></p>
-  <p>Playin as <strong>{"random troldmayn"}</strong></p>
-  <button onclick={resetProd}>reset prod gamestate & queueu</button>
-  <input type="checkbox" name="url" id="" bind:checked={dev}>
+	<p>Playin as <strong>{'random troldmayn'}</strong></p>
+	<select bind:value={choosenDeckJson}>
+		{#each decks as deck}
+			<option value={deck.cards}>{deck.name}</option>
+		{/each}
+	</select>
+	<div style="display: flex; flex-direction: row; gap: 10px;">
+		<div class="right" style="display: flex; flex-direction: column; gap: 10px;">
+			<p class="dev">Development</p>
+      <button class="button primary" onclick={() => handleReset(false)}>Reset Server</button>
 
-  <select bind:value={choosenDeckJson}>
-    {#each decks as deck}
-      <option value={deck.cards}>{deck.name}</option>
-    {/each}
-  </select>
+			<button
+				class="button primary"
+				class:queuedUp
+				onclick={() => {
+					connectSocket(DEV_URL);
+					if (queuedUp) {
+						leaveQueue();
+						invalidateSocket();
+					} else queueUp(playerMetaData);
+					queuedUp = true;
+				}}
+			>
+				{queuedUp ? `Queueing ${ellipseVar}` : 'Join Queue'}
+			</button>
+		</div>
+    <div class="left" style="display: flex; flex-direction: column; gap: 10px;">
+    <p class="prod">Production</p>
 
-  <button class="button primary" class:queuedUp={queuedUp} onclick={() => { 
-    connectSocket(url);
-    queuedUp ? leaveQueue() : queueUp(playerMetaData);
-    queuedUp = true;
-    }}>
-      {queuedUp ? `Queueing ${ellipseVar}` : "Join Queue"}
-  </button>
-  {#if queuedUp}
-    <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button class="button primary" transition:fly={{ duration: 250 }} onclick={() => { 
-      leaveQueue();
-      queuedUp = false;
-      }}>
-      Leave Queue
-    </button>
-  {/if}
+			<button class="button primary" onclick={() => handleReset(true)}>Reset Server</button>
+			<button
+				class="button primary"
+				class:queuedUp
+				onclick={() => {
+					connectSocket(PRODUCTION_URL);
+					if (queuedUp) {
+						leaveQueue();
+						invalidateSocket();
+					} else queueUp(playerMetaData);
+					queuedUp = true;
+				}}
+			>
+				{queuedUp ? `Queueing ${ellipseVar}` : 'Join Queue'}
+			</button>
+		</div>
+
+		
+	</div>
+
+	{#if queuedUp}
+		<!-- svelte-ignore a11y_consider_explicit_label -->
+		<button
+			class="button primary"
+			transition:fly={{ duration: 250 }}
+			onclick={() => {
+				leaveQueue();
+				queuedUp = false;
+			}}
+		>
+			Leave Queue
+		</button>
+	{/if}
 </main>
 
 <style lang="scss">
-  .queuedUp{
-    background-color: $grey-mid;
+  select{
+    padding: 10px;
+    background-color: $grey-light;
+    color: steelblue;
     &:hover{
-      background-color: $grey-mid;
-      cursor: auto;
+      cursor: pointer;
     }
   }
-  .main {
-    margin: 30px;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    align-items: center;
-    text-align: center;
-    gap: 10px;
+	.left {
+		border: 1px dotted steelblue;
+    padding: 10px;
+	}
+  .right {
+		border: 1px dotted rgb(247, 125, 38); 
+    padding: 10px;
+	}
+  .dev{
+    color: rgb(247, 125, 38); 
   }
+  .prod{
+    color: steelblue;
+  }
+	p {
+		color: $grey-ultralight;
+	}
+	.queuedUp {
+		background-color: $grey-mid;
+		&:hover {
+			background-color: $grey-mid;
+			cursor: auto;
+		}
+	}
+	.main {
+		margin: 30px;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		align-items: center;
+		text-align: center;
+		gap: 10px;
+	}
 </style>

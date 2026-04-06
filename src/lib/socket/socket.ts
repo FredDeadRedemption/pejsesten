@@ -53,6 +53,8 @@ const fire = (socket: Socket | null, event: string, data?: any) => {
 
 export const invalidateSocket = () => { socket?.disconnect(); socket = null; console.log("disconnected socket")}
 
+export const resetServer = () => fire(socket, "resetServer")
+
 export const queueUp = (data: PlayerMetaData) => fire(socket, "queueUp", data)
 
 export const leaveQueue = () => fire(socket, "leaveQueue")
