@@ -4,7 +4,7 @@
 	"version": "0.0.420",
 	"type": "module",
 	"scripts": {
-		"start": "node server.js",
+		"start": "node --import tsx/esm server.ts",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
@@ -37,6 +37,7 @@
 	"dependencies": {
 		"@sveltejs/adapter-node": "^5.5.4",
 		"socket.io": "^4.8.3",
-		"socket.io-client": "^4.8.1"
+		"socket.io-client": "^4.8.1",
+		"tsx": "^4.21.0"
 	}
 }
