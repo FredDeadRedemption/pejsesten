@@ -189,25 +189,15 @@ export const playCard = (
 };
 
 export const attack = (_socketID: string, attackData: AttackData): GameStateResponse => {
-	const originBattlefield = gameState.whiteTurn
-		? gameState.white.battlefield
-		: gameState.black.battlefield;
-	const targetBattlefield = gameState.whiteTurn
-		? gameState.black.battlefield
-		: gameState.white.battlefield;
-	const originGraveyard = gameState.whiteTurn
-		? gameState.white.graveyard
-		: gameState.black.graveyard;
-	const targetGraveyard = gameState.whiteTurn
-		? gameState.black.graveyard
-		: gameState.white.graveyard;
+	const sourceBoard = getSourceBoard(gameState);
+	const enemyBoard = getEnemyBoard(gameState);
 
-	const attacker = originBattlefield[attackData.origin];
+	const attacker = sourceBoard.battlefield[attackData.origin];
 
 	if (attacker.exhausted) return null;
 	attacker.exhausted = true;
 
-	const target = targetBattlefield[attackData.target];
+	const target = enemyBoard.battlefield[attackData.target];
 
 	if (attackData.face) {
 		// early return if attacking face - noooooooooo ;_;
@@ -224,14 +214,14 @@ export const attack = (_socketID: string, attackData: AttackData): GameStateResp
 
 		// check if attacked card died, if so move to graveyard
 		if (target.defence <= 0) {
-			const [deadCard] = targetBattlefield.splice(attackData.target, 1);
+			const [deadCard] = enemyBoard.battlefield.splice(attackData.target, 1);
 
-			targetGraveyard.push(deadCard);
+			enemyBoard.graveyard.push(deadCard);
 		}
 		if (attacker.defence <= 0) {
-			const [deadCard] = originBattlefield.splice(attackData.origin, 1);
+			const [deadCard] = sourceBoard.battlefield.splice(attackData.origin, 1);
 
-			originGraveyard.push(deadCard);
+			sourceBoard.graveyard.push(deadCard);
 		}
 	}
 
