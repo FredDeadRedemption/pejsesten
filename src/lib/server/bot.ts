@@ -24,9 +24,9 @@ export const makeBotMove = (gameState: GameStateServer, botIsWhite: boolean) => 
     if (minion.exhausted) return;
     if (enemyBoard.battlefield.length > 0) {
       const randomTarget = enemyBoard.battlefield[Math.floor(Math.random() * enemyBoard.battlefield.length)];
-      attack('bot', { originID: minion.entityID, targetID: randomTarget.entityID, face: false });
+      attack('bot', { originID: minion.entityID, targetID: randomTarget.entityID });
     } else {
-      attack('bot', { originID: minion.entityID, targetID: 'face', face: true });
+      attack('bot', { originID: minion.entityID, targetID: 'faceEnemy' });
     }
   });
 

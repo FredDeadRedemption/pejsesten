@@ -10,10 +10,30 @@ let socket: Socket | null = null;
 export const gameState = writable<GameStateClient>({
 	whitePlayerID: '',
 	blackPlayerID: '',
-	enemy: { battlefield: [], hand: [], hp: 0, graveyard: [], deck: [], mana: 0},
-	self: { battlefield: [], hand: [], hp: 0, graveyard: [], deck: [], mana: 0},
-  turnCount: 0,
-  yourTurn: false 
+	enemy: {
+		battlefield: [],
+		hand: [],
+		hero: {
+			attack: 0,
+			defence: 0,
+		},
+		graveyard: [],
+		deck: [],
+		mana: 0
+	},
+	self: {
+		battlefield: [],
+		hand: [],
+		hero: {
+			attack: 0,
+			defence: 0,
+		},
+		graveyard: [],
+		deck: [],
+		mana: 0
+	},
+	turnCount: 0,
+	yourTurn: false
 });
 
 // Function to connect to the socket server

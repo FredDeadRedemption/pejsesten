@@ -38,6 +38,10 @@ export type Effect =
 			readonly type: 'damage';
 			readonly targetSpec: TargetSpec;
 			damage: number;
+	  }
+	| {
+			readonly type: 'draw';
+			drawAmount: number;
 	  };
 
 export type Ability = {
@@ -93,17 +97,22 @@ export type IncantationEntity = IncantationCard & {
 	cost: number;
 };
 
-// !!! IF ADDING REMOVING ANYTHING HERE REMEMBER TO ALSO 
+// !!! IF ADDING REMOVING ANYTHING HERE REMEMBER TO ALSO
 // REWORK THE deckToCards FUNCTION IN cards.ts !!!
 // Card Entity
 export type CardEntity = MinionEntity | IncantationEntity;
+
+export type Hero = {
+	attack: number;
+	defence: number;
+}
 
 export type Board = {
 	deck: CardEntity[];
 	hand: CardEntity[];
 	graveyard: MinionEntity[];
 	battlefield: MinionEntity[];
-	hp: number;
+	hero: Hero;
 	mana: number;
 };
 
@@ -133,6 +142,5 @@ export type PlayerMetaData = {
 
 export type AttackData = {
 	originID: string;
-	targetID: string;
-	face: boolean;
+	targetID: string | "heroEnemy" | "heroSelf";
 };
