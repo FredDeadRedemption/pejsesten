@@ -20,12 +20,12 @@
 
 	// Save decks to localStorage whenever they change
 	$effect(() => {
-		localStorage.setItem('decks', JSON.stringify(decks));
+		localStorage?.setItem('decks', JSON.stringify(decks));
 	});
 
 	const getCardData = (id: number) => cards.find((card) => card.id === id);
 
-	let decks = $state<Deck[]>(JSON.parse(localStorage.getItem('decks') ?? '[]'));
+	let decks = $state<Deck[]>(JSON.parse(localStorage?.getItem('decks') ?? '[]'));
 
 	let selectedDeckID: number | null = $state(null);
 	let deck: number[] = $state([]); // contains id's of all cards
@@ -83,7 +83,7 @@
 	};
 
 	const exportDecks = () => {
-		const data = localStorage.getItem('decks') ?? '[]';
+		const data = localStorage?.getItem('decks') ?? '[]';
 		const base64 = btoa(data);
 		navigator.clipboard.writeText(base64);
 		alert('Decks copied to clipboard!');
@@ -97,7 +97,7 @@
 			const parsed = JSON.parse(decoded);
 			if (!Array.isArray(parsed)) throw new Error();
 			decks = parsed;
-			localStorage.setItem('decks', decoded);
+			localStorage?.setItem('decks', decoded);
 		} catch {
 			alert('Invalid deck data!');
 		}
