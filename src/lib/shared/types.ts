@@ -132,7 +132,7 @@ export type PlayerMetaData = {
 };
 
 export type AttackData = {
-	origin: number;
-	target: number;
+	originID: string;
+	targetID: string;
 	face: boolean;
 };

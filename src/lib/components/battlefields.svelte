@@ -19,31 +19,30 @@
 	let mouseX = $state(0);
 	let mouseY = $state(0);
 	let originRect = $state<DOMRect | null>(null);
-	let origin: number | null = $state(null);
+	let origin: string | null = $state(null);
 
 	const handleMouseMove = (e: MouseEvent) => {
 		mouseX = e.clientX;
 		mouseY = e.clientY;
 	};
 
-	const beginAttack = (index: number, e: MouseEvent) => {
-		origin = index;
+	const beginAttack = (entityID: string, e: MouseEvent) => {
+		origin = entityID;
 		const el = e.currentTarget as HTMLElement;
 		originRect = el.getBoundingClientRect();
 	};
 
 	const cancelAttack = () => (origin = null);
 
-	const tryAttack = (index: number, face: boolean) => {
+	const tryAttack = (entityID: string, face: boolean) => {
 		if (origin === null) return;
 		attack({
-			origin: origin,
-			target: index,
+			originID: origin,
+			targetID: entityID,
 			face: face
 		});
 		origin = null;
 	};
-
 	let didFireTargeting = $state(false);
 
 	const handleTargetInteraction = (e: MouseEvent, entityID: string) => {
@@ -120,8 +119,8 @@
 	<div
 		class="hero enemy"
 		onclick={(e) => {
-			e.stopPropagation(); // so it doesnt also trigger cancelAttack prevent event bubbling
-			tryAttack(-1, true);
+			e.stopPropagation();
+			tryAttack('face', true);
 		}}
 	>
 		<span class="hp">{enemyHP}</span>
@@ -140,11 +139,11 @@
 			}}
 			onmouseup={(e) => {
 				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else tryAttack(index, false);
+				else tryAttack(card.entityID, false);
 			}}
 			onclick={(e) => {
 				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else tryAttack(index, false);
+				else tryAttack(card.entityID, false);
 			}}
 		>
 			<CardSmall {card}></CardSmall>
@@ -161,7 +160,7 @@
 		<div
 			class="card-container"
 			style="--i: {index}; --total: {selfBattleField.length}"
-			class:selected={origin === index}
+			class:selected={origin === card.entityID}
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entityID;
 			}}
@@ -175,7 +174,7 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				if (targeting.active) handleFriendlyTargetInteraction(e, card.entityID);
-				else beginAttack(index, e);
+				else beginAttack(card.entityID, e);
 			}}
 		>
 			<CardSmall {card}></CardSmall>

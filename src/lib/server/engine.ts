@@ -211,15 +211,15 @@ export const playCard = (
 };
 
 export const attack = (_socketID: string, attackData: AttackData): GameStateResponse => {
-	const sourceBoard = getSourceBoard(gameState);
-	const enemyBoard = getEnemyBoard(gameState);
+	
+	const attacker = findEntity(attackData.originID)
+	if (!attacker) return null;
 
-	const attacker = sourceBoard.battlefield[attackData.origin];
+	const target = findEntity(attackData.targetID);
+	if (!target) return null;
 
 	if (attacker.exhausted) return null;
 	attacker.exhausted = true;
-
-	const target = enemyBoard.battlefield[attackData.target];
 
 	if (attackData.face) {
 		// early return if attacking face - noooooooooo ;_;
@@ -237,8 +237,8 @@ export const attack = (_socketID: string, attackData: AttackData): GameStateResp
 		checkForDeaths();
 	}
 
-	console.log('FROM: ' + attackData.origin);
-	console.log('TO: ' + attackData.target);
+	console.log('FROM: ' + attackData.originID);
+	console.log('TO: ' + attackData.targetID);
 
 	return gameState;
 };
