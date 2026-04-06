@@ -82,23 +82,23 @@
 	};
 
 	const exportDecks = () => {
-    const data = localStorage.getItem('decks') ?? '[]';
-    navigator.clipboard.writeText(data);
-    alert('Decks copied to clipboard!');
-};
+		const data = localStorage.getItem('decks') ?? '[]';
+		navigator.clipboard.writeText(data);
+		alert('Decks copied to clipboard!');
+	};
 
-const importDecks = () => {
-    const input = prompt('Paste your deck data here:');
-    if (!input) return;
-    try {
-        const parsed = JSON.parse(input);
-        if (!Array.isArray(parsed)) throw new Error();
-        decks = parsed;
-        localStorage.setItem('decks', input);
-    } catch {
-        alert('Invalid deck data!');
-    }
-};
+	const importDecks = () => {
+		const input = prompt('Paste your deck data here:');
+		if (!input) return;
+		try {
+			const parsed = JSON.parse(input);
+			if (!Array.isArray(parsed)) throw new Error();
+			decks = parsed;
+			localStorage.setItem('decks', input);
+		} catch {
+			alert('Invalid deck data!');
+		}
+	};
 </script>
 
 <div class="main">
