@@ -5,6 +5,7 @@ type Color =
 type Race = 
   |"human" 
   | "elf"
+  | "beast"
 
 export type Trigger = 
   | "onPlay"      // when the card is played
@@ -82,6 +83,7 @@ export type Card = MinionCard | IncantationCard
 
 // Minion Entity
 export type MinionEntity = MinionCard & {
+  entityId: string
   attack: number
   defence: number
   cost: number
@@ -90,6 +92,7 @@ export type MinionEntity = MinionCard & {
 
 // Encantation Entity
 export type IncantationEntity = IncantationCard & {
+  entityId: string
   cost: number
 }
 
