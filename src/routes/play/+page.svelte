@@ -4,7 +4,10 @@
 		leaveQueue,
 		invalidateSocket,
 		connectSocket,
-		resetServer
+		resetServer,
+
+		queueUpBot
+
 	} from '$lib/socket/socket';
 	import type { PlayerMetaData } from '$lib/shared/types';
 	import { fly } from 'svelte/transition';
@@ -77,6 +80,20 @@
 			>
 				{queuedUp ? `Queueing ${ellipseVar}` : 'Join Queue'}
 			</button>
+      <button
+				class="button primary"
+				class:queuedUp
+				onclick={() => {
+					connectSocket(DEV_URL);
+					if (queuedUp) {
+						leaveQueue();
+						invalidateSocket();
+					} else queueUpBot(playerMetaData);
+					queuedUp = true;
+				}}
+			>
+				{queuedUp ? `Queueing ${ellipseVar}` : 'Play Bot'}
+			</button>
 		</div>
 		<div class="left" style="display: flex; flex-direction: column; gap: 10px;">
 			<p class="prod">Production</p>
@@ -95,6 +112,20 @@
 				}}
 			>
 				{queuedUp ? `Queueing ${ellipseVar}` : 'Join Queue'}
+			</button>
+      <button
+				class="button primary"
+				class:queuedUp
+				onclick={() => {
+					connectSocket(PRODUCTION_URL);
+					if (queuedUp) {
+						leaveQueue();
+						invalidateSocket();
+					} else queueUpBot(playerMetaData);
+					queuedUp = true;
+				}}
+			>
+				{queuedUp ? `Queueing ${ellipseVar}` : 'Play Bot'}
 			</button>
 		</div>
 	</div>

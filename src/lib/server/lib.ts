@@ -68,6 +68,7 @@ export const broadcastGameState = (
     isPlayer1White: boolean;
     socket1: Socket;
     socket2: Socket;
+    botGame: boolean;
   }
 ): void => {
   // Create player-specific views of the game state
@@ -80,6 +81,12 @@ export const broadcastGameState = (
     newGameState,
     activeGame.isPlayer1White === false
   );
+
+  // in a bot game socket1 === socket2, only send player's perspective
+  if (activeGame.botGame) {
+    activeGame.socket1.emit('newGameState', clientGameState1);
+    return;
+  }
 
   // Send to respective players
   activeGame.socket1.emit('newGameState', clientGameState1);

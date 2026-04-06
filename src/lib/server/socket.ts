@@ -4,11 +4,17 @@ import { endTurn, setGameState, getGameState, playCard, attack } from '$lib/serv
 import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
 import { deckToCards } from '$lib/shared/cards';
 import type { PlayerMetaData } from '$lib/shared/types';
+import { makeBotMove } from '$lib/server/bot';
+import { BOT_DELAY_MS } from './settings';
+
+const BOT_ID = 'bot';
 
 type ActiveGame = {
 	socket1: Socket;
 	socket2: Socket;
 	isPlayer1White: boolean;
+	botGame: boolean;
+	botIsWhite?: boolean;
 };
 const LOGGING = true;
 export let ioHandle: Server | null = null;
@@ -40,6 +46,32 @@ export const setupSocketIO = (io: Server) => {
 			};
 		};
 
+		// after broadcastGameState check if it's bot's turn
+		const fireAndMaybeBot = (fn: (socket: string, data?: any) => GameStateResponse) => {
+			return (data: any) => {
+				if (!activeGame) return;
+				const gamestate = getGameState();
+				if (!validateTurn(socket.id, gamestate)) {
+					console.log('NOT UR TURN');
+					return;
+				}
+				const result = fn(socket.id, data);
+				if (result) {
+					broadcastGameState(result, activeGame);
+					// if bot game and it's now the bot's turn
+					if (activeGame.botGame && !validateTurn(socket.id, getGameState())) {
+						setTimeout(
+							() => {
+								const botResult = makeBotMove(getGameState(), activeGame!.botIsWhite!);
+								if (botResult) broadcastGameState(botResult, activeGame!);
+							},
+							BOT_DELAY_MS
+						);
+					}
+				}
+			};
+		};
+
 		// Queue System
 		socket.on('queueUp', (playerMetaData: PlayerMetaData) => {
 			playerMetaDataMap.set(socket.id, playerMetaData);
@@ -65,7 +97,7 @@ export const setupSocketIO = (io: Server) => {
 
 				const isPlayer1White = coinFlip(); // Determine who goes first
 
-				activeGame = { socket1, socket2, isPlayer1White }; // Set active game data
+				activeGame = { socket1, socket2, isPlayer1White, botGame: false }; // Set active game data
 
 				const newGameState = setGameState(
 					socket1.id,
@@ -83,16 +115,48 @@ export const setupSocketIO = (io: Server) => {
 			}
 		});
 
+		socket.on('queueBot', (playerMetaData: PlayerMetaData) => {
+			const isPlayer1White = coinFlip();
+			const botIsWhite = !isPlayer1White;
+			activeGame = {
+				socket1: socket,
+				socket2: socket,
+				isPlayer1White,
+				botGame: true,
+				botIsWhite,
+			};
+
+			const newGameState = setGameState(
+				socket.id,
+				BOT_ID,
+				isPlayer1White,
+				deckToCards(playerMetaData.choosenDeck),
+				deckToCards(playerMetaData.choosenDeck)
+			);
+
+			broadcastGameState(newGameState, activeGame);
+			const newGameURL = `${Math.floor(Math.random() * 10000)}${Date.now()}`;
+			socket.emit('redirect', newGameURL);
+
+			// bot goes first if it's white (white always goes first)
+			if (botIsWhite) {
+				setTimeout(() => {
+					const botResult = makeBotMove(getGameState(), botIsWhite);
+					if (botResult) broadcastGameState(botResult, activeGame!);
+				}, 1000); // first move delay
+			}
+		});
+
 		// Attach the handlers to events
-		socket.on('endTurn', fire(endTurn));
-		socket.on('playCard', fire(playCard));
-		socket.on('attack', fire(attack));
+		socket.on('endTurn', fireAndMaybeBot(endTurn));
+		socket.on('playCard', fireAndMaybeBot(playCard));
+		socket.on('attack', fireAndMaybeBot(attack));
 
 		socket.on('resetServer', () => {
 			activeGame = null;
 			queue = [];
 			playerMetaDataMap.clear();
-      console.log("RESET GAME")
+			console.log('RESET GAME');
 		});
 
 		socket.on('leaveQueue', () => {
