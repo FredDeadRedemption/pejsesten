@@ -33,8 +33,7 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description:
-			'<strong>Blitz</strong>. Appears in your peripheral vision. Gone when you look directly.',
+		description: '<strong>Blitz</strong>',
 		baseCost: 1,
 		type: 'minion',
 		races: ['elf'],
@@ -82,12 +81,12 @@ const cards: Card[] = [
 		image_url: '',
 		abilities: [
 			{
-				trigger: "onDeath",
+				trigger: 'onDeath',
 				conditions: [],
 				effects: [
 					{
-						type: "draw",
-						drawAmount: 1,
+						type: 'draw',
+						drawAmount: 1
 					}
 				]
 			}
@@ -98,28 +97,64 @@ const cards: Card[] = [
 		id: 4,
 		color: 'white',
 		name: 'Radiant Sentinel',
-		description: 'Light pours from every crack in her armour. Doctors are concerned.',
+		description: '<strong>Fanfare:</strong> Deal 2 damage to all minions',
 		baseCost: 4,
 		type: 'minion',
 		races: ['elf'],
 		baseAttack: 4,
 		baseDefence: 6,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				effects: [
+					{
+						type: 'damage',
+						damage: 2,
+						targetSpec: {
+							scope: 'all',
+							side: 'all',
+							entityType: 'minion'
+						}
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
 		id: 5,
 		color: 'white',
 		name: 'Herald of the Sun',
-		description: 'Arrives before the dawn. Leaves before doing the dishes.',
+		description: '<strong>Last breath:</strong> Deal 5 damage to the enemy hero, draw a card',
 		baseCost: 5,
 		type: 'minion',
 		races: ['elf'],
 		baseAttack: 6,
 		baseDefence: 5,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: 'onDeath',
+				conditions: [],
+				effects: [
+					{
+						type: 'damage',
+						damage: 5,
+						targetSpec: {
+							scope: "all",
+							side: 'enemy',
+							entityType: 'hero'
+						}
+					},
+					{
+						type: 'draw',
+						drawAmount: 1
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 
@@ -129,7 +164,7 @@ const cards: Card[] = [
 		color: 'black',
 		name: 'Black Cat',
 		description:
-			'<strong>Blitz</strong>. <strong>Fanfare:</strong> Return a friendly minion from the battlefield to your hand',
+			'<strong>Combo:</strong> Return a friendly minion from the battlefield to your hand',
 		baseCost: 1,
 		type: 'minion',
 		races: ['beast'],
@@ -140,6 +175,9 @@ const cards: Card[] = [
 			{
 				trigger: 'onPlay',
 				conditions: [],
+				proc: {
+					type: 'combo'
+				},
 				effects: [
 					{
 						type: 'returnToHand',
@@ -152,62 +190,127 @@ const cards: Card[] = [
 				]
 			}
 		],
-		attributes: ['charge']
+		attributes: []
 	},
 	{
 		id: 7,
 		color: 'black',
 		name: 'Barry the Hexblade',
-		description: 'Every wound he deals festers. His name does not.',
+		description: '<strong>Fanfare:</strong> Give all minions +1 +1',
 		baseCost: 2,
 		type: 'minion',
 		races: ['human'],
 		baseAttack: 4,
 		baseDefence: 2,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				effects: [
+					{
+						type: "buff",
+						attack: 1,
+						defence: 1,
+						targetSpec: {
+							scope: 'all',
+							side: 'all',
+							entityType: 'minion'
+						}
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
 		id: 8,
 		color: 'black',
 		name: 'Void Stalker',
-		description: 'Hunts in the space between thoughts. Probably behind you right now.',
-		baseCost: 3,
+		description: '<strong>Fanfare:</strong> Deal 10 damage to your own hero',
+		baseCost: 2,
 		type: 'minion',
 		races: ['elf'],
-		baseAttack: 3,
+		baseAttack: 5,
 		baseDefence: 5,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: "onPlay",
+				conditions: [],
+				effects: [
+					{
+						type: "damage",
+						damage: 10,
+						targetSpec: {
+							scope: "all", // scope all means that the player doesnt get to choose
+							side: "friendly",
+							entityType: "hero"
+						}
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
 		id: 9,
 		color: 'black',
 		name: 'Grave Warden',
-		description: 'He was told to guard the grave. He did not ask whose.',
+		description: '<strong>Last breath:</strong> Return all minions to their owners hand',
 		baseCost: 4,
 		type: 'minion',
 		races: ['human'],
 		baseAttack: 5,
 		baseDefence: 4,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: "onDeath",
+				conditions: [],
+				effects: [
+					{
+						type: "returnToHand",
+						targetSpec: {
+							scope: "all",
+							side: "all",
+							entityType: "minion"
+						}
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
 		id: 10,
 		color: 'black',
-		name: 'Soulreaper',
-		description: "Collecting souls since 1987. It's been a good year.",
+		name: 'Admirable Minion',
+		description: "<strong>Fanfare:</strong> Give a friendly minion +3 +3",
 		baseCost: 6,
 		type: 'minion',
 		races: ['elf'],
-		baseAttack: 7,
-		baseDefence: 6,
+		baseAttack: 5,
+		baseDefence: 4,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: "onPlay",
+				conditions: [],
+				effects: [
+					{
+						type: "buff",
+						attack: 3,
+						defence: 3,
+						targetSpec: {
+							scope: "single",
+							side: "friendly",
+							entityType: "minion"
+						}
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 
@@ -350,7 +453,7 @@ const cards: Card[] = [
 						damage: 2,
 						targetSpec: {
 							scope: 'single',
-							side: 'enemy',
+							side: 'all',
 							entityType: 'all'
 						}
 					}

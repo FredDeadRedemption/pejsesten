@@ -265,7 +265,7 @@ export const endTurn = (): GameStateResponse => {
 	// add mana to the new activer player
 	// set current mana to base mana
 	sourceBoard.baseMana += 1;
-	sourceBoard.mana += sourceBoard.baseMana
+	sourceBoard.mana = sourceBoard.baseMana
 
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {
