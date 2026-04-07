@@ -19,6 +19,7 @@ export const gameState = writable<GameStateClient>({
 		},
 		graveyard: [],
 		deck: [],
+		baseMana: 0,
 		mana: 0
 	},
 	self: {
@@ -30,6 +31,7 @@ export const gameState = writable<GameStateClient>({
 		},
 		graveyard: [],
 		deck: [],
+		baseMana: 0,
 		mana: 0
 	},
 	turnCount: 0,

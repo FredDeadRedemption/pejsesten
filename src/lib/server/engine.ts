@@ -90,7 +90,7 @@ const checkForDeaths = () => {
 	const enemyBoard = getEnemyBoard(gameState);
 
 	let anyDied = false;
-	let anyDeathrattle = false;
+	let anyOnDeathTriggers = false;
 
 	[sourceBoard, enemyBoard].forEach((board) => {
 		board.battlefield = board.battlefield.filter((minion) => {
@@ -101,7 +101,7 @@ const checkForDeaths = () => {
 					if (ability.trigger !== 'onDeath') return;
 					if (!checkConditions(ability.conditions, sourceBoard, enemyBoard)) return;
 					if (!checkProc(ability.proc, sourceBoard, enemyBoard)) return;
-					anyDeathrattle = true;
+					anyOnDeathTriggers = true;
 					ability.effects.forEach((effect) => {
 						effectQueue.push({
 							effect,
@@ -118,7 +118,7 @@ const checkForDeaths = () => {
 		});
 	});
 
-	if(anyDeathrattle) processEffectQueue();
+	if(anyOnDeathTriggers) processEffectQueue();
 	if(anyDied) checkForDeaths(); // recursive in case death effects cause more deaths
 };
 
@@ -227,6 +227,7 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
+			baseMana: 0,
 			mana: 1
 		},
 		black: {
@@ -238,6 +239,7 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
+			baseMana: 0,
 			mana: 0
 		},
 		whitePlayerID: isPlayer1White ? player1ID : player2ID,
@@ -261,7 +263,9 @@ export const endTurn = (): GameStateResponse => {
 	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
 
 	// add mana to the new activer player
-	sourceBoard.mana += 1;
+	// set current mana to base mana
+	sourceBoard.baseMana += 1;
+	sourceBoard.mana += sourceBoard.baseMana
 
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {
