@@ -5,26 +5,27 @@ const getCardByID = (id: number) => cards.find((card) => card.id === id);
 export const getCards = () => cards;
 
 // Transform Deck: [1, 2, 3] to (actual)Deck: [CardEntity, CardEntity, CardEntity]
-export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => getCardByID(id)!).map(
-	(card) => {
-		if (card.type === 'minion') {
-			return {
-				...card,
-				entityID: crypto.randomUUID(),
-				attack: card.baseAttack,
-				defence: card.baseDefence,
-				cost: card.baseCost,
-				exhausted: false
-			} as MinionEntity;
-		} else {
-			return {
-				...card,
-				entityID: crypto.randomUUID(),
-				cost: card.baseCost
-			} as IncantationEntity;
-		}
-	}
-);
+export const deckToCards = (deck: number[]): CardEntity[] =>
+	deck
+		.map((id) => getCardByID(id)!)
+		.map((card) => {
+			if (card.type === 'minion') {
+				return {
+					...card,
+					entityID: crypto.randomUUID(),
+					attack: card.baseAttack,
+					defence: card.baseDefence,
+					cost: card.baseCost,
+					exhausted: false
+				} as MinionEntity;
+			} else {
+				return {
+					...card,
+					entityID: crypto.randomUUID(),
+					cost: card.baseCost
+				} as IncantationEntity;
+			}
+		});
 
 const cards: Card[] = [
 	// ── WHITE MINIONS ────────────────────────────────────────
@@ -32,21 +33,22 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description: 'Appears in your peripheral vision. Gone when you look directly.',
+		description:
+			'<strong>Blitz</strong>. Appears in your peripheral vision. Gone when you look directly.',
 		baseCost: 1,
 		type: 'minion',
-		races: ['human'],
+		races: ['elf'],
 		baseAttack: 1,
 		baseDefence: 2,
 		image_url: 'Machine Elf.webp',
 		abilities: [],
-		attributes: []
+		attributes: ['charge']
 	},
 	{
 		id: 2,
 		color: 'white',
 		name: 'Overzealous Priest',
-		description: 'Battlecry: Draw 2 cards',
+		description: '<strong>Fanfare:</strong> Draw a card',
 		baseCost: 3,
 		type: 'minion',
 		races: ['human'],
@@ -56,10 +58,11 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
-						type: "draw",
-						drawAmount: 2
+						type: 'draw',
+						drawAmount: 1
 					}
 				]
 			}
@@ -114,15 +117,30 @@ const cards: Card[] = [
 		id: 6,
 		color: 'black',
 		name: 'Black Cat',
-		description: 'Meaw.',
+		description: '<strong>Blitz</strong>',
 		baseCost: 1,
 		type: 'minion',
-		races: ["beast"],
+		races: ['beast'],
 		baseAttack: 2,
 		baseDefence: 1,
-		image_url: '',
-		abilities: [],
-		attributes: []
+		image_url: 'Black Cat.webp',
+		abilities: [
+			{
+				trigger: "onPlay",
+				conditions: [],
+				effects: [
+					{
+						type: "returnToHand",
+						targetSpec: {
+							scope: 'single',
+							side: "friendly",
+							entityType: "minion"
+						}
+					}
+				]
+			}
+		],
+		attributes: ['charge']
 	},
 	{
 		id: 7,
@@ -193,16 +211,16 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
-						type: "buff",
+						type: 'buff',
 						attack: 4,
 						defence: 4,
-						conditions: [],
 						targetSpec: {
-							scope: "single",
-							side: "friendly",
-							entityType: "minion",
+							scope: 'single',
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -220,6 +238,7 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: 'damage',
@@ -227,8 +246,8 @@ const cards: Card[] = [
 						targetSpec: {
 							scope: 'single',
 							side: 'all',
-							entityType: "all"
-						},
+							entityType: 'all'
+						}
 					}
 				]
 			}
@@ -238,19 +257,21 @@ const cards: Card[] = [
 		id: 13,
 		color: 'white',
 		name: 'Pot of Greed',
-		description: 'Deal 2 cards',
+		description: 'Draw 1 card <strong>Combo:</strong> Draw 2 cards instead',
 		baseCost: 3,
 		type: 'incantation',
 		image_url: 'Pot of Greed.webp',
 		abilities: [
 			{
 				trigger: 'onPlay',
-				effects: [
-					{
-						type: 'draw',
-						drawAmount: 2
-					}
-				]
+				conditions: [],
+				effects: [{ type: 'draw', drawAmount: 1 }]
+			},
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				proc: { type: 'combo' }, // only fires on combo
+				effects: [{ type: 'draw', drawAmount: 1 }] // extra 1 on top = 2 total
 			}
 		]
 	},
@@ -267,16 +288,16 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
-						type: "buff",
+						type: 'buff',
 						attack: 3,
 						defence: 2,
-						conditions: [],
 						targetSpec: {
-							scope: "single",
-							side: "friendly",
-							entityType: "minion",
+							scope: 'single',
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -286,14 +307,31 @@ const cards: Card[] = [
 	{
 		id: 15,
 		color: 'black',
-		name: 'Soul Drain',
-		description: 'Deal 2 damage',
-		baseCost: 1,
+		name: 'Smite',
+		description: 'Deal 2 damage <strong>Combo:</strong> Deal 4 damage instead.',
+		baseCost: 2,
 		type: 'incantation',
-		image_url: '',
+		image_url: 'Smite.webp',
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
+				effects: [
+					{
+						type: 'damage',
+						damage: 2,
+						targetSpec: {
+							scope: 'single',
+							side: "all",
+							entityType: 'all'
+						}
+					}
+				]
+			},
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				proc: { type: 'combo' }, // only fires on combo
 				effects: [
 					{
 						type: 'damage',
@@ -301,8 +339,34 @@ const cards: Card[] = [
 						targetSpec: {
 							scope: 'single',
 							side: 'enemy',
-							entityType: "all"
-						},
+							entityType: 'all'
+						}
+					}
+				] // extra 2 on top = 4 total
+			}
+		]
+	},
+	{
+		id: 16,
+		color: 'black',
+		name: 'Pull',
+		description: 'Return a friendly minions to your hand it costs (2) less.',
+		baseCost: 0,
+		type: 'incantation',
+		image_url: 'Pull.webp',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				effects: [
+					{
+						type: "returnToHand",
+						costReduction: 2,
+						targetSpec: {
+							scope: 'single',
+							side: "friendly",
+							entityType: "minion"
+						}
 					}
 				]
 			}

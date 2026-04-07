@@ -1,13 +1,18 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import Card from './card.svelte';
-	import { gameState, playCard } from '$lib/socket/socket';
+	import { endTurn, gameState, playCard } from '$lib/socket/socket';
 	import type { CardEntity } from '$lib/shared/types';
 	import { beginTargeting } from '$lib/targeting.svelte';
 
 	let handElement: HTMLElement;
 
-	let { hand = $bindable() }: { hand: CardEntity[] } = $props();
+	let {
+		hand = $bindable(),
+		mana = $bindable(),
+		self = false,
+		yourTurn = false
+	}: { hand: CardEntity[]; mana: number; self?: boolean; yourTurn?: boolean } = $props();
 
 	let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
 	let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
@@ -48,8 +53,6 @@
 				beginTargeting(card, index);
 				return; // return here so it doesn't fall through to normal drag
 			}
-
-			
 		}
 
 		// normal minion drag below
@@ -71,31 +74,82 @@
 		dragCoords.y += e.movementY;
 	};
 	function tryPlaceCard(x: number, y: number, dragIndex: number) {
-		// TODO: move this logic into hand component
 		if (!handElement) return;
-		if (dragIndex === null) return; // js moment
-		// Get battlefield position and dimensions
+		if (dragIndex === null) return;
 		const rect = handElement.getBoundingClientRect();
-
-		// Check if coordinates are within the battlefield
-		console.log(x);
-		const cardWidth = 100; // small card size (in cardSmall component)
-		const cardHeight = 147; // small card size (in cardSmall component)
+		const cardWidth = 100;
+		const cardHeight = 147;
 		const isWithinHand =
 			x + cardWidth / 2 >= rect.left &&
 			x + cardWidth / 2 <= rect.right &&
 			y + cardHeight / 2 >= rect.top &&
 			y + cardHeight / 2 <= rect.bottom;
 		if (isWithinHand) return;
-		console.log('IS WITHIN HAND' + isWithinHand);
 
-		playCard({ index: dragIndex }); // HERE I NEED THE INDEX OF THE CARD NOT THE CARD ITSELF
+		const card = hand[dragIndex];
+		if (!card) return;
+
+		// check if minion needs targeting on play
+		// and that target is a single target
+		const needsTarget = card.abilities.some(
+			(a) =>
+				a.trigger === 'onPlay' &&
+				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
+		);
+
+		if (needsTarget) {
+			// check if it needs a friendly minion but board is empty
+			const needsFriendlyMinion = card.abilities.some(
+				(a) =>
+					a.trigger === 'onPlay' &&
+					a.effects.some(
+						(e) =>
+							'targetSpec' in e &&
+							e.targetSpec.scope === 'single' &&
+							e.targetSpec.side === 'friendly' &&
+							e.targetSpec.entityType === 'minion'
+					)
+			);
+
+			const needsEnemyMinion = card.abilities.some(
+				(a) =>
+					a.trigger === 'onPlay' &&
+					a.effects.some(
+						(e) =>
+							'targetSpec' in e &&
+							e.targetSpec.scope === 'single' &&
+							e.targetSpec.side === 'enemy' &&
+							e.targetSpec.entityType === 'minion'
+					)
+			);
+
+			// if friendly board is empty and spell needs friendly minion target, just play without target
+			if (
+				(needsFriendlyMinion && $gameState.self.battlefield.length === 0) ||
+				(needsEnemyMinion && $gameState.enemy.battlefield.length === 0)
+			) {
+				console.log("NFM " +needsFriendlyMinion)
+				playCard({ index: dragIndex });
+				return;
+			}
+
+			beginTargeting(card, dragIndex);
+			return;
+		}
+
+		playCard({ index: dragIndex });
 	}
 </script>
 
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
 
 <div id="hand" bind:this={handElement}>
+	{#if self}
+		<button class="end" class:self class:inactive={!yourTurn} onclick={() => endTurn()}
+			>END TURN</button
+		>
+	{/if}
+	<div class="mana" class:self>{mana}</div>
 	{#each hand as cardInHand, index}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -131,6 +185,22 @@
 </div>
 
 <style lang="scss">
+	.mana {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		align-self: flex-end;
+		font-size: x-large;
+		color: $white;
+		height: 45px;
+		width: 45px;
+		margin: 5px;
+		border-radius: 100px;
+		background-color: rgb(88, 120, 161);
+		&.self {
+			align-self: flex-start;
+		}
+	}
 	.dragger {
 		position: fixed; /* Use fixed for smooth dragging */
 		z-index: 1000;
@@ -138,9 +208,31 @@
 		cursor: grabbing;
 	}
 
-	#hand {
+	button.end {
 		display: flex;
 		justify-content: center;
+		align-items: center;
+		height: 45px;
+		padding: 15px;
+		margin: 5px;
+		color: $white;
+		font-size: large;
+		background-color: #61aabe;
+		border: none;
+		border-radius: 10px;
+		&:hover {
+			background-color: #5c9c97;
+			cursor: pointer;
+		}
+		&.inactive {
+			pointer-events: none;
+			background-color: #b7bfbe;
+		}
+	}
+
+	#hand {
+		display: flex;
+		justify-content: flex-end;
 		margin: 0 auto;
 		width: fit-content;
 		position: relative;

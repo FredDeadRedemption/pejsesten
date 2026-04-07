@@ -1,13 +1,14 @@
 import { getEnemyBoard, getSourceBoard, switchTurn } from '$lib/server/lib';
 import type {
-	Ability,
 	AttackData,
 	Board,
 	CardEntity,
+	Condition,
 	Effect,
 	GameStateServer,
 	Hero,
 	MinionEntity,
+	Proc,
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
@@ -35,11 +36,38 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 	);
 };
 
+const checkConditions = (
+	conditions: Condition[],
+	sourceBoard: Board,
+	enemyBoard: Board
+): boolean => {
+	return conditions.every((condition) => {
+		if (condition.type === 'heroHealthBelow') return sourceBoard.hero.defence < condition.value;
+		if (condition.type === 'boardSize') {
+			const size =
+				condition.side === 'friendly'
+					? sourceBoard.battlefield.length
+					: enemyBoard.battlefield.length;
+			if (condition.comparison === 'more') return size > condition.value;
+			if (condition.comparison === 'less') return size < condition.value;
+			return size === condition.value;
+		}
+		return true;
+	});
+};
+
+const checkProc = (proc: Proc | undefined, _sourceBoard: Board, _enemyBoard: Board): boolean => {
+	if (!proc) return true; // no proc = always fires
+	if (proc.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
+	if (proc.type === 'firstCard') return gameState.cardsPlayedThisTurn === 0;
+	return true;
+};
+
 let effectQueue: QueuedEffect[] = [];
 
-// enqueueTrigger scans the active player's battlefield 
-// for any minion that has an ability matching the given trigger, 
-// and pushes all those effects onto the queue. 
+// enqueueTrigger scans the active player's battlefield
+// for any minion that has an ability matching the given trigger,
+// and pushes all those effects onto the queue.
 // Then processEffectQueue consumes them.
 const enqueueTrigger = (trigger: Trigger) => {
 	const sourceBoard = getSourceBoard(gameState);
@@ -125,6 +153,24 @@ const applyEffect = (
 	if (effect.type === 'draw') {
 		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
 	}
+	if (effect.type === 'returnToHand') {
+		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
+		targets.forEach((t) => {
+			if (!('exhausted' in t)) return; // must be a minion not a hero
+			const idx = sourceBoard.battlefield.indexOf(t as MinionEntity);
+			if (idx === -1) return;
+			const [returned] = sourceBoard.battlefield.splice(idx, 1);
+			if (effect.costReduction) {
+				console.log('cost before:', returned.cost, 'reduction:', effect.costReduction);
+				returned.cost = Math.max(0, returned.cost - effect.costReduction);
+				console.log('cost after:', returned.cost);
+			}
+			returned.exhausted = false;
+			returned.attack = returned.baseAttack;
+			returned.defence = returned.baseDefence;
+			sourceBoard.hand.push(returned);
+		});
+	}
 };
 
 export const setGameState = (
@@ -163,11 +209,12 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			mana: 1
+			mana: 0
 		},
 		whitePlayerID: isPlayer1White ? player1ID : player2ID,
 		blackPlayerID: isPlayer1White ? player2ID : player1ID,
 		whiteTurn: true,
+		cardsPlayedThisTurn: 0,
 		turnCount: 0
 	};
 	console.log(`Game started! First turn: ${gameState.whitePlayerID}`);
@@ -184,10 +231,15 @@ export const endTurn = (): GameStateResponse => {
 	// draw for the new active player
 	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
 
+	// add mana to the new activer player
+	sourceBoard.mana += 1;
+
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {
 		if (card.type === 'minion') card.exhausted = false;
 	});
+
+	gameState.cardsPlayedThisTurn = 0;
 
 	enqueueTrigger('onDraw');
 	processEffectQueue();
@@ -240,26 +292,30 @@ export const playCard = (
 	const [consumed] = sourceBoard.hand.splice(data.index, 1);
 
 	if (consumed.type === 'minion') {
-		consumed.exhausted = true;
+		consumed.attributes.some((a) => a === 'charge')
+			? (consumed.exhausted = false)
+			: (consumed.exhausted = true);
 		sourceBoard.battlefield.push(consumed);
 	}
 
-	if (consumed.type === 'incantation') {
-		consumed.abilities.forEach((ability) => {
-			if (ability.trigger !== 'onPlay') return;
-			ability.effects.forEach((effect) => {
-				effectQueue.push({
-					effect,
-					sourceBoard,
-					enemyBoard,
-					targetID:
-						'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
-				});
+	consumed.abilities.forEach((ability) => {
+		if (ability.trigger !== 'onPlay') return;
+		if (!checkConditions(ability.conditions, sourceBoard, enemyBoard)) return;
+		if (!checkProc(ability.proc, sourceBoard, enemyBoard)) return;
+		ability.effects.forEach((effect) => {
+			effectQueue.push({
+				effect,
+				sourceBoard,
+				enemyBoard,
+				targetID:
+					'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
 			});
 		});
-		processEffectQueue();
-		checkForDeaths();
-	}
+	});
+	processEffectQueue();
+	checkForDeaths();
+
+	gameState.cardsPlayedThisTurn++;
 
 	return gameState;
 };

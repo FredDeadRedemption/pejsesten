@@ -19,45 +19,33 @@
 />
 
 <div id="game-frame">
-{#if targeting.active}
-	<svg
-		class="crosshair"
-		style="left: {mouse.x}px; top: {mouse.y}px;"
-		width="100"
-		height="100"
-		viewBox="0 0 40 40"
-		xmlns="http://www.w3.org/2000/svg"
-	>
-		<circle cx="20" cy="20" r="8" fill="none" stroke="#2E2E2E" stroke-width="1.5" />
-		<circle cx="20" cy="20" r="1.5" fill="#2E2E2E" />
-		<!-- top -->
-		<line x1="20" y1="2" x2="20" y2="10" stroke="#2E2E2E" stroke-width="1.5" />
-		<!-- bottom -->
-		<line x1="20" y1="30" x2="20" y2="38" stroke="#2E2E2E" stroke-width="1.5" />
-		<!-- left -->
-		<line x1="2" y1="20" x2="10" y2="20" stroke="#2E2E2E" stroke-width="1.5" />
-		<!-- right -->
-		<line x1="30" y1="20" x2="38" y2="20" stroke="#2E2E2E" stroke-width="1.5" />
-	</svg>
-{/if}
-	<!-- DEBUGGING / LOGGIN -->
-	<div class="DEBUG">
-		<!-- svelte-ignore a11y_consider_explicit_label -->
-		<button
-			disabled={!$gameState.yourTurn}
-			onclick={() => {
-				endTurn();
-			}}>END TURN</button
+	{#if targeting.active}
+		<svg
+			class="crosshair"
+			style="left: {mouse.x}px; top: {mouse.y}px;"
+			width="100"
+			height="100"
+			viewBox="0 0 40 40"
+			xmlns="http://www.w3.org/2000/svg"
 		>
-		<p>Game ID: {page.params.gameId}</p>
-		<button
+			<circle cx="20" cy="20" r="8" fill="none" stroke="#2E2E2E" stroke-width="1.5" />
+			<circle cx="20" cy="20" r="1.5" fill="#2E2E2E" />
+			<!-- top -->
+			<line x1="20" y1="2" x2="20" y2="10" stroke="#2E2E2E" stroke-width="1.5" />
+			<!-- bottom -->
+			<line x1="20" y1="30" x2="20" y2="38" stroke="#2E2E2E" stroke-width="1.5" />
+			<!-- left -->
+			<line x1="2" y1="20" x2="10" y2="20" stroke="#2E2E2E" stroke-width="1.5" />
+			<!-- right -->
+			<line x1="30" y1="20" x2="38" y2="20" stroke="#2E2E2E" stroke-width="1.5" />
+		</svg>
+	{/if}
+	<!-- DEBUGGING / LOGGIN -->
+	<button id="fs"
 			onclick={() => {
 				enterFullscreen('game-frame');
 			}}>Go Fullscreen</button
 		>
-		<span>enemy mana</span>
-		<div>Your turn: {$gameState.yourTurn}</div>
-	</div>
 	<!-- GRAVEYARDS -->
 	<div class="graveyard-zone">
 		<div class="enemy-graveyard">
@@ -70,7 +58,7 @@
 	<!-- HANDS & BATTLEFIELD -->
 	<div class="hand-battlefield-zone">
 		<div class="enemy-hand">
-			<Hand bind:hand={$gameState.enemy.hand}></Hand>
+			<Hand bind:hand={$gameState.enemy.hand} bind:mana={$gameState.enemy.mana}></Hand>
 		</div>
 		<div class="battlefield">
 			<Battlefields
@@ -81,7 +69,7 @@
 			></Battlefields>
 		</div>
 		<div class="self-hand">
-			<Hand bind:hand={$gameState.self.hand}></Hand>
+			<Hand self={true} yourTurn={$gameState.yourTurn} bind:hand={$gameState.self.hand} bind:mana={$gameState.self.mana}></Hand>
 		</div>
 	</div>
 	<!-- DECKS -->
@@ -105,19 +93,10 @@
 		filter: drop-shadow(0 0 4px #645d5b);
 	}
 
-	.DEBUG {
-		z-index: 99;
+	#fs{
 		position: absolute;
-		background-color: $black;
-		color: $white;
-		border: 2px solid red;
-		top: 0;
-		width: 90%;
-		display: flex;
-		flex-direction: row;
-		transform: translateY(50px);
-		font-size: 1rem;
-		justify-content: space-between;
+		margin: 0 auto;
+		right: 50vw;
 	}
 	#game-frame {
 		overflow: hidden;
