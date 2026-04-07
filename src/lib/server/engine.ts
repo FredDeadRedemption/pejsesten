@@ -26,6 +26,7 @@ type QueuedEffect = {
 	targetID?: string;
 	sourceBoard: Board;
 	enemyBoard: Board;
+	selfID?: string;
 };
 
 const findEntity = (id: string): MinionEntity | Hero | undefined => {
@@ -88,15 +89,37 @@ const checkForDeaths = () => {
 	const sourceBoard = getSourceBoard(gameState);
 	const enemyBoard = getEnemyBoard(gameState);
 
+	let anyDied = false;
+	let anyOnDeathTriggers = false;
+
 	[sourceBoard, enemyBoard].forEach((board) => {
 		board.battlefield = board.battlefield.filter((minion) => {
 			if (minion.defence <= 0) {
+				anyDied = true;
+				// enqueue onDeath abilities before removing
+				minion.abilities.forEach((ability) => {
+					if (ability.trigger !== 'onDeath') return;
+					if (!checkConditions(ability.conditions, sourceBoard, enemyBoard)) return;
+					if (!checkProc(ability.proc, sourceBoard, enemyBoard)) return;
+					anyOnDeathTriggers = true;
+					ability.effects.forEach((effect) => {
+						effectQueue.push({
+							effect,
+							sourceBoard: board,
+							enemyBoard: board === sourceBoard ? enemyBoard : sourceBoard,
+							selfID: minion.entityID
+						});
+					});
+				});
 				board.graveyard.push(minion);
 				return false;
 			}
 			return true;
 		});
 	});
+
+	if(anyOnDeathTriggers) processEffectQueue();
+	if(anyDied) checkForDeaths(); // recursive in case death effects cause more deaths
 };
 
 // Consume and apply one effect at a time
@@ -104,7 +127,7 @@ const processEffectQueue = () => {
 	while (effectQueue.length > 0) {
 		const queued = effectQueue.shift()!;
 		const target = queued.targetID ? findEntity(queued.targetID) : undefined;
-		applyEffect(queued.effect, queued.sourceBoard, queued.enemyBoard, target);
+		applyEffect(queued.effect, queued.sourceBoard, queued.enemyBoard, target, queued.selfID);
 	}
 };
 
@@ -125,9 +148,9 @@ const resolveTargets = (
 		if (spec.side === 'enemy' || spec.side === 'all') pool.push(enemyBoard.hero);
 	}
 
-	// note: for 'single' scope effects, a target is always pre-selected by the player
-	// so resolveTargets is only ever called for 'all' scope effects.
-	// the pool.slice(0, 1) is a safety fallback that should never be hit in practice.
+	// note: for 'single' scope effects with no pre-selected target,
+	// resolveTargets is used as a fallback (e.g. returnToHand with no target).
+	// selfID filtering upstream ensures the source minion is excluded from the pool.
 	return spec.scope === 'single' ? pool.slice(0, 1) : pool;
 };
 
@@ -135,18 +158,25 @@ const applyEffect = (
 	effect: Effect,
 	sourceBoard: Board,
 	enemyBoard: Board,
-	target?: MinionEntity | Hero
+	target?: MinionEntity | Hero,
+	selfID?: string
 ) => {
+	let targets: (MinionEntity | Hero)[] | null = null;
+	if ('targetSpec' in effect) {
+		targets = target
+			? [target]
+			: resolveTargets(effect.targetSpec, sourceBoard, enemyBoard).filter(
+					(t) => !selfID || (t as MinionEntity).entityID !== selfID
+				);
+	}
 	if (effect.type === 'buff') {
-		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
-		targets.forEach((t) => {
+		targets?.forEach((t) => {
 			t.attack += effect.attack;
 			t.defence += effect.defence;
 		});
 	}
 	if (effect.type === 'damage') {
-		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
-		targets.forEach((t) => {
+		targets?.forEach((t) => {
 			t.defence -= effect.damage;
 		});
 	}
@@ -154,15 +184,14 @@ const applyEffect = (
 		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
 	}
 	if (effect.type === 'returnToHand') {
-		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
-		targets.forEach((t) => {
+		targets?.forEach((t) => {
 			if (!('exhausted' in t)) return; // must be a minion not a hero
 			const idx = sourceBoard.battlefield.indexOf(t as MinionEntity);
 			if (idx === -1) return;
 			const [returned] = sourceBoard.battlefield.splice(idx, 1);
 			if (effect.costReduction) {
 				console.log('cost before:', returned.cost, 'reduction:', effect.costReduction);
-				returned.cost = Math.max(0, returned.cost - effect.costReduction);
+				returned.cost = Math.max(0, returned.baseCost - effect.costReduction);
 				console.log('cost after:', returned.cost);
 			}
 			returned.exhausted = false;
@@ -198,6 +227,7 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
+			baseMana: 0,
 			mana: 1
 		},
 		black: {
@@ -209,6 +239,7 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
+			baseMana: 0,
 			mana: 0
 		},
 		whitePlayerID: isPlayer1White ? player1ID : player2ID,
@@ -232,7 +263,9 @@ export const endTurn = (): GameStateResponse => {
 	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
 
 	// add mana to the new activer player
-	sourceBoard.mana += 1;
+	// set current mana to base mana
+	sourceBoard.baseMana += 1;
+	sourceBoard.mana += sourceBoard.baseMana
 
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {
@@ -308,7 +341,8 @@ export const playCard = (
 				sourceBoard,
 				enemyBoard,
 				targetID:
-					'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
+					'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined,
+				selfID: consumed.entityID
 			});
 		});
 	});

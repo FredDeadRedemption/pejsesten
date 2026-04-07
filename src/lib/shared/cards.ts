@@ -73,14 +73,25 @@ const cards: Card[] = [
 		id: 3,
 		color: 'white',
 		name: 'Silverguard Knight',
-		description: 'Has never actually been in a fight. Looks great though.',
+		description: '<strong>Last breath:</strong> Draw a card',
 		baseCost: 3,
 		type: 'minion',
 		races: ['human'],
 		baseAttack: 5,
 		baseDefence: 3,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: "onDeath",
+				conditions: [],
+				effects: [
+					{
+						type: "draw",
+						drawAmount: 1,
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
@@ -117,7 +128,8 @@ const cards: Card[] = [
 		id: 6,
 		color: 'black',
 		name: 'Black Cat',
-		description: '<strong>Blitz</strong>',
+		description:
+			'<strong>Blitz</strong>. <strong>Fanfare:</strong> Return a friendly minion from the battlefield to your hand',
 		baseCost: 1,
 		type: 'minion',
 		races: ['beast'],
@@ -126,15 +138,15 @@ const cards: Card[] = [
 		image_url: 'Black Cat.webp',
 		abilities: [
 			{
-				trigger: "onPlay",
+				trigger: 'onPlay',
 				conditions: [],
 				effects: [
 					{
-						type: "returnToHand",
+						type: 'returnToHand',
 						targetSpec: {
 							scope: 'single',
-							side: "friendly",
-							entityType: "minion"
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -322,7 +334,7 @@ const cards: Card[] = [
 						damage: 2,
 						targetSpec: {
 							scope: 'single',
-							side: "all",
+							side: 'all',
 							entityType: 'all'
 						}
 					}
@@ -360,12 +372,12 @@ const cards: Card[] = [
 				conditions: [],
 				effects: [
 					{
-						type: "returnToHand",
+						type: 'returnToHand',
 						costReduction: 2,
 						targetSpec: {
 							scope: 'single',
-							side: "friendly",
-							entityType: "minion"
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]

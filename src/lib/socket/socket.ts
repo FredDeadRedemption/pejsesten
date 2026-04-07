@@ -19,6 +19,7 @@ export const gameState = writable<GameStateClient>({
 		},
 		graveyard: [],
 		deck: [],
+		baseMana: 0,
 		mana: 0
 	},
 	self: {
@@ -30,6 +31,7 @@ export const gameState = writable<GameStateClient>({
 		},
 		graveyard: [],
 		deck: [],
+		baseMana: 0,
 		mana: 0
 	},
 	turnCount: 0,
@@ -87,7 +89,10 @@ export const queueUpBot = (data: PlayerMetaData) => fire(socket, 'queueBot', dat
 export const leaveQueue = () => fire(socket, 'leaveQueue');
 
 export const playCard = (data: { index: number; target?: string }) =>
+{
 	fire(socket, 'playCard', data);
+	console.log("PlayCard", data.index, data.target)
+}
 
 export const attack = (data: AttackData) => fire(socket, 'attack', data);
 

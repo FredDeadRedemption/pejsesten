@@ -125,6 +125,7 @@ export type Board = {
 	graveyard: MinionEntity[];
 	battlefield: MinionEntity[];
 	hero: Hero;
+	baseMana: number;
 	mana: number;
 };
 
