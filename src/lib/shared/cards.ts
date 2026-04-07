@@ -57,7 +57,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'draw',
@@ -82,7 +81,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onDeath',
-				conditions: [],
 				effects: [
 					{
 						type: 'draw',
@@ -107,7 +105,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'damage',
@@ -137,13 +134,12 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onDeath',
-				conditions: [],
 				effects: [
 					{
 						type: 'damage',
 						damage: 5,
 						targetSpec: {
-							scope: "all",
+							scope: 'all',
 							side: 'enemy',
 							entityType: 'hero'
 						}
@@ -174,10 +170,11 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
-				proc: {
-					type: 'combo'
-				},
+				requirements: [
+					{
+						type: 'combo'
+					}
+				],
 				effects: [
 					{
 						type: 'returnToHand',
@@ -206,10 +203,9 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
-						type: "buff",
+						type: 'buff',
 						attack: 1,
 						defence: 1,
 						targetSpec: {
@@ -236,16 +232,15 @@ const cards: Card[] = [
 		image_url: '',
 		abilities: [
 			{
-				trigger: "onPlay",
-				conditions: [],
+				trigger: 'onPlay',
 				effects: [
 					{
-						type: "damage",
+						type: 'damage',
 						damage: 10,
 						targetSpec: {
-							scope: "all", // scope all means that the player doesnt get to choose
-							side: "friendly",
-							entityType: "hero"
+							scope: 'all', // scope all means that the player doesnt get to choose
+							side: 'friendly',
+							entityType: 'hero'
 						}
 					}
 				]
@@ -266,15 +261,14 @@ const cards: Card[] = [
 		image_url: '',
 		abilities: [
 			{
-				trigger: "onDeath",
-				conditions: [],
+				trigger: 'onDeath',
 				effects: [
 					{
-						type: "returnToHand",
+						type: 'returnToHand',
 						targetSpec: {
-							scope: "all",
-							side: "all",
-							entityType: "minion"
+							scope: 'all',
+							side: 'all',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -286,7 +280,7 @@ const cards: Card[] = [
 		id: 10,
 		color: 'black',
 		name: 'Admirable Minion',
-		description: "<strong>Fanfare:</strong> Give a friendly minion +3 +3",
+		description: '<strong>Fanfare:</strong> Give a friendly minion +3 +3',
 		baseCost: 6,
 		type: 'minion',
 		races: ['elf'],
@@ -295,17 +289,16 @@ const cards: Card[] = [
 		image_url: '',
 		abilities: [
 			{
-				trigger: "onPlay",
-				conditions: [],
+				trigger: 'onPlay',
 				effects: [
 					{
-						type: "buff",
+						type: 'buff',
 						attack: 3,
 						defence: 3,
 						targetSpec: {
-							scope: "single",
-							side: "friendly",
-							entityType: "minion"
+							scope: 'single',
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -326,7 +319,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'buff',
@@ -353,7 +345,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'damage',
@@ -379,13 +370,15 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [{ type: 'draw', drawAmount: 1 }]
 			},
 			{
 				trigger: 'onPlay',
-				conditions: [],
-				proc: { type: 'combo' }, // only fires on combo
+				requirements: [
+					{
+						type: 'combo'
+					}
+				], // only fires on combo
 				effects: [{ type: 'draw', drawAmount: 1 }] // extra 1 on top = 2 total
 			}
 		]
@@ -403,7 +396,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'buff',
@@ -430,7 +422,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'damage',
@@ -445,8 +436,11 @@ const cards: Card[] = [
 			},
 			{
 				trigger: 'onPlay',
-				conditions: [],
-				proc: { type: 'combo' }, // only fires on combo
+				requirements: [
+					{
+						type: 'combo'
+					}
+				], // only fires on combo
 				effects: [
 					{
 						type: 'damage',
@@ -472,7 +466,6 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
-				conditions: [],
 				effects: [
 					{
 						type: 'returnToHand',

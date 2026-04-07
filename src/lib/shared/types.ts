@@ -21,17 +21,7 @@ export type TargetSpec = {
 	readonly entityType: 'minion' | 'hero' | 'all';
 };
 
-export type Condition =
-	| { type: 'targetRace'; race: Race }
-	| { type: 'heroHealthBelow'; heroSide: 'self' | 'enemy'; value: number }
-	| {
-			type: 'boardSize';
-			side: 'friendly' | 'enemy';
-			comparison: 'more' | 'less' | 'equal';
-			value: number;
-	  };
-
-export type Proc =
+export type Requirement =
 	| { type: 'combo' } // played a card before this one this turn
 	| { type: 'firstCard' }; // first card played this turn
 
@@ -59,8 +49,7 @@ export type Effect =
 
 export type Ability = {
 	trigger: Trigger;
-	conditions: Condition[];
-	proc?: Proc;
+	requirements?: Requirement[];
 	effects: Effect[];
 };
 

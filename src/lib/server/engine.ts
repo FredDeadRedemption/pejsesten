@@ -3,12 +3,11 @@ import type {
 	AttackData,
 	Board,
 	CardEntity,
-	Condition,
 	Effect,
 	GameStateServer,
 	Hero,
 	MinionEntity,
-	Proc,
+	Requirement,
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
@@ -37,30 +36,14 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 	);
 };
 
-const checkConditions = (
-	conditions: Condition[],
-	sourceBoard: Board,
-	enemyBoard: Board
+const checkRequirement = (
+	rec: Requirement | undefined,
+	_sourceBoard: Board,
+	_enemyBoard: Board
 ): boolean => {
-	return conditions.every((condition) => {
-		if (condition.type === 'heroHealthBelow') return sourceBoard.hero.defence < condition.value;
-		if (condition.type === 'boardSize') {
-			const size =
-				condition.side === 'friendly'
-					? sourceBoard.battlefield.length
-					: enemyBoard.battlefield.length;
-			if (condition.comparison === 'more') return size > condition.value;
-			if (condition.comparison === 'less') return size < condition.value;
-			return size === condition.value;
-		}
-		return true;
-	});
-};
-
-const checkProc = (proc: Proc | undefined, _sourceBoard: Board, _enemyBoard: Board): boolean => {
-	if (!proc) return true; // no proc = always fires
-	if (proc.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
-	if (proc.type === 'firstCard') return gameState.cardsPlayedThisTurn === 0;
+	if (!rec) return true; // no rec = always fires
+	if (rec.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
+	if (rec.type === 'firstCard') return gameState.cardsPlayedThisTurn === 0;
 	return true;
 };
 
@@ -99,8 +82,7 @@ const checkForDeaths = () => {
 				// enqueue onDeath abilities before removing
 				minion.abilities.forEach((ability) => {
 					if (ability.trigger !== 'onDeath') return;
-					if (!checkConditions(ability.conditions, sourceBoard, enemyBoard)) return;
-					if (!checkProc(ability.proc, sourceBoard, enemyBoard)) return;
+					if (ability.requirements && !ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard))) return;
 					anyOnDeathTriggers = true;
 					ability.effects.forEach((effect) => {
 						effectQueue.push({
@@ -118,8 +100,8 @@ const checkForDeaths = () => {
 		});
 	});
 
-	if(anyOnDeathTriggers) processEffectQueue();
-	if(anyDied) checkForDeaths(); // recursive in case death effects cause more deaths
+	if (anyOnDeathTriggers) processEffectQueue();
+	if (anyDied) checkForDeaths(); // recursive in case death effects cause more deaths
 };
 
 // Consume and apply one effect at a time
@@ -265,7 +247,7 @@ export const endTurn = (): GameStateResponse => {
 	// add mana to the new activer player
 	// set current mana to base mana
 	sourceBoard.baseMana += 1;
-	sourceBoard.mana = sourceBoard.baseMana
+	sourceBoard.mana = sourceBoard.baseMana;
 
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {
@@ -333,8 +315,7 @@ export const playCard = (
 
 	consumed.abilities.forEach((ability) => {
 		if (ability.trigger !== 'onPlay') return;
-		if (!checkConditions(ability.conditions, sourceBoard, enemyBoard)) return;
-		if (!checkProc(ability.proc, sourceBoard, enemyBoard)) return;
+		if (ability.requirements && !ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard))) return;
 		ability.effects.forEach((effect) => {
 			effectQueue.push({
 				effect,
