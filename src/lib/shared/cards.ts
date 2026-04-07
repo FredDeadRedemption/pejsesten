@@ -383,7 +383,7 @@ const cards: Card[] = [
 	// ── BLACK MINIONS ────────────────────────────────────────
 	{
 		id: 6,
-		color: 'black',
+		color: 'white',
 		name: 'Black Cat',
 		description:
 			'<strong>Combo:</strong> Return a friendly minion from the battlefield to your hand',
@@ -417,7 +417,7 @@ const cards: Card[] = [
 	},
 	{
 		id: 7,
-		color: 'black',
+		color: 'white',
 		name: 'Barry the Hexblade',
 		description: '<strong>Fanfare:</strong> Give all minions +1 +1',
 		baseCost: 2,
@@ -447,7 +447,7 @@ const cards: Card[] = [
 	},
 	{
 		id: 8,
-		color: 'black',
+		color: 'white',
 		name: 'Void Stalker',
 		description: '<strong>Fanfare:</strong> Deal 10 damage to your own hero',
 		baseCost: 2,
@@ -476,7 +476,7 @@ const cards: Card[] = [
 	},
 	{
 		id: 9,
-		color: 'black',
+		color: 'white',
 		name: 'Grave Warden',
 		description: '<strong>Last breath:</strong> Return all minions to their owners hand',
 		baseCost: 4,
@@ -504,7 +504,7 @@ const cards: Card[] = [
 	},
 	{
 		id: 10,
-		color: 'black',
+		color: 'white',
 		name: 'Admirable Minion',
 		description: '<strong>Fanfare:</strong> Give a friendly minion +3 +3',
 		baseCost: 6,
@@ -613,8 +613,8 @@ const cards: Card[] = [
 	// ── BLACK INCANTATIONS ───────────────────────────────────
 	{
 		id: 14,
-		color: 'black',
-		name: 'Dark Blessing',
+		color: 'white',
+		name: 'Blessing',
 		description: 'Give a friendly minion +3 +2',
 		baseCost: 2,
 		type: 'incantation',
@@ -639,7 +639,7 @@ const cards: Card[] = [
 	},
 	{
 		id: 15,
-		color: 'black',
+		color: 'white',
 		name: 'Smite',
 		description: 'Deal 2 damage <strong>Combo:</strong> Deal 4 damage instead.',
 		baseCost: 2,
@@ -683,7 +683,7 @@ const cards: Card[] = [
 	},
 	{
 		id: 16,
-		color: 'black',
+		color: 'white',
 		name: 'Pull',
 		description: 'Return a friendly minions to your hand it costs (2) less.',
 		baseCost: 0,

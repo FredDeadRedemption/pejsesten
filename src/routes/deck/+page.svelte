@@ -174,7 +174,9 @@
 					<div
 						transition:slide={{ axis: 'x', duration: 250 }}
 						class="deck-in-deck-view"
-						style="background-image: url(TODO MAKE SOME KINDA IMAGE HERE);"
+						style="background-image: url('{getCardData(deck.cards[0]!)?.image_url
+							? `/media/${getCardData(deck.cards[0]!)?.image_url}`
+							: '/media/cards/missing-texture.jpg'}');"
 						onclick={() => {
 							loadExistingDeck(deck.id);
 						}}
@@ -287,6 +289,7 @@
 			height: 40px;
 			width: 100%;
 			background-size: cover;
+			background-position: center;
 			color: $white;
 			user-select: none;
 			font-weight: 800;
