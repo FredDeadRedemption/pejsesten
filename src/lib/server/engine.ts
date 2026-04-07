@@ -89,15 +89,37 @@ const checkForDeaths = () => {
 	const sourceBoard = getSourceBoard(gameState);
 	const enemyBoard = getEnemyBoard(gameState);
 
+	let anyDied = false;
+	let anyDeathrattle = false;
+
 	[sourceBoard, enemyBoard].forEach((board) => {
 		board.battlefield = board.battlefield.filter((minion) => {
 			if (minion.defence <= 0) {
+				anyDied = true;
+				// enqueue onDeath abilities before removing
+				minion.abilities.forEach((ability) => {
+					if (ability.trigger !== 'onDeath') return;
+					if (!checkConditions(ability.conditions, sourceBoard, enemyBoard)) return;
+					if (!checkProc(ability.proc, sourceBoard, enemyBoard)) return;
+					anyDeathrattle = true;
+					ability.effects.forEach((effect) => {
+						effectQueue.push({
+							effect,
+							sourceBoard: board,
+							enemyBoard: board === sourceBoard ? enemyBoard : sourceBoard,
+							selfID: minion.entityID
+						});
+					});
+				});
 				board.graveyard.push(minion);
 				return false;
 			}
 			return true;
 		});
 	});
+
+	if(anyDeathrattle) processEffectQueue();
+	if(anyDied) checkForDeaths(); // recursive in case death effects cause more deaths
 };
 
 // Consume and apply one effect at a time

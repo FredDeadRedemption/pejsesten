@@ -73,14 +73,25 @@ const cards: Card[] = [
 		id: 3,
 		color: 'white',
 		name: 'Silverguard Knight',
-		description: 'Has never actually been in a fight. Looks great though.',
+		description: '<strong>Last breath:</strong> Draw a card',
 		baseCost: 3,
 		type: 'minion',
 		races: ['human'],
 		baseAttack: 5,
 		baseDefence: 3,
 		image_url: '',
-		abilities: [],
+		abilities: [
+			{
+				trigger: "onDeath",
+				conditions: [],
+				effects: [
+					{
+						type: "draw",
+						drawAmount: 1,
+					}
+				]
+			}
+		],
 		attributes: []
 	},
 	{
