@@ -26,6 +26,232 @@ export const deckToCards = (deck: number[]): CardEntity[] =>
 				} as IncantationEntity;
 			}
 		});
+		
+// =============================================================================
+// CARD WRITING GUIDE
+// =============================================================================
+//
+// Every card is a plain object matching the Card type (MinionCard | IncantationCard).
+// Cards live in the cards array at the bottom of this file.
+// After adding a card, add its id to a deck in your test client to try it out.
+//
+// =============================================================================
+// CARD SKELETON
+// =============================================================================
+//
+// MINION:
+// {
+//   id: <unique number>,
+//   color: 'white' | 'black',
+//   name: 'Card Name',
+//   description: 'Human-readable description of what it does',
+//   baseCost: <number>,
+//   type: 'minion',
+//   races: ['human' | 'elf' | 'beast'],   // can be multiple
+//   baseAttack: <number>,
+//   baseDefence: <number>,
+//   image_url: 'filename.webp',            // or '' if no image yet
+//   attributes: [],                        // see ATTRIBUTES section
+//   abilities: [],                         // see ABILITIES section
+// }
+//
+// INCANTATION (spell):
+// {
+//   id: <unique number>,
+//   color: 'white' | 'black',
+//   name: 'Card Name',
+//   description: 'Human-readable description',
+//   baseCost: <number>,
+//   type: 'incantation',
+//   image_url: 'filename.webp',
+//   abilities: [],
+// }
+//
+// =============================================================================
+// ATTRIBUTES  (minions only)
+// =============================================================================
+//
+// attributes: ['charge']
+//
+//   charge  — minion can attack the same turn it is played (not exhausted on summon)
+//             display as <strong>Blitz</strong> in description
+//
+// =============================================================================
+// ABILITIES
+// =============================================================================
+//
+// An ability is an object with:
+//   trigger      — WHEN it fires (see TRIGGERS)
+//   requirements — optional array of conditions that must ALL be true for the
+//                  ability to fire (see REQUIREMENTS)
+//   effects      — array of things that happen when the ability fires (see EFFECTS)
+//
+// {
+//   trigger: 'onPlay',
+//   requirements: [{ type: 'combo' }],   // optional
+//   effects: [ ... ]
+// }
+//
+// A card can have MULTIPLE abilities with the SAME trigger. They are processed
+// in order. This is how combo cards work — one ability always fires, a second
+// ability only fires when the combo requirement is met.
+//
+// Example — Pot of Greed (draw 1, combo: draw 2 total):
+//   abilities: [
+//     { trigger: 'onPlay', effects: [{ type: 'draw', drawAmount: 1 }] },
+//     { trigger: 'onPlay', requirements: [{ type: 'combo' }], effects: [{ type: 'draw', drawAmount: 1 }] }
+//   ]
+// The base ability always draws 1. The combo ability draws 1 more on top = 2 total.
+//
+// =============================================================================
+// TRIGGERS
+// =============================================================================
+//
+// 'onPlay'   — fires when the card is played from hand. Use this for Fanfare effects.
+//              ⚠ incantations are consumed after firing — they don't stay on board
+//
+// 'onDeath'  — fires when a minion's defence reaches 0. Use this for Last Breath effects.
+//              the minion is still on the board when its effects fire, then removed.
+//
+// NOT YET IMPLEMENTED (defined in types for future use):
+//   onTurnStart, onTurnEnd, onAttack, onAttacked, onDamage, onHeal, onSummon, onDiscard, onDraw
+//
+// =============================================================================
+// REQUIREMENTS
+// =============================================================================
+//
+// requirements is an optional array. ALL requirements must pass for the ability to fire.
+// If requirements is omitted (or empty), the ability always fires.
+//
+// { type: 'combo' }      — at least one other card was played this turn before this one
+//                          display as <strong>Combo:</strong> in description
+//
+// { type: 'firstCard' }  — this is the first card played this turn
+//
+// =============================================================================
+// EFFECTS
+// =============================================================================
+//
+// ── buff ──────────────────────────────────────────────────────────────────────
+// Adds attack and defence to targets.
+//
+// {
+//   type: 'buff',
+//   attack: 2,
+//   defence: 3,
+//   targetSpec: { scope: 'single', side: 'friendly', entityType: 'minion' }
+// }
+//
+// ── damage ────────────────────────────────────────────────────────────────────
+// Deals damage (reduces defence) to targets.
+//
+// {
+//   type: 'damage',
+//   damage: 4,
+//   targetSpec: { scope: 'single', side: 'all', entityType: 'all' }
+// }
+//
+// ── draw ──────────────────────────────────────────────────────────────────────
+// Draws cards from the active player's deck into their hand. No targetSpec needed.
+//
+// { type: 'draw', drawAmount: 2 }
+//
+// ── returnToHand ──────────────────────────────────────────────────────────────
+// Returns a minion from the battlefield to its owner's hand.
+// Resets its attack, defence, and exhausted state.
+// costReduction is optional — reduces the card's cost when returned.
+//
+// {
+//   type: 'returnToHand',
+//   costReduction: 2,    // optional
+//   targetSpec: { scope: 'single', side: 'friendly', entityType: 'minion' }
+// }
+//
+// =============================================================================
+// TARGETSPEC — THE MOST IMPORTANT THING TO GET RIGHT
+// =============================================================================
+//
+// targetSpec has three fields: scope, side, entityType
+//
+// ── scope ─────────────────────────────────────────────────────────────────────
+//
+//   ⚠ scope does NOT mean "how many targets". It means "who picks the target".
+//
+//   'single' — the PLAYER must click a target before the card can be played.
+//               the engine validates their choice against side and entityType.
+//               use this when there is a real choice (e.g. "deal 4 damage to any target")
+//
+//   'all'    — the ENGINE resolves targets automatically from the pool defined by
+//               side and entityType. No player input required.
+//               use this when there is no real choice (e.g. "deal 2 damage to ALL minions",
+//               OR "deal 5 damage to the enemy hero" — only one possible target)
+//
+//   RULE OF THUMB: if there is only ever one possible target (your hero, enemy hero,
+//   all minions, all friendlies), always use 'all'. Only use 'single' when the player
+//   genuinely needs to choose between multiple options.
+//
+// ── side ──────────────────────────────────────────────────────────────────────
+//
+//   'friendly' — targets on the active player's side
+//   'enemy'    — targets on the opponent's side
+//   'all'      — targets on both sides
+//
+// ── entityType ────────────────────────────────────────────────────────────────
+//
+//   'minion'   — only minions on the battlefield
+//   'hero'     — only the hero
+//   'all'      — both minions and hero
+//
+// ── EXAMPLES ──────────────────────────────────────────────────────────────────
+//
+//   "Deal 4 damage to any target" (player chooses):
+//   { scope: 'single', side: 'all', entityType: 'all' }
+//
+//   "Deal 2 damage to ALL minions" (no choice):
+//   { scope: 'all', side: 'all', entityType: 'minion' }
+//
+//   "Deal 5 damage to the enemy hero" (no choice, only one target):
+//   { scope: 'all', side: 'enemy', entityType: 'hero' }      ← use 'all' NOT 'single'!
+//
+//   "Give a friendly minion +3 +3" (player chooses which one):
+//   { scope: 'single', side: 'friendly', entityType: 'minion' }
+//
+//   "Give ALL friendly minions +1 +1" (no choice):
+//   { scope: 'all', side: 'friendly', entityType: 'minion' }
+//
+//   "Return a friendly minion to hand" (player chooses):
+//   { scope: 'single', side: 'friendly', entityType: 'minion' }
+//
+//   "Return ALL minions to hand" (no choice):
+//   { scope: 'all', side: 'all', entityType: 'minion' }
+//
+// =============================================================================
+// DESCRIPTION FORMATTING CONVENTIONS
+// =============================================================================
+//
+//   <strong>Fanfare:</strong>     — onPlay ability (always fires)
+//   <strong>Last Breath:</strong> — onDeath ability
+//   <strong>Combo:</strong>       — ability with requirements: [{ type: 'combo' }]
+//   <strong>Blitz</strong>        — charge attribute
+//
+// =============================================================================
+// COMMON MISTAKES
+// =============================================================================
+//
+//   ✗ Using scope: 'single' for "deal damage to the enemy hero"
+//     → There's only one enemy hero, no choice needed. Use scope: 'all'.
+//
+//   ✗ Using scope: 'all' for "give a friendly minion +3 +3"
+//     → Player needs to choose which one. Use scope: 'single'.
+//
+//   ✗ Forgetting that a minion with returnToHand and scope: 'single'
+//     will be a no-op if played with no other friendly minions on board
+//     (the source minion is excluded from its own returnToHand pool).
+//     This is intentional — it just stays on the board.
+//
+//   ✗ Using the same id as an existing card — ids must be unique.
+//
+// =============================================================================
 
 const cards: Card[] = [
 	// ── WHITE MINIONS ────────────────────────────────────────
