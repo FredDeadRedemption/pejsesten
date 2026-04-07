@@ -130,6 +130,7 @@ export type GameStateServer = {
 	blackPlayerID: string; // used for validation turn
 	whiteTurn: boolean; // used for processing the actual game
 	turnCount: number;
+	cardsPlayedThisTurn: number;
 };
 
 export type GameStateClient = {

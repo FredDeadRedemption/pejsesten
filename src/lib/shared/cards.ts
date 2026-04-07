@@ -5,26 +5,27 @@ const getCardByID = (id: number) => cards.find((card) => card.id === id);
 export const getCards = () => cards;
 
 // Transform Deck: [1, 2, 3] to (actual)Deck: [CardEntity, CardEntity, CardEntity]
-export const deckToCards = (deck: number[]): CardEntity[] => deck.map((id) => getCardByID(id)!).map(
-	(card) => {
-		if (card.type === 'minion') {
-			return {
-				...card,
-				entityID: crypto.randomUUID(),
-				attack: card.baseAttack,
-				defence: card.baseDefence,
-				cost: card.baseCost,
-				exhausted: false
-			} as MinionEntity;
-		} else {
-			return {
-				...card,
-				entityID: crypto.randomUUID(),
-				cost: card.baseCost
-			} as IncantationEntity;
-		}
-	}
-);
+export const deckToCards = (deck: number[]): CardEntity[] =>
+	deck
+		.map((id) => getCardByID(id)!)
+		.map((card) => {
+			if (card.type === 'minion') {
+				return {
+					...card,
+					entityID: crypto.randomUUID(),
+					attack: card.baseAttack,
+					defence: card.baseDefence,
+					cost: card.baseCost,
+					exhausted: false
+				} as MinionEntity;
+			} else {
+				return {
+					...card,
+					entityID: crypto.randomUUID(),
+					cost: card.baseCost
+				} as IncantationEntity;
+			}
+		});
 
 const cards: Card[] = [
 	// ── WHITE MINIONS ────────────────────────────────────────
@@ -32,15 +33,16 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description: '<strong>Blitz</strong>. Appears in your peripheral vision. Gone when you look directly.',
+		description:
+			'<strong>Blitz</strong>. Appears in your peripheral vision. Gone when you look directly.',
 		baseCost: 1,
 		type: 'minion',
-		races: ["elf"],
+		races: ['elf'],
 		baseAttack: 1,
 		baseDefence: 2,
 		image_url: 'Machine Elf.webp',
 		abilities: [],
-		attributes: ["charge"]
+		attributes: ['charge']
 	},
 	{
 		id: 2,
@@ -59,7 +61,7 @@ const cards: Card[] = [
 				conditions: [],
 				effects: [
 					{
-						type: "draw",
+						type: 'draw',
 						drawAmount: 1
 					}
 				]
@@ -118,12 +120,12 @@ const cards: Card[] = [
 		description: '<strong>Blitz</strong>',
 		baseCost: 1,
 		type: 'minion',
-		races: ["beast"],
+		races: ['beast'],
 		baseAttack: 2,
 		baseDefence: 1,
 		image_url: 'Black Cat.webp',
 		abilities: [],
-		attributes: ["charge"]
+		attributes: ['charge']
 	},
 	{
 		id: 7,
@@ -197,13 +199,13 @@ const cards: Card[] = [
 				conditions: [],
 				effects: [
 					{
-						type: "buff",
+						type: 'buff',
 						attack: 4,
 						defence: 4,
 						targetSpec: {
-							scope: "single",
-							side: "friendly",
-							entityType: "minion",
+							scope: 'single',
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -229,8 +231,8 @@ const cards: Card[] = [
 						targetSpec: {
 							scope: 'single',
 							side: 'all',
-							entityType: "all"
-						},
+							entityType: 'all'
+						}
 					}
 				]
 			}
@@ -240,7 +242,7 @@ const cards: Card[] = [
 		id: 13,
 		color: 'white',
 		name: 'Pot of Greed',
-		description: 'Deal 2 cards',
+		description: 'Draw 1 card <strong>Combo:</strong> Draw 2 cards instead',
 		baseCost: 3,
 		type: 'incantation',
 		image_url: 'Pot of Greed.webp',
@@ -248,12 +250,13 @@ const cards: Card[] = [
 			{
 				trigger: 'onPlay',
 				conditions: [],
-				effects: [
-					{
-						type: 'draw',
-						drawAmount: 2
-					}
-				]
+				effects: [{ type: 'draw', drawAmount: 1 }]
+			},
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				proc: { type: 'combo' }, // only fires on combo
+				effects: [{ type: 'draw', drawAmount: 1 }] // extra 1 on top = 2 total
 			}
 		]
 	},
@@ -273,13 +276,13 @@ const cards: Card[] = [
 				conditions: [],
 				effects: [
 					{
-						type: "buff",
+						type: 'buff',
 						attack: 3,
 						defence: 2,
 						targetSpec: {
-							scope: "single",
-							side: "friendly",
-							entityType: "minion",
+							scope: 'single',
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -305,8 +308,8 @@ const cards: Card[] = [
 						targetSpec: {
 							scope: 'single',
 							side: 'enemy',
-							entityType: "all"
-						},
+							entityType: 'all'
+						}
 					}
 				]
 			}
