@@ -180,14 +180,12 @@ export const endTurn = (): GameStateResponse => {
 
 	// getSourceBoard returns the NEW active player
 	const sourceBoard = getSourceBoard(gameState);
-	const enemyBoard = getEnemyBoard(gameState);
 
 	// draw for the new active player
 	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
 
-	// add mana
+	// add mana to the new activer player
 	sourceBoard.mana += 1
-	//enemyBoard.mana += 1
 
 	// unexhaust the new active player's minions
 	sourceBoard.battlefield.forEach((card) => {

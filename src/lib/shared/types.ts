@@ -21,10 +21,19 @@ export type TargetSpec = {
 	readonly entityType: 'minion' | 'hero' | 'all';
 };
 
-export type Condition = {
-	readonly type: 'race';
-	readonly value: Race;
-};
+export type Condition =
+	| { type: 'targetRace'; race: Race }
+	| { type: 'heroHealthBelow'; heroSide: 'self' | 'enemy'; value: number }
+	| {
+			type: 'boardSize';
+			side: 'friendly' | 'enemy';
+			comparison: 'more' | 'less' | 'equal';
+			value: number;
+	  };
+
+export type Proc =
+	| { type: 'combo' } // played a card before this one this turn
+	| { type: 'firstCard' }; // first card played this turn
 
 export type Effect =
 	| {
@@ -32,7 +41,6 @@ export type Effect =
 			readonly targetSpec: TargetSpec;
 			attack: number;
 			defence: number;
-			readonly conditions: Condition[];
 	  }
 	| {
 			readonly type: 'damage';
@@ -46,11 +54,12 @@ export type Effect =
 
 export type Ability = {
 	trigger: Trigger;
+	conditions: Condition[];
+	proc?: Proc;
 	effects: Effect[];
 };
 
-type Attributes =
-	| 'charge' // can attack the turn it is played
+type Attributes = 'charge'; // can attack the turn it is played
 
 // Base Card
 type CardBase = {
@@ -103,7 +112,7 @@ export type CardEntity = MinionEntity | IncantationEntity;
 export type Hero = {
 	attack: number;
 	defence: number;
-}
+};
 
 export type Board = {
 	deck: CardEntity[];
@@ -140,5 +149,5 @@ export type PlayerMetaData = {
 
 export type AttackData = {
 	originID: string;
-	targetID: string | "heroEnemy" | "heroSelf";
+	targetID: string | 'heroEnemy' | 'heroSelf';
 };

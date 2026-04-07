@@ -26,7 +26,7 @@
 		<div class="description {theme.desc}">
 			<div class="description-inner">
 				<span class="icon-big" style="color: {theme.color}">{@html getIcon(theme.icon)}</span>
-				<span class="text">{card.description}</span>
+				<span class="text">{@html card.description}</span>
 			</div>
 			{#if card.type === 'minion'}
 				<div class="bottom {theme.title}">

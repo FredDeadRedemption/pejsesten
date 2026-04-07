@@ -32,7 +32,7 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description: 'Charge. Appears in your peripheral vision. Gone when you look directly.',
+		description: '<strong>Blitz</strong>. Appears in your peripheral vision. Gone when you look directly.',
 		baseCost: 1,
 		type: 'minion',
 		races: ["elf"],
@@ -46,7 +46,7 @@ const cards: Card[] = [
 		id: 2,
 		color: 'white',
 		name: 'Overzealous Priest',
-		description: 'Battlecry: Draw 2 cards',
+		description: '<strong>Fanfare:</strong> Draw a card',
 		baseCost: 3,
 		type: 'minion',
 		races: ['human'],
@@ -56,10 +56,11 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: "draw",
-						drawAmount: 2
+						drawAmount: 1
 					}
 				]
 			}
@@ -114,15 +115,15 @@ const cards: Card[] = [
 		id: 6,
 		color: 'black',
 		name: 'Black Cat',
-		description: 'Meaw.',
+		description: '<strong>Blitz</strong>',
 		baseCost: 1,
 		type: 'minion',
 		races: ["beast"],
 		baseAttack: 2,
 		baseDefence: 1,
-		image_url: '',
+		image_url: 'Black Cat.webp',
 		abilities: [],
-		attributes: []
+		attributes: ["charge"]
 	},
 	{
 		id: 7,
@@ -193,12 +194,12 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: "buff",
 						attack: 4,
 						defence: 4,
-						conditions: [],
 						targetSpec: {
 							scope: "single",
 							side: "friendly",
@@ -220,6 +221,7 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: 'damage',
@@ -245,6 +247,7 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: 'draw',
@@ -267,12 +270,12 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: "buff",
 						attack: 3,
 						defence: 2,
-						conditions: [],
 						targetSpec: {
 							scope: "single",
 							side: "friendly",
@@ -294,6 +297,7 @@ const cards: Card[] = [
 		abilities: [
 			{
 				trigger: 'onPlay',
+				conditions: [],
 				effects: [
 					{
 						type: 'damage',
