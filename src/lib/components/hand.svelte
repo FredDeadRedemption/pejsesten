@@ -29,37 +29,10 @@
 
 	const beginDrag = (index: number, event: MouseEvent) => {
 		event.preventDefault();
-		const card = hand[index]!;
-
-		if (card.type === 'incantation') {
-			const needsFriendlyMinion = card.abilities.some((a) =>
-				a.effects.some(
-					(e) =>
-						'targetSpec' in e &&
-						e.targetSpec.scope === 'single' &&
-						e.targetSpec.side === 'friendly' &&
-						e.targetSpec.entityType === 'minion'
-				)
-			);
-
-			if (needsFriendlyMinion && $gameState.self.battlefield.length === 0) return;
-
-			// if it needs any kind of targeting, begin targeting
-			const needsTarget = card.abilities.some((a) =>
-				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
-			);
-
-			if (needsTarget) {
-				beginTargeting(card, index);
-				return; // return here so it doesn't fall through to normal drag
-			}
-		}
-
-		// normal minion drag below
 		draggin = true;
 		draggerIndex = index;
 		dragCoords = { x: event.clientX - 50, y: event.clientY - 73 };
-		dragCard = card;
+		dragCard = hand[index]!;
 	};
 	const endDrag = () => {
 		draggin = false;
@@ -128,7 +101,7 @@
 				(needsFriendlyMinion && $gameState.self.battlefield.length === 0) ||
 				(needsEnemyMinion && $gameState.enemy.battlefield.length === 0)
 			) {
-				console.log("NFM " +needsFriendlyMinion)
+				console.log('NFM ' + needsFriendlyMinion);
 				playCard({ index: dragIndex });
 				return;
 			}

@@ -26,6 +26,7 @@ type QueuedEffect = {
 	targetID?: string;
 	sourceBoard: Board;
 	enemyBoard: Board;
+	selfID?: string;
 };
 
 const findEntity = (id: string): MinionEntity | Hero | undefined => {
@@ -104,7 +105,7 @@ const processEffectQueue = () => {
 	while (effectQueue.length > 0) {
 		const queued = effectQueue.shift()!;
 		const target = queued.targetID ? findEntity(queued.targetID) : undefined;
-		applyEffect(queued.effect, queued.sourceBoard, queued.enemyBoard, target);
+		applyEffect(queued.effect, queued.sourceBoard, queued.enemyBoard, target, queued.selfID);
 	}
 };
 
@@ -125,9 +126,9 @@ const resolveTargets = (
 		if (spec.side === 'enemy' || spec.side === 'all') pool.push(enemyBoard.hero);
 	}
 
-	// note: for 'single' scope effects, a target is always pre-selected by the player
-	// so resolveTargets is only ever called for 'all' scope effects.
-	// the pool.slice(0, 1) is a safety fallback that should never be hit in practice.
+	// note: for 'single' scope effects with no pre-selected target,
+	// resolveTargets is used as a fallback (e.g. returnToHand with no target).
+	// selfID filtering upstream ensures the source minion is excluded from the pool.
 	return spec.scope === 'single' ? pool.slice(0, 1) : pool;
 };
 
@@ -135,18 +136,25 @@ const applyEffect = (
 	effect: Effect,
 	sourceBoard: Board,
 	enemyBoard: Board,
-	target?: MinionEntity | Hero
+	target?: MinionEntity | Hero,
+	selfID?: string
 ) => {
+	let targets: (MinionEntity | Hero)[] | null = null;
+	if ('targetSpec' in effect) {
+		targets = target
+			? [target]
+			: resolveTargets(effect.targetSpec, sourceBoard, enemyBoard).filter(
+					(t) => !selfID || (t as MinionEntity).entityID !== selfID
+				);
+	}
 	if (effect.type === 'buff') {
-		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
-		targets.forEach((t) => {
+		targets?.forEach((t) => {
 			t.attack += effect.attack;
 			t.defence += effect.defence;
 		});
 	}
 	if (effect.type === 'damage') {
-		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
-		targets.forEach((t) => {
+		targets?.forEach((t) => {
 			t.defence -= effect.damage;
 		});
 	}
@@ -154,8 +162,7 @@ const applyEffect = (
 		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
 	}
 	if (effect.type === 'returnToHand') {
-		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
-		targets.forEach((t) => {
+		targets?.forEach((t) => {
 			if (!('exhausted' in t)) return; // must be a minion not a hero
 			const idx = sourceBoard.battlefield.indexOf(t as MinionEntity);
 			if (idx === -1) return;
@@ -308,7 +315,8 @@ export const playCard = (
 				sourceBoard,
 				enemyBoard,
 				targetID:
-					'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined
+					'targetSpec' in effect && effect.targetSpec.scope === 'single' ? data.target : undefined,
+				selfID: consumed.entityID
 			});
 		});
 	});
