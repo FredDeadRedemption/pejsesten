@@ -117,7 +117,8 @@ const cards: Card[] = [
 		id: 6,
 		color: 'black',
 		name: 'Black Cat',
-		description: '<strong>Blitz</strong>',
+		description:
+			'<strong>Blitz</strong>. <strong>Fanfare:</strong> Return a friendly minion from the battlefield to your hand',
 		baseCost: 1,
 		type: 'minion',
 		races: ['beast'],
@@ -126,15 +127,15 @@ const cards: Card[] = [
 		image_url: 'Black Cat.webp',
 		abilities: [
 			{
-				trigger: "onPlay",
+				trigger: 'onPlay',
 				conditions: [],
 				effects: [
 					{
-						type: "returnToHand",
+						type: 'returnToHand',
 						targetSpec: {
 							scope: 'single',
-							side: "friendly",
-							entityType: "minion"
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
@@ -322,7 +323,7 @@ const cards: Card[] = [
 						damage: 2,
 						targetSpec: {
 							scope: 'single',
-							side: "all",
+							side: 'all',
 							entityType: 'all'
 						}
 					}
@@ -360,12 +361,12 @@ const cards: Card[] = [
 				conditions: [],
 				effects: [
 					{
-						type: "returnToHand",
+						type: 'returnToHand',
 						costReduction: 2,
 						targetSpec: {
 							scope: 'single',
-							side: "friendly",
-							entityType: "minion"
+							side: 'friendly',
+							entityType: 'minion'
 						}
 					}
 				]
