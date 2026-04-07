@@ -162,7 +162,7 @@ const applyEffect = (
 			const [returned] = sourceBoard.battlefield.splice(idx, 1);
 			if (effect.costReduction) {
 				console.log('cost before:', returned.cost, 'reduction:', effect.costReduction);
-				returned.cost = Math.max(0, returned.cost - effect.costReduction);
+				returned.cost = Math.max(0, returned.baseCost - effect.costReduction);
 				console.log('cost after:', returned.cost);
 			}
 			returned.exhausted = false;
