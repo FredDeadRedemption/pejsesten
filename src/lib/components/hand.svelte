@@ -74,25 +74,70 @@
 		dragCoords.y += e.movementY;
 	};
 	function tryPlaceCard(x: number, y: number, dragIndex: number) {
-		// TODO: move this logic into hand component
 		if (!handElement) return;
-		if (dragIndex === null) return; // js moment
-		// Get battlefield position and dimensions
+		if (dragIndex === null) return;
 		const rect = handElement.getBoundingClientRect();
-
-		// Check if coordinates are within the battlefield
-		console.log(x);
-		const cardWidth = 100; // small card size (in cardSmall component)
-		const cardHeight = 147; // small card size (in cardSmall component)
+		const cardWidth = 100;
+		const cardHeight = 147;
 		const isWithinHand =
 			x + cardWidth / 2 >= rect.left &&
 			x + cardWidth / 2 <= rect.right &&
 			y + cardHeight / 2 >= rect.top &&
 			y + cardHeight / 2 <= rect.bottom;
 		if (isWithinHand) return;
-		console.log('IS WITHIN HAND' + isWithinHand);
 
-		playCard({ index: dragIndex }); // HERE I NEED THE INDEX OF THE CARD NOT THE CARD ITSELF
+		const card = hand[dragIndex];
+		if (!card) return;
+
+		// check if minion needs targeting on play
+		// and that target is a single target
+		const needsTarget = card.abilities.some(
+			(a) =>
+				a.trigger === 'onPlay' &&
+				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
+		);
+
+		if (needsTarget) {
+			// check if it needs a friendly minion but board is empty
+			const needsFriendlyMinion = card.abilities.some(
+				(a) =>
+					a.trigger === 'onPlay' &&
+					a.effects.some(
+						(e) =>
+							'targetSpec' in e &&
+							e.targetSpec.scope === 'single' &&
+							e.targetSpec.side === 'friendly' &&
+							e.targetSpec.entityType === 'minion'
+					)
+			);
+
+			const needsEnemyMinion = card.abilities.some(
+				(a) =>
+					a.trigger === 'onPlay' &&
+					a.effects.some(
+						(e) =>
+							'targetSpec' in e &&
+							e.targetSpec.scope === 'single' &&
+							e.targetSpec.side === 'enemy' &&
+							e.targetSpec.entityType === 'minion'
+					)
+			);
+
+			// if friendly board is empty and spell needs friendly minion target, just play without target
+			if (
+				(needsFriendlyMinion && $gameState.self.battlefield.length === 0) ||
+				(needsEnemyMinion && $gameState.enemy.battlefield.length === 0)
+			) {
+				console.log("NFM " +needsFriendlyMinion)
+				playCard({ index: dragIndex });
+				return;
+			}
+
+			beginTargeting(card, dragIndex);
+			return;
+		}
+
+		playCard({ index: dragIndex });
 	}
 </script>
 
@@ -100,7 +145,9 @@
 
 <div id="hand" bind:this={handElement}>
 	{#if self}
-		<button class="end" class:self class:inactive={!yourTurn} onclick={() => endTurn()}>END TURN</button>
+		<button class="end" class:self class:inactive={!yourTurn} onclick={() => endTurn()}
+			>END TURN</button
+		>
 	{/if}
 	<div class="mana" class:self>{mana}</div>
 	{#each hand as cardInHand, index}

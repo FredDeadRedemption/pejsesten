@@ -124,7 +124,22 @@ const cards: Card[] = [
 		baseAttack: 2,
 		baseDefence: 1,
 		image_url: 'Black Cat.webp',
-		abilities: [],
+		abilities: [
+			{
+				trigger: "onPlay",
+				conditions: [],
+				effects: [
+					{
+						type: "returnToHand",
+						targetSpec: {
+							scope: 'single',
+							side: "friendly",
+							entityType: "minion"
+						}
+					}
+				]
+			}
+		],
 		attributes: ['charge']
 	},
 	{
