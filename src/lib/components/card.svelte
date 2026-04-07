@@ -12,6 +12,7 @@
 <div id="card" class={theme.bg} class:compact>
 	<div id="content">
 		<div class="img-wrap">
+		<div class="cost">{("cost" in card) ? card.cost : card.baseCost}</div>
 			<img
 				src={card.image_url === ''
 					? '/media/cards/missing-texture.jpg'
@@ -38,6 +39,23 @@
 </div>
 
 <style lang="scss">
+.cost{
+	position: absolute;
+	align-self: flex-start;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: steelblue;
+	color: $white;
+	font-size: 20px;
+	padding: 5px;
+	width: 25px;
+	height: 25px;
+	border-right: 2px solid $black;
+	border-bottom: 2px solid $black;
+	transform: translateX(-65px);
+	z-index: 100;
+}
 	.description-inner {
 		display: grid;
 		//place-items: center;

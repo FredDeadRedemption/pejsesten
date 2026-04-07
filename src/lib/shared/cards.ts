@@ -292,11 +292,11 @@ const cards: Card[] = [
 	{
 		id: 15,
 		color: 'black',
-		name: 'Soul Drain',
-		description: 'Deal 2 damage',
-		baseCost: 1,
+		name: 'Smite',
+		description: 'Deal 2 damage <strong>Combo:</strong> Deal 4 damage instead.',
+		baseCost: 2,
 		type: 'incantation',
-		image_url: '',
+		image_url: 'Smite.webp',
 		abilities: [
 			{
 				trigger: 'onPlay',
@@ -307,8 +307,50 @@ const cards: Card[] = [
 						damage: 2,
 						targetSpec: {
 							scope: 'single',
+							side: "all",
+							entityType: 'all'
+						}
+					}
+				]
+			},
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				proc: { type: 'combo' }, // only fires on combo
+				effects: [
+					{
+						type: 'damage',
+						damage: 2,
+						targetSpec: {
+							scope: 'single',
 							side: 'enemy',
 							entityType: 'all'
+						}
+					}
+				] // extra 2 on top = 4 total
+			}
+		]
+	},
+	{
+		id: 16,
+		color: 'black',
+		name: 'Pull',
+		description: 'Return a friendly minions to your hand it costs (2) less.',
+		baseCost: 0,
+		type: 'incantation',
+		image_url: 'Pull.webp',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				conditions: [],
+				effects: [
+					{
+						type: "returnToHand",
+						costReduction: 2,
+						targetSpec: {
+							scope: 'single',
+							side: "friendly",
+							entityType: "minion"
 						}
 					}
 				]

@@ -36,17 +36,24 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 	);
 };
 
-const checkConditions = (conditions: Condition[], sourceBoard: Board, enemyBoard: Board): boolean => {
-  return conditions.every((condition) => {
-    if (condition.type === 'heroHealthBelow') return sourceBoard.hero.defence < condition.value;
-    if (condition.type === 'boardSize') {
-      const size = condition.side === 'friendly' ? sourceBoard.battlefield.length : enemyBoard.battlefield.length;
-      if (condition.comparison === 'more') return size > condition.value;
-      if (condition.comparison === 'less') return size < condition.value;
-      return size === condition.value;
-    }
-    return true;
-  });
+const checkConditions = (
+	conditions: Condition[],
+	sourceBoard: Board,
+	enemyBoard: Board
+): boolean => {
+	return conditions.every((condition) => {
+		if (condition.type === 'heroHealthBelow') return sourceBoard.hero.defence < condition.value;
+		if (condition.type === 'boardSize') {
+			const size =
+				condition.side === 'friendly'
+					? sourceBoard.battlefield.length
+					: enemyBoard.battlefield.length;
+			if (condition.comparison === 'more') return size > condition.value;
+			if (condition.comparison === 'less') return size < condition.value;
+			return size === condition.value;
+		}
+		return true;
+	});
 };
 
 const checkProc = (proc: Proc | undefined, _sourceBoard: Board, _enemyBoard: Board): boolean => {
@@ -145,6 +152,24 @@ const applyEffect = (
 	}
 	if (effect.type === 'draw') {
 		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
+	}
+	if (effect.type === 'returnToHand') {
+		const targets = target ? [target] : resolveTargets(effect.targetSpec, sourceBoard, enemyBoard);
+		targets.forEach((t) => {
+			if (!('exhausted' in t)) return; // must be a minion not a hero
+			const idx = sourceBoard.battlefield.indexOf(t as MinionEntity);
+			if (idx === -1) return;
+			const [returned] = sourceBoard.battlefield.splice(idx, 1);
+			if (effect.costReduction) {
+				console.log('cost before:', returned.cost, 'reduction:', effect.costReduction);
+				returned.cost = Math.max(0, returned.cost - effect.costReduction);
+				console.log('cost after:', returned.cost);
+			}
+			returned.exhausted = false;
+			returned.attack = returned.baseAttack;
+			returned.defence = returned.baseDefence;
+			sourceBoard.hand.push(returned);
+		});
 	}
 };
 

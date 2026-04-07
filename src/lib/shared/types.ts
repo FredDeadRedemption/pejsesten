@@ -50,7 +50,12 @@ export type Effect =
 	| {
 			readonly type: 'draw';
 			drawAmount: number;
-	  };
+	  }
+	| {
+      readonly type: 'returnToHand';
+      readonly targetSpec: TargetSpec;
+      readonly costReduction?: number;
+    };
 
 export type Ability = {
 	trigger: Trigger;
