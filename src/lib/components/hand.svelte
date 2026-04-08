@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import Card from './card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
 	import type { CardEntity } from '$lib/shared/types';
@@ -15,77 +16,113 @@
 		yourTurn = false
 	}: { hand: CardEntity[]; mana: number; self?: boolean; yourTurn?: boolean } = $props();
 
-	let hoverIndex: number | null = $state(null); // keeps track of which index to display big card
-	let draggerIndex: number | null = $state(null); // keeps track of which index is to hide because it's being dragged
+	// half card dimensions, used to find card center from top-left coords
+	const CARD_CX = 85;
+	const CARD_CY = 125;
+
+	let hoverIndex: number | null = $state(null);
+	let draggerIndex: number | null = $state(null);
 	let dragCoords = $state({ x: 0, y: 0 });
 	let dragCard: CardEntity | null = $state(null);
+	let returning = $state(false);
+	let dragging = $derived(draggerIndex !== null && !returning);
 
-	// fan layout: rotation, arc, and horizontal spread
+	// fan layout: rotation, arc, horizontal spread, and neighbor displacement
 	const fanStyle = (i: number, total: number) => {
 		const offset = i - (total - 1) / 2;
 		const spacing = Math.min(70, 400 / Math.max(total, 1));
 		const rot = offset * 5;
 		const arc = offset * offset * 2;
 
-		// spread neighbors apart when hovering
+		// keep neighbors spread while hovering or dragging
 		let spread = 0;
-		if (hoverIndex !== null && !draggin && i !== hoverIndex) {
-			spread = i < hoverIndex ? -45 : 45;
+		const activeIdx = draggerIndex ?? hoverIndex;
+		if (activeIdx !== null && i !== activeIdx) {
+			spread = i < activeIdx ? -45 : 45;
 		}
 
 		return `--fan-x: ${offset * spacing + spread}px; --fan-rot: ${rot}deg; --fan-arc: ${arc}px`;
 	};
 
-	const setHover = (index: number) => (hoverIndex = index);
-	const clearHover = () => (hoverIndex = null);
-
-	let draggin: boolean = $state(false);
-	$effect(() => {
-		console.log(draggin);
-	});
+	const setHover = (index: number) => {
+		if (!dragging) hoverIndex = index;
+	};
+	const clearHover = () => {
+		if (!dragging) hoverIndex = null;
+	};
 
 	const beginDrag = (index: number, event: MouseEvent) => {
 		event.preventDefault();
-		draggin = true;
+
+		// capture card's screen position before state changes
+		const cardEl = handElement.querySelectorAll('.card-container')[index]?.querySelector('.hand-card');
+		const rect = cardEl?.getBoundingClientRect();
+
 		draggerIndex = index;
-		dragCoords = { x: event.clientX - 50, y: event.clientY - 73 };
 		dragCard = hand[index]!;
+		hoverIndex = null;
+
+		dragCoords = rect
+			? { x: rect.left, y: rect.top }
+			: { x: event.clientX - CARD_CX, y: event.clientY - CARD_CY };
 	};
-	const endDrag = () => {
-		draggin = false;
-		if (!dragCard || draggerIndex === null) return; // js moment 2
-		tryPlaceCard(dragCoords.x, dragCoords.y, draggerIndex);
-		dragCard = null;
-		draggerIndex = null;
-	};
-	const onMouseMove = (e: { movementX: number; movementY: number }) => {
-		if (!draggin) return;
-		dragCoords.x += e.movementX;
-		dragCoords.y += e.movementY;
-	};
-	const tryPlaceCard = (x: number, y: number, dragIndex: number) => {
+
+	const endDrag = async () => {
+		if (!dragCard || draggerIndex === null) return;
+
+		const idx = draggerIndex;
+
 		if (!handElement) return;
-		const rect = handElement.getBoundingClientRect();
+		const handRect = handElement.getBoundingClientRect();
+		const cx = dragCoords.x + CARD_CX;
+		const cy = dragCoords.y + CARD_CY;
 		const isWithinHand =
-			x + 50 >= rect.left && x + 50 <= rect.right && y + 73 >= rect.top && y + 73 <= rect.bottom;
-		if (isWithinHand) return;
+			cx >= handRect.left && cx <= handRect.right &&
+			cy >= handRect.top && cy <= handRect.bottom;
 
-		const card = hand[dragIndex];
-		if (!card) return;
-
-		const needsTarget = card.abilities.some(
-			(a) =>
-				a.trigger === 'onPlay' &&
-				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
-		);
-
-		if (needsTarget && !isSpellAndHasNoValidTarget(card, gameState)) {
-			beginTargeting(card, dragIndex);
+		if (!isWithinHand) {
+			// play the card
+			const card = hand[idx];
+			if (card) {
+				const needsTarget = card.abilities.some(
+					(a) =>
+						a.trigger === 'onPlay' &&
+						a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
+				);
+				if (needsTarget && !isSpellAndHasNoValidTarget(card, gameState)) {
+					beginTargeting(card, idx);
+				} else {
+					playCard({ index: idx });
+				}
+			}
+			dragCard = null;
+			draggerIndex = null;
 			return;
 		}
 
-		playCard({ index: dragIndex });
-	}
+		// return to hand: animate dragger back to fan position
+		returning = true;
+		await tick();
+		await new Promise((r) => requestAnimationFrame(r));
+
+		const container = handElement.querySelectorAll('.card-container')[idx];
+		if (container) {
+			const target = container.getBoundingClientRect();
+			dragCoords = { x: target.left, y: target.top };
+		}
+
+		setTimeout(() => {
+			returning = false;
+			dragCard = null;
+			draggerIndex = null;
+		}, 250);
+	};
+
+	const onMouseMove = (e: { movementX: number; movementY: number }) => {
+		if (!dragging) return;
+		dragCoords.x += e.movementX;
+		dragCoords.y += e.movementY;
+	};
 </script>
 
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
@@ -101,39 +138,39 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			class:hovered={hoverIndex === index && !draggin}
+			class:hovered={hoverIndex === index && !dragging}
 			style="{self ? fanStyle(index, hand.length) : `--fan-x: ${(index - (hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
 			onmouseenter={() => setHover(index)}
 			onmouseleave={clearHover}
 			onmousedown={(e) => { if (hoverIndex === index) beginDrag(index, e) }}
 		>
-			{#if draggerIndex !== index}
-				<div
-					class="hand-card"
-					class:affordable={card.cost <= gameState.self.mana &&
-						!isSpellAndHasNoValidTarget(card, gameState)}
-					class:procced={!isSpellAndHasNoValidTarget(card, gameState) &&
-						card.cost <= gameState.self.mana &&
-						card.abilities?.some(
-							(a) =>
-								a.requirements &&
-								a.requirements.length > 0 &&
-								a.requirements.every((r) =>
-									checkRequirement(r, gameState.self, gameState.enemy, gameState)
-								)
-						)}
-				>
-					<Card {card} />
-				</div>
-			{/if}
+			<div
+				class="hand-card"
+				class:dragged-away={draggerIndex === index}
+				class:affordable={card.cost <= gameState.self.mana &&
+					!isSpellAndHasNoValidTarget(card, gameState)}
+				class:procced={!isSpellAndHasNoValidTarget(card, gameState) &&
+					card.cost <= gameState.self.mana &&
+					card.abilities?.some(
+						(a) =>
+							a.requirements &&
+							a.requirements.length > 0 &&
+							a.requirements.every((r) =>
+								checkRequirement(r, gameState.self, gameState.enemy, gameState)
+							)
+					)}
+			>
+				<Card {card} />
+			</div>
 		</div>
 	{/each}
-	{#if draggin && dragCard}
+	{#if dragCard}
 		<div
 			class="dragger"
-			style="position: abosolute; left: {dragCoords.x}px; top: {dragCoords.y}px;"
+			class:returning
+			style="left: {dragCoords.x}px; top: {dragCoords.y}px;"
 		>
-			<Card compact={true} card={dragCard}></Card>
+			<Card card={dragCard} />
 		</div>
 	{/if}
 </div>
@@ -155,11 +192,16 @@
 			align-self: flex-start;
 		}
 	}
+
 	.dragger {
-		position: fixed; /* Use fixed for smooth dragging */
+		position: fixed;
 		z-index: 1000;
 		pointer-events: none;
-		cursor: grabbing;
+		&.returning {
+			transition: left 0.25s ease, top 0.25s ease, scale 0.25s ease, opacity 0.25s ease;
+			scale: 0.6;
+			opacity: 0;
+		}
 	}
 
 	button.end {
@@ -205,12 +247,17 @@
 			rotate(var(--fan-rot));
 		transform-origin: center bottom;
 	}
+
 	.hand-card {
 		scale: 0.6;
 		translate: 0 0;
 		rotate: 0deg;
+		opacity: 1;
 		transform-origin: center bottom;
-		transition: scale 0.2s ease, translate 0.2s ease, rotate 0.2s ease;
+		transition: scale 0.2s ease, translate 0.2s ease, rotate 0.2s ease, opacity 0.15s ease;
+		&.dragged-away {
+			opacity: 0;
+		}
 	}
 	.card-container.hovered .hand-card {
 		scale: 1;
