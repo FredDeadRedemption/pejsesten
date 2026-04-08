@@ -175,19 +175,22 @@ const applyEffect = (
 	}
 	if (effect.type === 'returnToHand') {
 		targets?.forEach((t) => {
-			if (!('exhausted' in t)) return; // must be a minion not a hero
-			const idx = sourceBoard.battlefield.indexOf(t as MinionEntity);
+			if (!('exhausted' in t)) return;
+			const minion = t as MinionEntity;
+
+			// figure out which board owns this minion
+			const ownerBoard = sourceBoard.battlefield.includes(minion) ? sourceBoard : enemyBoard;
+
+			const idx = ownerBoard.battlefield.indexOf(minion);
 			if (idx === -1) return;
-			const [returned] = sourceBoard.battlefield.splice(idx, 1);
+			const [returned] = ownerBoard.battlefield.splice(idx, 1);
 			if (effect.costReduction) {
-				console.log('cost before:', returned.cost, 'reduction:', effect.costReduction);
 				returned.cost = Math.max(0, returned.baseCost - effect.costReduction);
-				console.log('cost after:', returned.cost);
 			}
 			returned.exhausted = false;
 			returned.attack = returned.baseAttack;
 			returned.defence = returned.baseDefence;
-			sourceBoard.hand.push(returned);
+			ownerBoard.hand.push(returned);
 		});
 	}
 };
