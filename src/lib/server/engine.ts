@@ -278,7 +278,9 @@ export const playCard = (
 	const enemyBoard = getEnemyBoard(gameState);
 
 	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
+	
 	if (!card) return null;
+	if (card.cost > sourceBoard.mana) return null;
 
 	if (card.type === 'incantation') {
 		// if card has effect with targetSpec that requires a

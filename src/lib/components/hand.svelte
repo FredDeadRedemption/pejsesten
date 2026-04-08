@@ -5,6 +5,7 @@
 	import type { CardEntity } from '$lib/shared/types';
 	import { beginTargeting } from '$lib/targeting.svelte';
 	import { checkRequirement } from '$lib/shared/lib';
+	import { isSpellAndHasNoValidTarget } from '$lib/util';
 
 	let handElement: HTMLElement;
 
@@ -47,66 +48,23 @@
 		dragCoords.x += e.movementX;
 		dragCoords.y += e.movementY;
 	};
-	function tryPlaceCard(x: number, y: number, dragIndex: number) {
+	const tryPlaceCard = (x: number, y: number, dragIndex: number) => {
 		if (!handElement) return;
-		if (dragIndex === null) return;
 		const rect = handElement.getBoundingClientRect();
-		const cardWidth = 100;
-		const cardHeight = 147;
 		const isWithinHand =
-			x + cardWidth / 2 >= rect.left &&
-			x + cardWidth / 2 <= rect.right &&
-			y + cardHeight / 2 >= rect.top &&
-			y + cardHeight / 2 <= rect.bottom;
+			x + 50 >= rect.left && x + 50 <= rect.right && y + 73 >= rect.top && y + 73 <= rect.bottom;
 		if (isWithinHand) return;
 
 		const card = hand[dragIndex];
 		if (!card) return;
 
-		// check if minion needs targeting on play
-		// and that target is a single target
 		const needsTarget = card.abilities.some(
 			(a) =>
 				a.trigger === 'onPlay' &&
 				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
 		);
 
-		if (needsTarget) {
-			// check if it needs a friendly minion but board is empty
-			const needsFriendlyMinion = card.abilities.some(
-				(a) =>
-					a.trigger === 'onPlay' &&
-					a.effects.some(
-						(e) =>
-							'targetSpec' in e &&
-							e.targetSpec.scope === 'single' &&
-							e.targetSpec.side === 'friendly' &&
-							e.targetSpec.entityType === 'minion'
-					)
-			);
-
-			const needsEnemyMinion = card.abilities.some(
-				(a) =>
-					a.trigger === 'onPlay' &&
-					a.effects.some(
-						(e) =>
-							'targetSpec' in e &&
-							e.targetSpec.scope === 'single' &&
-							e.targetSpec.side === 'enemy' &&
-							e.targetSpec.entityType === 'minion'
-					)
-			);
-
-			// if friendly board is empty and spell needs friendly minion target, just play without target
-			if (
-				(needsFriendlyMinion && gameState.self.battlefield.length === 0) ||
-				(needsEnemyMinion && gameState.enemy.battlefield.length === 0)
-			) {
-				console.log('NFM ' + needsFriendlyMinion);
-				playCard({ index: dragIndex });
-				return;
-			}
-
+		if (needsTarget && !isSpellAndHasNoValidTarget(card, gameState)) {
 			beginTargeting(card, dragIndex);
 			return;
 		}
@@ -135,8 +93,8 @@
 			{#if hoverIndex === index && !draggin}
 				<div
 					class="hover-card"
-					class:affordable={card.cost <= gameState.self.mana && card.cost <= gameState.self.mana}
-					class:procced={card.abilities?.some(
+					class:affordable={card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
+					class:procced={!isSpellAndHasNoValidTarget(card, gameState) && card.cost <= gameState.self.mana && card.abilities?.some(
 						(a) =>
 							a.requirements &&
 							a.requirements.length > 0 &&
@@ -153,15 +111,18 @@
 			{:else if draggerIndex !== index}
 				<div
 					class="default-card"
-					class:affordable={card.cost <= gameState.self.mana}
-					class:procced={card.cost <= gameState.self.mana && card.abilities?.some(
-						(a) =>
-							a.requirements &&
-							a.requirements.length > 0 &&
-							a.requirements.every((r) =>
-								checkRequirement(r, gameState.self, gameState.enemy, gameState)
-							)
-					)}
+					class:affordable={card.cost <= gameState.self.mana &&
+						!isSpellAndHasNoValidTarget(card, gameState)}
+					class:procced={!isSpellAndHasNoValidTarget(card, gameState) &&
+						card.cost <= gameState.self.mana &&
+						card.abilities?.some(
+							(a) =>
+								a.requirements &&
+								a.requirements.length > 0 &&
+								a.requirements.every((r) =>
+									checkRequirement(r, gameState.self, gameState.enemy, gameState)
+								)
+						)}
 				>
 					<Card compact={false} {card} />
 				</div>
