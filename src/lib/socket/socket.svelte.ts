@@ -50,13 +50,7 @@ export const connectSocket = (url: string) => {
 	});
 
 	socket.on('newGameState', (newGameState: GameStateClient) => {
-		gameState.self = newGameState.self;
-		gameState.enemy = newGameState.enemy;
-		gameState.whitePlayerID = newGameState.whitePlayerID;
-		gameState.blackPlayerID = newGameState.blackPlayerID;
-		gameState.yourTurn = newGameState.yourTurn;
-		gameState.turnCount = newGameState.turnCount;
-		gameState.cardsPlayedThisTurn = newGameState.cardsPlayedThisTurn;
+		Object.assign(gameState, newGameState);
 	});
 
 	socket.on('cardDrawn', (card: string) => {
