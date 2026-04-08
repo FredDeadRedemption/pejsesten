@@ -60,13 +60,9 @@ export const setupSocketIO = (io: Server) => {
 					broadcastGameState(result, activeGame);
 					// if bot game and it's now the bot's turn
 					if (activeGame.botGame && !validateTurn(socket.id, getGameState())) {
-						setTimeout(
-							() => {
-								const botResult = makeBotMove(getGameState(), activeGame!.botIsWhite!);
-								if (botResult) broadcastGameState(botResult, activeGame!);
-							},
-							BOT_DELAY_MS
-						);
+						makeBotMove(getGameState(), activeGame!.botIsWhite!).then((botResult) => {
+							if (botResult) broadcastGameState(botResult, activeGame!);
+						});
 					}
 				}
 			};
@@ -116,7 +112,7 @@ export const setupSocketIO = (io: Server) => {
 		});
 
 		socket.on('queueBot', (playerMetaData: PlayerMetaData) => {
-			console.log(playerMetaData.choosenDeck)
+			console.log(playerMetaData.choosenDeck);
 			const isPlayer1White = coinFlip();
 			const botIsWhite = !isPlayer1White;
 			activeGame = {
@@ -124,7 +120,7 @@ export const setupSocketIO = (io: Server) => {
 				socket2: socket,
 				isPlayer1White,
 				botGame: true,
-				botIsWhite,
+				botIsWhite
 			};
 
 			const newGameState = setGameState(
@@ -141,10 +137,9 @@ export const setupSocketIO = (io: Server) => {
 
 			// bot goes first if it's white (white always goes first)
 			if (botIsWhite) {
-				setTimeout(() => {
-					const botResult = makeBotMove(getGameState(), botIsWhite);
+				makeBotMove(getGameState(), activeGame!.botIsWhite!).then((botResult) => {
 					if (botResult) broadcastGameState(botResult, activeGame!);
-				}, 1000); // first move delay
+				});
 			}
 		});
 
