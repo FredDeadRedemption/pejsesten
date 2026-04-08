@@ -1,13 +1,12 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
-import { writable } from 'svelte/store';
 import type { PlayerMetaData, GameStateClient, AttackData } from '$lib/shared/types';
 
 let socket: Socket | null = null;
 
 // Function to invalidate (disconnect) the socket
 
-export const gameState = writable<GameStateClient>({
+export let gameState = $state<GameStateClient>({
 	whitePlayerID: '',
 	blackPlayerID: '',
 	enemy: {
@@ -50,7 +49,7 @@ export const connectSocket = (url: string) => {
 	});
 
 	socket.on('newGameState', (newGameState: GameStateClient) => {
-		gameState.set(newGameState);
+		Object.assign(gameState, newGameState);
 		console.log(newGameState); // log fra helvede
 	});
 

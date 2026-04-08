@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import Card from './card.svelte';
-	import { endTurn, gameState, playCard } from '$lib/socket/socket';
+	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
 	import type { CardEntity } from '$lib/shared/types';
 	import { beginTargeting } from '$lib/targeting.svelte';
 
@@ -98,8 +98,8 @@
 
 			// if friendly board is empty and spell needs friendly minion target, just play without target
 			if (
-				(needsFriendlyMinion && $gameState.self.battlefield.length === 0) ||
-				(needsEnemyMinion && $gameState.enemy.battlefield.length === 0)
+				(needsFriendlyMinion && gameState.self.battlefield.length === 0) ||
+				(needsEnemyMinion && gameState.enemy.battlefield.length === 0)
 			) {
 				console.log('NFM ' + needsFriendlyMinion);
 				playCard({ index: dragIndex });

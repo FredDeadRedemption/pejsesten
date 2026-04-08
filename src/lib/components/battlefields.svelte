@@ -1,6 +1,6 @@
 <script lang="ts">
 	import CardSmall from './cardSmall.svelte';
-	import { attack, playCard } from '$lib/socket/socket';
+	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
 	import type { Hero, MinionEntity } from '$lib/shared/types';
 	import { endTargeting, targeting } from '$lib/targeting.svelte';
 
@@ -133,6 +133,9 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
+			//class:affordable={
+			//	card.cost >= gameState.
+			//}
 			style="--i: {index}; --total: {enemyBattleField.length}"
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entityID;
