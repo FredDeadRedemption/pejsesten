@@ -4,6 +4,7 @@ const getCardByID = (id: number) => cards.find((card) => card.id === id);
 
 export const getCards = () => cards;
 
+// Transforms deck ids from static cards into cards entities with state variables
 // Transform Deck: [1, 2, 3] to (actual)Deck: [CardEntity, CardEntity, CardEntity]
 export const deckToCards = (deck: number[]): CardEntity[] =>
 	deck
