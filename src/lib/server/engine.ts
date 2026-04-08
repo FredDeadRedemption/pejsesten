@@ -12,7 +12,7 @@ import type {
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
-import { STARTING_HAND_SIZE, STARTING_HP } from './settings';
+import { MAX_MANA, STARTING_HAND_SIZE, STARTING_HP, STARTING_MANA } from './settings';
 
 let gameState: GameStateServer;
 
@@ -217,8 +217,8 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			baseMana: 1,
-			mana: 1
+			baseMana: STARTING_MANA,
+			mana: STARTING_MANA
 		},
 		black: {
 			deck: blackDeck,
@@ -229,8 +229,8 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			baseMana: 0,
-			mana: 0
+			baseMana: STARTING_MANA - 1,
+			mana: STARTING_MANA - 1
 		},
 		whitePlayerID: isPlayer1White ? player1ID : player2ID,
 		blackPlayerID: isPlayer1White ? player2ID : player1ID,
@@ -254,7 +254,7 @@ export const endTurn = (): GameStateResponse => {
 
 	// add mana to the new activer player
 	// set current mana to base mana
-	sourceBoard.baseMana += 1;
+	sourceBoard.baseMana = Math.min(sourceBoard.baseMana + 1, MAX_MANA);
 	sourceBoard.mana = sourceBoard.baseMana;
 
 	// unexhaust the new active player's minions
@@ -278,7 +278,7 @@ export const playCard = (
 	const enemyBoard = getEnemyBoard(gameState);
 
 	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
-	
+
 	if (!card) return null;
 	if (card.cost > sourceBoard.mana) return null;
 
@@ -345,7 +345,7 @@ export const playCard = (
 	checkForDeaths();
 
 	// pay for the card
-	sourceBoard.mana -= consumed.cost
+	sourceBoard.mana -= consumed.cost;
 
 	gameState.cardsPlayedThisTurn++;
 
