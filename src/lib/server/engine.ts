@@ -217,7 +217,7 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			baseMana: 0,
+			baseMana: 1,
 			mana: 1
 		},
 		black: {
@@ -341,6 +341,9 @@ export const playCard = (
 	});
 	processEffectQueue();
 	checkForDeaths();
+
+	// pay for the card
+	sourceBoard.mana -= consumed.cost
 
 	gameState.cardsPlayedThisTurn++;
 
