@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { scale } from 'svelte/transition';
 	import Card from './card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
 	import type { CardEntity } from '$lib/shared/types';
@@ -95,31 +94,15 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
+			class:hovered={hoverIndex === index && !draggin}
 			style="{self ? fanStyle(index, hand.length) : `--fan-x: ${(index - (hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {hoverIndex === index ? 100 : index}"
 			onmouseenter={() => setHover(index)}
 			onmouseleave={clearHover}
+			onmousedown={(e) => { if (hoverIndex === index) beginDrag(index, e) }}
 		>
-			{#if hoverIndex === index && !draggin}
+			{#if draggerIndex !== index}
 				<div
-					class="hover-card"
-					class:affordable={card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
-					class:procced={!isSpellAndHasNoValidTarget(card, gameState) && card.cost <= gameState.self.mana && card.abilities?.some(
-						(a) =>
-							a.requirements &&
-							a.requirements.length > 0 &&
-							a.requirements.every((r) =>
-								checkRequirement(r, gameState.self, gameState.enemy, gameState)
-							)
-					)}
-					onmousedown={(e: MouseEvent) => beginDrag(index, e)}
-					in:scale={{ start: 0.9, duration: 250 }}
-					out:scale={{ duration: 200 }}
-				>
-					<Card card={card!} />
-				</div>
-			{:else if draggerIndex !== index}
-				<div
-					class="default-card"
+					class="hand-card"
 					class:affordable={card.cost <= gameState.self.mana &&
 						!isSpellAndHasNoValidTarget(card, gameState)}
 					class:procced={!isSpellAndHasNoValidTarget(card, gameState) &&
@@ -133,7 +116,7 @@
 								)
 						)}
 				>
-					<Card compact={false} {card} />
+					<Card {card} />
 				</div>
 			{/if}
 		</div>
@@ -215,15 +198,17 @@
 			rotate(var(--fan-rot));
 		transform-origin: center bottom;
 	}
-	.default-card {
+	.hand-card {
 		scale: 0.6;
+		translate: 0 0;
+		rotate: 0deg;
+		transform-origin: center bottom;
+		transition: scale 0.2s ease, translate 0.2s ease, rotate 0.2s ease;
 	}
-	.hover-card {
+	.card-container.hovered .hand-card {
+		scale: 1;
+		translate: 0 -60%;
+		rotate: calc(var(--fan-rot) * -1);
 		cursor: pointer;
-		border-radius: 5px;
-		position: absolute;
-		top: 0;
-		left: -35px;
-		transform: translateY(-60%) rotate(calc(var(--fan-rot) * -1));
 	}
 </style>
