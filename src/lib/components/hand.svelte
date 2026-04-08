@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import Card from './card.svelte';
-	import { endTurn, gameState, playCard } from '$lib/socket/socket';
+	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
 	import type { CardEntity } from '$lib/shared/types';
 	import { beginTargeting } from '$lib/targeting.svelte';
+	import { checkRequirement } from '$lib/shared/lib';
+	import { isSpellAndHasNoValidTarget } from '$lib/util';
 
 	let handElement: HTMLElement;
 
@@ -46,66 +48,23 @@
 		dragCoords.x += e.movementX;
 		dragCoords.y += e.movementY;
 	};
-	function tryPlaceCard(x: number, y: number, dragIndex: number) {
+	const tryPlaceCard = (x: number, y: number, dragIndex: number) => {
 		if (!handElement) return;
-		if (dragIndex === null) return;
 		const rect = handElement.getBoundingClientRect();
-		const cardWidth = 100;
-		const cardHeight = 147;
 		const isWithinHand =
-			x + cardWidth / 2 >= rect.left &&
-			x + cardWidth / 2 <= rect.right &&
-			y + cardHeight / 2 >= rect.top &&
-			y + cardHeight / 2 <= rect.bottom;
+			x + 50 >= rect.left && x + 50 <= rect.right && y + 73 >= rect.top && y + 73 <= rect.bottom;
 		if (isWithinHand) return;
 
 		const card = hand[dragIndex];
 		if (!card) return;
 
-		// check if minion needs targeting on play
-		// and that target is a single target
 		const needsTarget = card.abilities.some(
 			(a) =>
 				a.trigger === 'onPlay' &&
 				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
 		);
 
-		if (needsTarget) {
-			// check if it needs a friendly minion but board is empty
-			const needsFriendlyMinion = card.abilities.some(
-				(a) =>
-					a.trigger === 'onPlay' &&
-					a.effects.some(
-						(e) =>
-							'targetSpec' in e &&
-							e.targetSpec.scope === 'single' &&
-							e.targetSpec.side === 'friendly' &&
-							e.targetSpec.entityType === 'minion'
-					)
-			);
-
-			const needsEnemyMinion = card.abilities.some(
-				(a) =>
-					a.trigger === 'onPlay' &&
-					a.effects.some(
-						(e) =>
-							'targetSpec' in e &&
-							e.targetSpec.scope === 'single' &&
-							e.targetSpec.side === 'enemy' &&
-							e.targetSpec.entityType === 'minion'
-					)
-			);
-
-			// if friendly board is empty and spell needs friendly minion target, just play without target
-			if (
-				(needsFriendlyMinion && $gameState.self.battlefield.length === 0) ||
-				(needsEnemyMinion && $gameState.enemy.battlefield.length === 0)
-			) {
-				console.log('NFM ' + needsFriendlyMinion);
-				playCard({ index: dragIndex });
-				return;
-			}
-
+		if (needsTarget && !isSpellAndHasNoValidTarget(card, gameState)) {
 			beginTargeting(card, dragIndex);
 			return;
 		}
@@ -122,8 +81,8 @@
 			>END TURN</button
 		>
 	{/if}
-	<div class="mana" class:self>{mana}</div>
-	{#each hand as cardInHand, index}
+	<div class="mana" class:self>{mana}/{gameState.self.baseMana}</div>
+	{#each hand as card, index}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
@@ -134,15 +93,38 @@
 			{#if hoverIndex === index && !draggin}
 				<div
 					class="hover-card"
+					class:affordable={card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
+					class:procced={!isSpellAndHasNoValidTarget(card, gameState) && card.cost <= gameState.self.mana && card.abilities?.some(
+						(a) =>
+							a.requirements &&
+							a.requirements.length > 0 &&
+							a.requirements.every((r) =>
+								checkRequirement(r, gameState.self, gameState.enemy, gameState)
+							)
+					)}
 					onmousedown={(e: MouseEvent) => beginDrag(index, e)}
 					in:scale={{ start: 0.9, duration: 250 }}
 					out:scale={{ duration: 200 }}
 				>
-					<Card card={cardInHand!} />
+					<Card card={card!} />
 				</div>
 			{:else if draggerIndex !== index}
-				<div class="default-card">
-					<Card compact={true} card={cardInHand} />
+				<div
+					class="default-card"
+					class:affordable={card.cost <= gameState.self.mana &&
+						!isSpellAndHasNoValidTarget(card, gameState)}
+					class:procced={!isSpellAndHasNoValidTarget(card, gameState) &&
+						card.cost <= gameState.self.mana &&
+						card.abilities?.some(
+							(a) =>
+								a.requirements &&
+								a.requirements.length > 0 &&
+								a.requirements.every((r) =>
+									checkRequirement(r, gameState.self, gameState.enemy, gameState)
+								)
+						)}
+				>
+					<Card compact={false} {card} />
 				</div>
 			{/if}
 		</div>
@@ -216,16 +198,18 @@
 	.card-container {
 		position: absolute;
 		height: 147px;
-		width: 100px;
+		width: 170px;
 		transition: all 0.3s ease;
 
 		/* Centered overlapping translation */
 		left: 50%;
 		transform: translateX(calc(-50% + (var(--i) - (var(--total) - 1) / 2) * 80px)) translateY(10%);
 	}
+	.default-card {
+		scale: 0.6;
+	}
 	.hover-card {
 		cursor: pointer;
-		border: 2px solid greenyellow;
 		border-radius: 5px;
 		position: absolute;
 		top: 0;

@@ -4,6 +4,7 @@ import type {
 	Board,
 	CardEntity,
 	Effect,
+	GameStateClient,
 	GameStateServer,
 	Hero,
 	MinionEntity,
@@ -11,7 +12,7 @@ import type {
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
-import { STARTING_HAND_SIZE, STARTING_HP } from './settings';
+import { MAX_MANA, STARTING_HAND_SIZE, STARTING_HP, STARTING_MANA } from './settings';
 
 let gameState: GameStateServer;
 
@@ -39,7 +40,8 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 const checkRequirement = (
 	rec: Requirement | undefined,
 	_sourceBoard: Board,
-	_enemyBoard: Board
+	_enemyBoard: Board,
+	gameState: GameStateServer | GameStateClient
 ): boolean => {
 	if (!rec) return true; // no rec = always fires
 	if (rec.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
@@ -82,7 +84,13 @@ const checkForDeaths = () => {
 				// enqueue onDeath abilities before removing
 				minion.abilities.forEach((ability) => {
 					if (ability.trigger !== 'onDeath') return;
-					if (ability.requirements && !ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard))) return;
+					if (
+						ability.requirements &&
+						!ability.requirements.every((r) =>
+							checkRequirement(r, sourceBoard, enemyBoard, gameState)
+						)
+					)
+						return;
 					anyOnDeathTriggers = true;
 					ability.effects.forEach((effect) => {
 						effectQueue.push({
@@ -209,8 +217,8 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			baseMana: 0,
-			mana: 1
+			baseMana: STARTING_MANA,
+			mana: STARTING_MANA
 		},
 		black: {
 			deck: blackDeck,
@@ -221,8 +229,8 @@ export const setGameState = (
 				attack: 0,
 				defence: STARTING_HP
 			},
-			baseMana: 0,
-			mana: 0
+			baseMana: STARTING_MANA - 1,
+			mana: STARTING_MANA - 1
 		},
 		whitePlayerID: isPlayer1White ? player1ID : player2ID,
 		blackPlayerID: isPlayer1White ? player2ID : player1ID,
@@ -246,7 +254,7 @@ export const endTurn = (): GameStateResponse => {
 
 	// add mana to the new activer player
 	// set current mana to base mana
-	sourceBoard.baseMana += 1;
+	sourceBoard.baseMana = Math.min(sourceBoard.baseMana + 1, MAX_MANA);
 	sourceBoard.mana = sourceBoard.baseMana;
 
 	// unexhaust the new active player's minions
@@ -270,7 +278,9 @@ export const playCard = (
 	const enemyBoard = getEnemyBoard(gameState);
 
 	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
+
 	if (!card) return null;
+	if (card.cost > sourceBoard.mana) return null;
 
 	if (card.type === 'incantation') {
 		// if card has effect with targetSpec that requires a
@@ -315,7 +325,11 @@ export const playCard = (
 
 	consumed.abilities.forEach((ability) => {
 		if (ability.trigger !== 'onPlay') return;
-		if (ability.requirements && !ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard))) return;
+		if (
+			ability.requirements &&
+			!ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard, gameState))
+		)
+			return;
 		ability.effects.forEach((effect) => {
 			effectQueue.push({
 				effect,
@@ -329,6 +343,9 @@ export const playCard = (
 	});
 	processEffectQueue();
 	checkForDeaths();
+
+	// pay for the card
+	sourceBoard.mana -= consumed.cost;
 
 	gameState.cardsPlayedThisTurn++;
 

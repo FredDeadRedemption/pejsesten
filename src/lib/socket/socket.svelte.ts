@@ -1,13 +1,12 @@
 import { goto } from '$app/navigation';
 import { io, type Socket } from 'socket.io-client';
-import { writable } from 'svelte/store';
 import type { PlayerMetaData, GameStateClient, AttackData } from '$lib/shared/types';
 
 let socket: Socket | null = null;
 
 // Function to invalidate (disconnect) the socket
 
-export const gameState = writable<GameStateClient>({
+export let gameState = $state<GameStateClient>({
 	whitePlayerID: '',
 	blackPlayerID: '',
 	enemy: {
@@ -15,7 +14,7 @@ export const gameState = writable<GameStateClient>({
 		hand: [],
 		hero: {
 			attack: 0,
-			defence: 0,
+			defence: 0
 		},
 		graveyard: [],
 		deck: [],
@@ -27,7 +26,7 @@ export const gameState = writable<GameStateClient>({
 		hand: [],
 		hero: {
 			attack: 0,
-			defence: 0,
+			defence: 0
 		},
 		graveyard: [],
 		deck: [],
@@ -35,6 +34,7 @@ export const gameState = writable<GameStateClient>({
 		mana: 0
 	},
 	turnCount: 0,
+	cardsPlayedThisTurn: 0,
 	yourTurn: false
 });
 
@@ -50,8 +50,7 @@ export const connectSocket = (url: string) => {
 	});
 
 	socket.on('newGameState', (newGameState: GameStateClient) => {
-		gameState.set(newGameState);
-		console.log(newGameState); // log fra helvede
+		Object.assign(gameState, newGameState);
 	});
 
 	socket.on('cardDrawn', (card: string) => {
@@ -88,11 +87,10 @@ export const queueUpBot = (data: PlayerMetaData) => fire(socket, 'queueBot', dat
 
 export const leaveQueue = () => fire(socket, 'leaveQueue');
 
-export const playCard = (data: { index: number; target?: string }) =>
-{
+export const playCard = (data: { index: number; target?: string }) => {
 	fire(socket, 'playCard', data);
-	console.log("PlayCard", data.index, data.target)
-}
+	console.log('PlayCard', data.index, data.target);
+};
 
 export const attack = (data: AttackData) => fire(socket, 'attack', data);
 

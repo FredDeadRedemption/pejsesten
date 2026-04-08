@@ -50,6 +50,7 @@ export function parseGameStateToGameStateClient(
     blackPlayerID: gameStateServer.blackPlayerID,
     yourTurn: parsingForWhite === gameStateServer.whiteTurn,
     turnCount: gameStateServer.turnCount,
+    cardsPlayedThisTurn: gameStateServer.cardsPlayedThisTurn
   };
 }
 

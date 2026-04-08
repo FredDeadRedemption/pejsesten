@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { endTurn } from '$lib/socket/socket';
+	import { endTurn } from '$lib/socket/socket.svelte';
 	import { page } from '$app/state';
-	import { gameState } from '$lib/socket/socket';
+	import { gameState } from '$lib/socket/socket.svelte';
 	import Hand from '$lib/components/hand.svelte';
 	import Battlefields from '$lib/components/battlefields.svelte';
 	import Deck from '$lib/components/deck.svelte';
@@ -49,36 +49,36 @@
 	<!-- GRAVEYARDS -->
 	<div class="graveyard-zone">
 		<div class="enemy-graveyard">
-			<Graveyard bind:graveyard={$gameState.enemy.graveyard}></Graveyard>
+			<Graveyard bind:graveyard={gameState.enemy.graveyard}></Graveyard>
 		</div>
 		<div class="self-graveyard">
-			<Graveyard bind:graveyard={$gameState.self.graveyard}></Graveyard>
+			<Graveyard bind:graveyard={gameState.self.graveyard}></Graveyard>
 		</div>
 	</div>
 	<!-- HANDS & BATTLEFIELD -->
 	<div class="hand-battlefield-zone">
 		<div class="enemy-hand">
-			<Hand bind:hand={$gameState.enemy.hand} bind:mana={$gameState.enemy.mana}></Hand>
+			<Hand bind:hand={gameState.enemy.hand} bind:mana={gameState.enemy.mana}></Hand>
 		</div>
 		<div class="battlefield">
 			<Battlefields
-				bind:selfBattleField={$gameState.self.battlefield}
-				bind:enemyBattleField={$gameState.enemy.battlefield}
-				bind:selfHero={$gameState.self.hero}
-				bind:enemyHero={$gameState.enemy.hero}
+				bind:selfBattleField={gameState.self.battlefield}
+				bind:enemyBattleField={gameState.enemy.battlefield}
+				bind:selfHero={gameState.self.hero}
+				bind:enemyHero={gameState.enemy.hero}
 			></Battlefields>
 		</div>
 		<div class="self-hand">
-			<Hand self={true} yourTurn={$gameState.yourTurn} bind:hand={$gameState.self.hand} bind:mana={$gameState.self.mana}></Hand>
+			<Hand self={true} yourTurn={gameState.yourTurn} bind:hand={gameState.self.hand} bind:mana={gameState.self.mana}></Hand>
 		</div>
 	</div>
 	<!-- DECKS -->
 	<div class="deck-zone">
 		<div class="enemy-deck">
-			<Deck bind:deck={$gameState.enemy.deck}></Deck>
+			<Deck bind:deck={gameState.enemy.deck}></Deck>
 		</div>
 		<div class="self-deck">
-			<Deck bind:deck={$gameState.self.deck}></Deck>
+			<Deck bind:deck={gameState.self.deck}></Deck>
 		</div>
 	</div>
 </div>
