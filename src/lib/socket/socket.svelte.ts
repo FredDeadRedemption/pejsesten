@@ -14,7 +14,7 @@ export let gameState = $state<GameStateClient>({
 		hand: [],
 		hero: {
 			attack: 0,
-			defence: 0,
+			defence: 0
 		},
 		graveyard: [],
 		deck: [],
@@ -26,7 +26,7 @@ export let gameState = $state<GameStateClient>({
 		hand: [],
 		hero: {
 			attack: 0,
-			defence: 0,
+			defence: 0
 		},
 		graveyard: [],
 		deck: [],
@@ -34,6 +34,7 @@ export let gameState = $state<GameStateClient>({
 		mana: 0
 	},
 	turnCount: 0,
+	cardsPlayedThisTurn: 0,
 	yourTurn: false
 });
 
@@ -49,8 +50,13 @@ export const connectSocket = (url: string) => {
 	});
 
 	socket.on('newGameState', (newGameState: GameStateClient) => {
-		Object.assign(gameState, newGameState);
-		console.log(newGameState); // log fra helvede
+		gameState.self = newGameState.self;
+		gameState.enemy = newGameState.enemy;
+		gameState.whitePlayerID = newGameState.whitePlayerID;
+		gameState.blackPlayerID = newGameState.blackPlayerID;
+		gameState.yourTurn = newGameState.yourTurn;
+		gameState.turnCount = newGameState.turnCount;
+		gameState.cardsPlayedThisTurn = newGameState.cardsPlayedThisTurn;
 	});
 
 	socket.on('cardDrawn', (card: string) => {
@@ -87,11 +93,10 @@ export const queueUpBot = (data: PlayerMetaData) => fire(socket, 'queueBot', dat
 
 export const leaveQueue = () => fire(socket, 'leaveQueue');
 
-export const playCard = (data: { index: number; target?: string }) =>
-{
+export const playCard = (data: { index: number; target?: string }) => {
 	fire(socket, 'playCard', data);
-	console.log("PlayCard", data.index, data.target)
-}
+	console.log('PlayCard', data.index, data.target);
+};
 
 export const attack = (data: AttackData) => fire(socket, 'attack', data);
 

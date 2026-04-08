@@ -1,0 +1,32 @@
+$glow-affordable: rgba(119, 206, 87);
+$glow-affordable-peak: rgba(132, 220, 100);
+$glow-procced: rgba(206, 160, 87);
+$glow-procced-peak: rgba(220, 175, 100);
+
+@mixin glow-pulse($name, $color, $color-peak, $duration: 5s) {
+	box-shadow:
+		0 0 10px 3px rgba($color, 0.7),
+		0 0 30px 8px rgba($color, 0.25);
+	animation: #{$name} $duration ease-in-out infinite alternate;
+
+	@keyframes #{$name} {
+		from {
+			box-shadow:
+				0 0 10px 3px rgba($color, 0.7),
+				0 0 30px 8px rgba($color, 0.25);
+		}
+		to {
+			box-shadow:
+				0 0 14px 5px rgba($color-peak, 0.8),
+				0 0 38px 10px rgba($color-peak, 0.3);
+		}
+	}
+}
+
+.affordable {
+	@include glow-pulse(glow-affordable, $glow-affordable, $glow-affordable-peak);
+}
+
+.procced {
+	@include glow-pulse(glow-proceed, $glow-procced, $glow-procced-peak, 3s);
+}

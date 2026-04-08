@@ -4,6 +4,7 @@ import type {
 	Board,
 	CardEntity,
 	Effect,
+	GameStateClient,
 	GameStateServer,
 	Hero,
 	MinionEntity,
@@ -39,7 +40,8 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 const checkRequirement = (
 	rec: Requirement | undefined,
 	_sourceBoard: Board,
-	_enemyBoard: Board
+	_enemyBoard: Board,
+	gameState: GameStateServer | GameStateClient
 ): boolean => {
 	if (!rec) return true; // no rec = always fires
 	if (rec.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
@@ -82,7 +84,13 @@ const checkForDeaths = () => {
 				// enqueue onDeath abilities before removing
 				minion.abilities.forEach((ability) => {
 					if (ability.trigger !== 'onDeath') return;
-					if (ability.requirements && !ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard))) return;
+					if (
+						ability.requirements &&
+						!ability.requirements.every((r) =>
+							checkRequirement(r, sourceBoard, enemyBoard, gameState)
+						)
+					)
+						return;
 					anyOnDeathTriggers = true;
 					ability.effects.forEach((effect) => {
 						effectQueue.push({
@@ -315,7 +323,11 @@ export const playCard = (
 
 	consumed.abilities.forEach((ability) => {
 		if (ability.trigger !== 'onPlay') return;
-		if (ability.requirements && !ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard))) return;
+		if (
+			ability.requirements &&
+			!ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard, gameState))
+		)
+			return;
 		ability.effects.forEach((effect) => {
 			effectQueue.push({
 				effect,

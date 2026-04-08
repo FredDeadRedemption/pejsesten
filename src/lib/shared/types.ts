@@ -135,6 +135,7 @@ export type GameStateClient = {
 	blackPlayerID: string; // used for validation turn
 	yourTurn: boolean; // used for processing the actual game
 	turnCount: number;
+	cardsPlayedThisTurn: number;
 };
 
 export type PlayerMetaData = {

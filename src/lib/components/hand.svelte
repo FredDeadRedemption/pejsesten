@@ -4,6 +4,7 @@
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
 	import type { CardEntity } from '$lib/shared/types';
 	import { beginTargeting } from '$lib/targeting.svelte';
+	import { checkRequirement } from '$lib/shared/lib';
 
 	let handElement: HTMLElement;
 
@@ -135,6 +136,14 @@
 				<div
 					class="hover-card"
 					class:affordable={card.cost <= gameState.self.mana}
+					class:procced={card.abilities?.some(
+						(a) =>
+							a.requirements &&
+							a.requirements.length > 0 &&
+							a.requirements.every((r) =>
+								checkRequirement(r, gameState.self, gameState.enemy, gameState)
+							)
+					)}
 					onmousedown={(e: MouseEvent) => beginDrag(index, e)}
 					in:scale={{ start: 0.9, duration: 250 }}
 					out:scale={{ duration: 200 }}
@@ -142,7 +151,18 @@
 					<Card card={card!} />
 				</div>
 			{:else if draggerIndex !== index}
-				<div class="default-card" class:affordable={card.cost <= gameState.self.mana}>
+				<div
+					class="default-card"
+					class:affordable={card.cost <= gameState.self.mana}
+					class:procced={card.abilities?.some(
+						(a) =>
+							a.requirements &&
+							a.requirements.length > 0 &&
+							a.requirements.every((r) =>
+								checkRequirement(r, gameState.self, gameState.enemy, gameState)
+							)
+					)}
+				>
 					<Card compact={false} {card} />
 				</div>
 			{/if}
@@ -217,7 +237,7 @@
 	.card-container {
 		position: absolute;
 		height: 147px;
-		width: 130px;
+		width: 170px;
 		transition: all 0.3s ease;
 
 		/* Centered overlapping translation */
@@ -226,25 +246,6 @@
 	}
 	.default-card {
 		scale: 0.6;
-		&.affordable {
-			box-shadow:
-				0 0 8px 2px rgba(125, 206, 87, 0.6),
-				0 0 20px 4px rgba(135, 92, 143, 0.2);
-			animation: glow-pulse 2s ease-in-out infinite alternate;
-		}
-
-		@keyframes glow-pulse {
-			from {
-				box-shadow:
-					0 0 8px 2px rgba(146, 206, 87, 0.6),
-					0 0 20px 4px rgba(121, 206, 87, 0.2);
-			}
-			to {
-				box-shadow:
-					0 0 12px 3px rgba(150, 206, 87, 0.8),
-					0 0 28px 6px rgba(141, 206, 87, 0.3);
-			}
-		}
 	}
 	.hover-card {
 		cursor: pointer;
@@ -253,24 +254,5 @@
 		top: 0;
 		left: -35px;
 		transform: translateY(-60%);
-		&.affordable {
-			box-shadow:
-				0 0 8px 2px rgba(125, 206, 87, 0.6),
-				0 0 20px 4px rgba(135, 92, 143, 0.2);
-			animation: glow-pulse 2s ease-in-out infinite alternate;
-		}
-
-		@keyframes glow-pulse {
-			from {
-				box-shadow:
-					0 0 8px 2px rgba(146, 206, 87, 0.6),
-					0 0 20px 4px rgba(121, 206, 87, 0.2);
-			}
-			to {
-				box-shadow:
-					0 0 12px 3px rgba(150, 206, 87, 0.8),
-					0 0 28px 6px rgba(141, 206, 87, 0.3);
-			}
-		}
 	}
 </style>
