@@ -21,6 +21,15 @@
 	let dragCoords = $state({ x: 0, y: 0 });
 	let dragCard: CardEntity | null = $state(null);
 
+	// fan layout: rotation, arc, and horizontal spread
+	const fanStyle = (i: number, total: number) => {
+		const offset = i - (total - 1) / 2;
+		const spacing = Math.min(70, 400 / Math.max(total, 1));
+		const rot = offset * 5;
+		const arc = offset * offset * 2;
+		return `--fan-x: ${offset * spacing}px; --fan-rot: ${rot}deg; --fan-arc: ${arc}px`;
+	};
+
 	const setHover = (index: number) => (hoverIndex = index);
 	const clearHover = () => (hoverIndex = null);
 
@@ -86,7 +95,7 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			style="--i: {index}; --total: {hand.length}"
+			style="{self ? fanStyle(index, hand.length) : `--fan-x: ${(index - (hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {hoverIndex === index ? 100 : index}"
 			onmouseenter={() => setHover(index)}
 			onmouseleave={clearHover}
 		>
@@ -200,10 +209,11 @@
 		height: 147px;
 		width: 170px;
 		transition: all 0.3s ease;
-
-		/* Centered overlapping translation */
 		left: 50%;
-		transform: translateX(calc(-50% + (var(--i) - (var(--total) - 1) / 2) * 80px)) translateY(10%);
+		transform: translateX(calc(-50% + var(--fan-x)))
+			translateY(calc(10% + var(--fan-arc)))
+			rotate(var(--fan-rot));
+		transform-origin: center bottom;
 	}
 	.default-card {
 		scale: 0.6;
@@ -214,6 +224,6 @@
 		position: absolute;
 		top: 0;
 		left: -35px;
-		transform: translateY(-60%);
+		transform: translateY(-60%) rotate(calc(var(--fan-rot) * -1));
 	}
 </style>
