@@ -26,7 +26,14 @@
 		const spacing = Math.min(70, 400 / Math.max(total, 1));
 		const rot = offset * 5;
 		const arc = offset * offset * 2;
-		return `--fan-x: ${offset * spacing}px; --fan-rot: ${rot}deg; --fan-arc: ${arc}px`;
+
+		// spread neighbors apart when hovering
+		let spread = 0;
+		if (hoverIndex !== null && !draggin && i !== hoverIndex) {
+			spread = i < hoverIndex ? -45 : 45;
+		}
+
+		return `--fan-x: ${offset * spacing + spread}px; --fan-rot: ${rot}deg; --fan-arc: ${arc}px`;
 	};
 
 	const setHover = (index: number) => (hoverIndex = index);
@@ -95,7 +102,7 @@
 		<div
 			class="card-container"
 			class:hovered={hoverIndex === index && !draggin}
-			style="{self ? fanStyle(index, hand.length) : `--fan-x: ${(index - (hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {hoverIndex === index ? 100 : index}"
+			style="{self ? fanStyle(index, hand.length) : `--fan-x: ${(index - (hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
 			onmouseenter={() => setHover(index)}
 			onmouseleave={clearHover}
 			onmousedown={(e) => { if (hoverIndex === index) beginDrag(index, e) }}
