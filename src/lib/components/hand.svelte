@@ -123,7 +123,7 @@
 			>END TURN</button
 		>
 	{/if}
-	<div class="mana" class:self>{mana}</div>
+	<div class="mana" class:self>{mana}/{gameState.self.baseMana}</div>
 	{#each hand as card, index}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
