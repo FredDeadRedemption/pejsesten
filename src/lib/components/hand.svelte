@@ -135,7 +135,7 @@
 			{#if hoverIndex === index && !draggin}
 				<div
 					class="hover-card"
-					class:affordable={card.cost <= gameState.self.mana}
+					class:affordable={card.cost <= gameState.self.mana && card.cost <= gameState.self.mana}
 					class:procced={card.abilities?.some(
 						(a) =>
 							a.requirements &&
@@ -154,7 +154,7 @@
 				<div
 					class="default-card"
 					class:affordable={card.cost <= gameState.self.mana}
-					class:procced={card.abilities?.some(
+					class:procced={card.cost <= gameState.self.mana && card.abilities?.some(
 						(a) =>
 							a.requirements &&
 							a.requirements.length > 0 &&
