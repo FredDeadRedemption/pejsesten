@@ -133,9 +133,6 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			//class:affordable={
-			//	card.cost >= gameState.
-			//}
 			style="--i: {index}; --total: {enemyBattleField.length}"
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entityID;

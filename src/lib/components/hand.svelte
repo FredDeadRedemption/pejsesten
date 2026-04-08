@@ -123,7 +123,7 @@
 		>
 	{/if}
 	<div class="mana" class:self>{mana}</div>
-	{#each hand as cardInHand, index}
+	{#each hand as card, index}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
@@ -134,15 +134,16 @@
 			{#if hoverIndex === index && !draggin}
 				<div
 					class="hover-card"
+					class:affordable={card.cost <= gameState.self.mana}
 					onmousedown={(e: MouseEvent) => beginDrag(index, e)}
 					in:scale={{ start: 0.9, duration: 250 }}
 					out:scale={{ duration: 200 }}
 				>
-					<Card card={cardInHand!} />
+					<Card card={card!} />
 				</div>
 			{:else if draggerIndex !== index}
-				<div class="default-card">
-					<Card compact={true} card={cardInHand} />
+				<div class="default-card" class:affordable={card.cost <= gameState.self.mana}>
+					<Card compact={false} {card} />
 				</div>
 			{/if}
 		</div>
@@ -216,20 +217,60 @@
 	.card-container {
 		position: absolute;
 		height: 147px;
-		width: 100px;
+		width: 130px;
 		transition: all 0.3s ease;
 
 		/* Centered overlapping translation */
 		left: 50%;
 		transform: translateX(calc(-50% + (var(--i) - (var(--total) - 1) / 2) * 80px)) translateY(10%);
 	}
+	.default-card {
+		scale: 0.6;
+		&.affordable {
+			box-shadow:
+				0 0 8px 2px rgba(125, 206, 87, 0.6),
+				0 0 20px 4px rgba(135, 92, 143, 0.2);
+			animation: glow-pulse 2s ease-in-out infinite alternate;
+		}
+
+		@keyframes glow-pulse {
+			from {
+				box-shadow:
+					0 0 8px 2px rgba(146, 206, 87, 0.6),
+					0 0 20px 4px rgba(121, 206, 87, 0.2);
+			}
+			to {
+				box-shadow:
+					0 0 12px 3px rgba(150, 206, 87, 0.8),
+					0 0 28px 6px rgba(141, 206, 87, 0.3);
+			}
+		}
+	}
 	.hover-card {
 		cursor: pointer;
-		border: 2px solid greenyellow;
 		border-radius: 5px;
 		position: absolute;
 		top: 0;
 		left: -35px;
 		transform: translateY(-60%);
+		&.affordable {
+			box-shadow:
+				0 0 8px 2px rgba(125, 206, 87, 0.6),
+				0 0 20px 4px rgba(135, 92, 143, 0.2);
+			animation: glow-pulse 2s ease-in-out infinite alternate;
+		}
+
+		@keyframes glow-pulse {
+			from {
+				box-shadow:
+					0 0 8px 2px rgba(146, 206, 87, 0.6),
+					0 0 20px 4px rgba(121, 206, 87, 0.2);
+			}
+			to {
+				box-shadow:
+					0 0 12px 3px rgba(150, 206, 87, 0.8),
+					0 0 28px 6px rgba(141, 206, 87, 0.3);
+			}
+		}
 	}
 </style>
