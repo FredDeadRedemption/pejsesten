@@ -58,7 +58,7 @@
 	<!-- HANDS & BATTLEFIELD -->
 	<div class="hand-battlefield-zone">
 		<div class="enemy-hand">
-			<Hand bind:hand={gameState.enemy.hand} bind:mana={gameState.enemy.mana}></Hand>
+			<Hand bind:hand={gameState.enemy.hand} bind:mana={gameState.enemy.mana} enemy={true}></Hand>
 		</div>
 		<div class="battlefield">
 			<Battlefields

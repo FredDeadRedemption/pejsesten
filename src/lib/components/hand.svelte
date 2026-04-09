@@ -13,8 +13,9 @@
 		hand = $bindable(),
 		mana = $bindable(),
 		self = false,
-		yourTurn = false
-	}: { hand: CardEntity[]; mana: number; self?: boolean; yourTurn?: boolean } = $props();
+		yourTurn = false,
+		enemy = false
+	}: { hand: CardEntity[]; mana: number; self?: boolean; yourTurn?: boolean, enemy?: boolean } = $props();
 
 	// half card dimensions, used to find card center from top-left coords
 	const CARD_CX = 85;
@@ -127,7 +128,7 @@
 
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
 
-<div id="hand" bind:this={handElement}>
+<div class="hand" bind:this={handElement} class:enemy>
 	{#if self}
 		<button class="end" class:self class:inactive={!yourTurn} onclick={() => endTurn()}
 			>END TURN</button
@@ -226,7 +227,7 @@
 		}
 	}
 
-	#hand {
+	.hand {
 		display: flex;
 		justify-content: flex-end;
 		margin: 0 auto;
@@ -234,6 +235,9 @@
 		position: relative;
 		height: 100%;
 		width: 100%;
+		&.enemy{
+			transform: translateY(-150px);
+		}
 	}
 
 	.card-container {
