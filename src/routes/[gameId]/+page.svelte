@@ -120,7 +120,7 @@
 	}
 	.hand-battlefield-zone {
 		display: grid;
-		grid-template-rows: 18% 1fr 18%;
+		grid-template-rows: 1fr 360px 1fr;
 	}
 	.battlefield {
 		background-color: rgb(70, 65, 74);

@@ -224,15 +224,15 @@
 		position: absolute;
 		height: 60px;
 		width: 60px;
-		border-radius: 100px;
+		//border-radius: 100px;
 		&.self {
 			align-self: flex-end;
-			transform: translateY(30px);
+			transform: translateY(60px);
 			background-color: rgb(102, 102, 174);
 		}
 		&.enemy {
 			align-self: flex-start;
-			transform: translateY(-30px);
+			transform: translateY(-60px);
 			background-color: rgb(192, 86, 86);
 		}
 	}
