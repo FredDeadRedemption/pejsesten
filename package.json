@@ -38,6 +38,7 @@
 		"@sveltejs/adapter-node": "^5.5.4",
 		"socket.io": "^4.8.3",
 		"socket.io-client": "^4.8.1",
-		"tsx": "^4.21.0"
+		"tsx": "^4.21.0",
+		"vitest": "^4.1.4"
 	}
 }
