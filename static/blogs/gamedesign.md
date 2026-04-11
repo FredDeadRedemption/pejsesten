@@ -17,11 +17,12 @@
 
 ### In
 
-- [x] Battlecry --> Renamed Fanfare
+- [x] Battlecry --> Fanfare
+- [x] Charge --> Blitz
 - [ ] Choose One
 - [x] Combo
 - [ ] Corpse
-- [x] Deathrattle --> Renamed Deathwish
+- [x] Deathrattle --> Deathwish
 - [ ] Discover
 - [ ] Divine Shield
 - [ ] Freeze
@@ -112,13 +113,12 @@
 
 ### In
 
-- [x] Charge (pas på med denne)
 - [ ] Can't attack
 - [ ] Cast spell
 - [ ] Change cost type
 - [ ] Copy
 - [ ] Damage
-- [ ] Destroy
+- [x] Destroy
 - [ ] Upgradable
 
 ### Maybe

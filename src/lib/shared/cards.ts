@@ -706,5 +706,29 @@ const cards: Card[] = [
 				]
 			}
 		]
+	},
+	{
+		id: 17,
+		color: 'white',
+		name: 'Destruction',
+		description: 'Destroy a minion',
+		baseCost: 5,
+		type: 'incantation',
+		image_url: '',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: "destroy",
+						targetSpec: {
+							scope: "single",
+							side: "all",
+							entityType: "minion"
+						}
+					}
+				]
+			}
+		]
 	}
 ];

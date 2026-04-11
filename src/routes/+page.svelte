@@ -58,7 +58,9 @@
 				<option value={deck.cards}>{deck.name}</option>
 			{/each}
 		</select>
+		
 		<button class="button primary" onclick={() => goto("/deck")}>Make Deck</button>
+		<button class="button primary" onclick={() => goto("/blog/gamedesign")}>Game Design</button>
 	</div>
 
 	<div style="display: flex; flex-direction: row; gap: 10px;">
