@@ -32,7 +32,7 @@
 - [ ] Silence
 - [ ] Stealth
 - [ ] Taunt
-- [ ] Tradeable
+- [x] Tradeable
 
 ### Maybe
 
