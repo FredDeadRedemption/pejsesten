@@ -3,6 +3,7 @@
 </script>
 
 <article class="post">
+  <a href="/">back</a>
 	<h1>{data.title}</h1>
 	<div class="content">{@html data.content}</div>
 </article>
@@ -13,6 +14,10 @@
 		margin: 0 auto;
 		padding: 2rem 1rem;
 		color: rgb(149, 165, 185);
+
+    a{
+      color: rgb(149, 165, 185);
+    }
 
 		h1 {
 			font-size: 2rem;

@@ -118,7 +118,7 @@
 - [ ] Change cost type
 - [ ] Copy
 - [ ] Damage
-- [ ] Destroy
+- [x] Destroy
 - [ ] Upgradable
 
 ### Maybe
