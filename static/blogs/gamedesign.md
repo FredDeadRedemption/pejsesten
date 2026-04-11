@@ -1,14 +1,15 @@
-# Pejsesten R&D
+# Game Design
 
 ## Philosophy
 
-- No ramping, nothing remotely rampesque like jade golems
-- No extra turns
-- No excessively big mana cheats / mana cheat stacking effects keep it for combo style decks
-- Encourage disruption and hard counters
-- Less RnG - no random targets unless spell is being replayed
-- Less non counterable effect - no charge maybe
-- Cards like counter, secret where opponent can react / interact directly and use big brain to gain upper hand
+- No (mana) **ramping**, nothing remotely *rampesque* like jade golems.
+- No extra turns.
+- No excessively big mana cheats, keep it for combo style decks.
+- No stacking effects on mana cheats.
+- No random targets unless spell is being **replayed**.
+- Discourage RnG. 
+- Encourage **disruption** and **hard counters**.
+- Reward player interaction with mechanics like **Counter** and **Secret**. 
 
 ---
 
@@ -16,11 +17,11 @@
 
 ### In
 
-- [x] Battlecry (fanfare?)
+- [x] Battlecry --> Renamed Fanfare
 - [ ] Choose One
 - [x] Combo
 - [ ] Corpse
-- [x] Deathrattle (deathwish)
+- [x] Deathrattle --> Renamed Deathwish
 - [ ] Discover
 - [ ] Divine Shield
 - [ ] Freeze
@@ -59,6 +60,7 @@
 - [ ] Quest (hard to implement, but is cool as fuck)
 - [ ] Questline
 - [ ] Quickdraw
+- [x] Return to hand
 - [ ] Revive
 - [ ] Start of Game
 - [ ] Twinspell
@@ -110,7 +112,7 @@
 
 ### In
 
-- [x]Charge (pas på med denne)
+- [x] Charge (pas på med denne)
 - [ ] Can't attack
 - [ ] Cast spell
 - [ ] Change cost type

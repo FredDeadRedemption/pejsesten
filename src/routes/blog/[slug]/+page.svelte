@@ -47,20 +47,20 @@
 
 		.content {
 			:global(h2) {
-				font-size: 1.4rem;
-				margin-top: 2rem;
+				font-size: 1.75rem;
+				margin-top: 2.5rem;
 			}
 			:global(p) {
-				line-height: 1.7;
+				line-height: 2.125;
 			}
 			:global(code) {
 				background: #1e1e1e;
-				padding: 0.2em 0.4em;
+				padding: 0.25em 0.5em;
 				border-radius: 4px;
 			}
 			:global(pre) {
 				background: #1e1e1e;
-				padding: 1rem;
+				padding: 1.25rem;
 				border-radius: 8px;
 				overflow-x: auto;
 			}
