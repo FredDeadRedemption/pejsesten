@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Card from '$lib/components/card.svelte';
-	import Filter from '$lib/components/filter.svelte';
+	import Card from '$lib/components/Card.svelte';
+	import Filter from '$lib/components/Filter.svelte';
 	import { getIcon } from '$lib/icons.js';
 	import { getRandomDeckName } from '$lib/util.js';
 	import { slide } from 'svelte/transition';

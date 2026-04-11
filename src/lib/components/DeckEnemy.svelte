@@ -1,14 +1,12 @@
 <script lang="ts">
-	import type { CardEntity } from '$lib/shared/types';
-
-	let { deck = $bindable() }: { deck: CardEntity[] } = $props();
+	import { gameState } from '$lib/socket/socket.svelte';
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div id="wrapper">
 	<div id="deck">
-		DECK | {deck.length}
+		DECK | {gameState.enemy.deck.length}
 	</div>
 </div>
 
