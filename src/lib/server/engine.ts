@@ -149,15 +149,16 @@ const applyEffect = (
 	sourceBoard: Board,
 	enemyBoard: Board,
 	target?: MinionEntity | Hero,
-	selfID?: string
+	selfID?: string // id of minion or spell? 
 ) => {
+	// first resolve targets
 	let targets: (MinionEntity | Hero)[] | null = null;
 	if ('targetSpec' in effect) {
 		targets = target
 			? [target]
 			: resolveTargets(effect.targetSpec, sourceBoard, enemyBoard).filter(
 					(t) => !selfID || (t as MinionEntity).entityID !== selfID
-				);
+				); // doesnt include self my default TODO: maybe make an includeSelf flag
 	}
 	if (effect.type === 'buff') {
 		targets?.forEach((t) => {
@@ -192,6 +193,23 @@ const applyEffect = (
 			returned.defence = returned.baseDefence;
 			ownerBoard.hand.push(returned);
 		});
+	}
+	if(effect.type === "destroy"){
+		targets?.forEach((t) => {
+			if (!('exhausted' in t)) return;
+			const minion = t as MinionEntity;
+			// figure out which board owns this minion
+			const ownerBoard = sourceBoard.battlefield.includes(minion) ? sourceBoard : enemyBoard;
+
+			const idx = ownerBoard.battlefield.indexOf(minion);
+			if (idx === -1) return;
+			const [returned] = ownerBoard.battlefield.splice(idx, 1);
+
+			returned.exhausted = false;
+			returned.attack = returned.baseAttack;
+			returned.defence = returned.baseDefence;
+			ownerBoard.graveyard.push(returned);
+		})
 	}
 };
 

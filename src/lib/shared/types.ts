@@ -45,7 +45,11 @@ export type Effect =
       readonly type: 'returnToHand';
       readonly targetSpec: TargetSpec;
       readonly costReduction?: number;
-    };
+    }
+	| {
+			readonly type: 'destroy';
+			readonly targetSpec: TargetSpec;
+	};
 
 export type Ability = {
 	trigger: Trigger;
