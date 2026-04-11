@@ -36,6 +36,7 @@
 	},
 	"dependencies": {
 		"@sveltejs/adapter-node": "^5.5.4",
+		"marked": "^18.0.0",
 		"socket.io": "^4.8.3",
 		"socket.io-client": "^4.8.1",
 		"tsx": "^4.21.0",
