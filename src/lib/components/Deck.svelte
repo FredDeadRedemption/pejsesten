@@ -4,14 +4,9 @@
 	import { targeting } from '$lib/targeting.svelte';
 
 	const onDrop = () => {
-		console.log("YEHAW")
 		if (!drag.card || drag.index === null) return;
-		console.log("YEHAW2")
-		console.log("dase", drag.card)
 		if (!drag.card.tradeable) return;
-		console.log("YEHAW3")
 		drag.consumed = true;
-		console.log("DROPPED")
 		tradeCard({ index: drag.index });
 	};
 </script>

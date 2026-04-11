@@ -1,6 +1,6 @@
 import type { GameStateServer, MinionEntity } from '$lib/shared/types';
 import { attack, endTurn, playCard } from './engine';
-import { BOT_DELAY_MS } from './settings';
+import { BOT_DELAY_MS } from '../shared/settings';
 
 // ── Evaluation helpers ────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ const evaluateBoard = (
 const pickBestSpellTarget = (
 	gameState: GameStateServer,
 	botIsWhite: boolean,
-	effectType: 'buff' | 'damage' | 'returnToHand',
+	effectType: 'buff' | 'damage' | 'returnToHand' | 'destroy',
 	side: 'friendly' | 'enemy' | 'all',
 	entityType: 'minion' | 'hero' | 'all'
 ): string | undefined => {
@@ -86,6 +86,19 @@ const pickBestSpellTarget = (
 		}
 		if ((side === 'enemy' || side === 'all') && entityType === 'hero') {
 			return 'heroEnemy';
+		}
+	}
+
+	if (effectType === 'destroy') {
+		// kill the highest threat enemy minion
+		if ((side === 'enemy' || side === 'all') && enemyMinions.length > 0) {
+			const highest = [...enemyMinions].sort((a, b) => threatScore(b) - threatScore(a));
+			return highest[0]!.entityID;
+		}
+		// if friendly destroy (e.g. sacrifice effect), kill weakest friendly
+		if ((side === 'friendly' || side === 'all') && friendlyMinions.length > 0) {
+			const weakest = [...friendlyMinions].sort((a, b) => threatScore(a) - threatScore(b));
+			return weakest[0]!.entityID;
 		}
 	}
 
@@ -119,7 +132,7 @@ const resolveCardTarget = (
 		for (const effect of ability.effects) {
 			if (!('targetSpec' in effect)) continue;
 			if (effect.targetSpec.scope !== 'single') continue;
-			if (effect.type === 'buff' || effect.type === 'damage' || effect.type === 'returnToHand') {
+			if (effect.type === 'buff' || effect.type === 'damage' || effect.type === 'returnToHand' || effect.type === "destroy") {
 				return pickBestSpellTarget(
 					gameState,
 					botIsWhite,
@@ -163,6 +176,11 @@ const cardPlayScore = (
 			}
 			if (effect.type === 'returnToHand') {
 				score += 2; // generally useful for combo setup
+			}
+			if (effect.type === 'destroy') {
+				// destroy is extremely high value — it kills anything regardless of stats
+				score += 15;
+				if (botBoard.battlefield.length === 0 && effect.targetSpec.side === 'friendly') score -= 20;
 			}
 		}
 	}
