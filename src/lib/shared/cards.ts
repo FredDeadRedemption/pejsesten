@@ -231,7 +231,7 @@ export const deckToCards = (deck: number[]): CardEntity[] =>
 // =============================================================================
 //
 //   <strong>Fanfare:</strong>     — onPlay ability (always fires)
-//   <strong>Last Breath:</strong> — onDeath ability
+//   <strong>Deathwish:</strong> — onDeath ability
 //   <strong>Combo:</strong>       — ability with requirements: [{ type: 'combo' }]
 //   <strong>Blitz</strong>        — charge attribute
 //
@@ -298,7 +298,7 @@ const cards: Card[] = [
 		id: 3,
 		color: 'white',
 		name: 'Silverguard Knight',
-		description: '<strong>Last breath:</strong> Draw a card',
+		description: '<strong>Deathwish:</strong> Draw a card',
 		baseCost: 3,
 		type: 'minion',
 		races: ['human'],
@@ -351,7 +351,7 @@ const cards: Card[] = [
 		id: 5,
 		color: 'white',
 		name: 'Herald of the Sun',
-		description: '<strong>Last breath:</strong> Deal 5 damage to the enemy hero, draw a card',
+		description: '<strong>Deathwish:</strong> Deal 5 damage to the enemy hero, draw a card',
 		baseCost: 5,
 		type: 'minion',
 		races: ['elf'],
@@ -479,7 +479,7 @@ const cards: Card[] = [
 		id: 9,
 		color: 'white',
 		name: 'Grave Warden',
-		description: '<strong>Last breath:</strong> Return all minions to their owners hand',
+		description: '<strong>Deathwish:</strong> Return all minions to their owners hand',
 		baseCost: 4,
 		type: 'minion',
 		races: ['human'],
