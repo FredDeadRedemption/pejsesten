@@ -1,20 +1,7 @@
 <script lang="ts">
-	import CardSmall from './cardSmall.svelte';
+	import CardSmall from './CardSmall.svelte';
 	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
-	import type { Hero, MinionEntity } from '$lib/shared/types';
 	import { endTargeting, targeting } from '$lib/targeting.svelte';
-
-	let {
-		selfBattleField = $bindable(),
-		enemyBattleField = $bindable(),
-		selfHero = $bindable(),
-		enemyHero = $bindable()
-	}: {
-		selfBattleField: MinionEntity[];
-		enemyBattleField: MinionEntity[];
-		selfHero: Hero;
-		enemyHero: Hero;
-	} = $props();
 
 	let mouseX = $state(0);
 	let mouseY = $state(0);
@@ -126,14 +113,14 @@
 			else tryAttack('heroEnemy');
 		}}
 	>
-		<span class="hp">{enemyHero.defence}</span>
+		<span class="hp">{gameState.enemy.hero.defence}</span>
 	</div>
-	{#each enemyBattleField as card, index (`${card.id}-${index}`)}
+	{#each gameState.enemy.battlefield as card, index (`${card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			style="--i: {index}; --total: {enemyBattleField.length}"
+			style="--i: {index}; --total: {gameState.enemy.battlefield.length}"
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entityID;
 			}}
@@ -162,14 +149,14 @@
 			if (targeting.active) handleTargetInteraction(e, 'heroSelf');
 		}}
 	>
-	<span class="hp">{selfHero.defence}</span>
+	<span class="hp">{gameState.self.hero.defence}</span>
 	</div>
-	{#each selfBattleField as card, index (`${card.id}-${index}`)}
+	{#each gameState.self.battlefield as card, index (`${card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			style="--i: {index}; --total: {selfBattleField.length}"
+			style="--i: {index}; --total: {gameState.self.battlefield.length}"
 			class:selected={origin === card.entityID}
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entityID;

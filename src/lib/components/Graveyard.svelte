@@ -1,13 +1,10 @@
 <script lang="ts">
-	import type { MinionEntity } from "$lib/shared/types";
-
-  let { graveyard = $bindable() }: { graveyard: MinionEntity[] } = $props();
-
+	import { gameState } from "$lib/socket/socket.svelte";
 </script>
 
 <div id="wrapper">
   <div id="graveyard">
-    {graveyard.length}
+    {gameState.self.graveyard.length}
   </div>
 </div>
 

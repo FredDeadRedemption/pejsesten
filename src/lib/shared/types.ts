@@ -61,12 +61,13 @@ type Attributes = 'charge'; // can attack the turn it is played
 
 // Base Card
 type CardBase = {
-	id: number; // also functions as runtime entity ID
+	readonly id: number; // static identifier
 	readonly name: string;
 	readonly description: string | null;
 	readonly color: Color;
 	readonly baseCost: number;
 	readonly image_url: string;
+	readonly tradeable?: true;
 	abilities: Ability[];
 };
 

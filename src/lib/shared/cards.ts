@@ -715,6 +715,7 @@ const cards: Card[] = [
 		baseCost: 5,
 		type: 'incantation',
 		image_url: '',
+		tradeable: true,
 		abilities: [
 			{
 				trigger: 'onPlay',
