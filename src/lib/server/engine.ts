@@ -149,7 +149,7 @@ const applyEffect = (
 	sourceBoard: Board,
 	enemyBoard: Board,
 	target?: MinionEntity | Hero,
-	selfID?: string // id of minion or spell? 
+	selfID?: string // id of minion or spell?
 ) => {
 	// first resolve targets
 	let targets: (MinionEntity | Hero)[] | null = null;
@@ -158,7 +158,7 @@ const applyEffect = (
 			? [target]
 			: resolveTargets(effect.targetSpec, sourceBoard, enemyBoard).filter(
 					(t) => !selfID || (t as MinionEntity).entityID !== selfID
-				); // doesnt include self my default TODO: maybe make an includeSelf flag
+				); // doesnt include self by default TODO: maybe make an includeSelf flag
 	}
 	if (effect.type === 'buff') {
 		targets?.forEach((t) => {
@@ -179,7 +179,7 @@ const applyEffect = (
 			if (!('exhausted' in t)) return;
 			const minion = t as MinionEntity;
 
-			// figure out which board owns this minion
+			// figure out which board owns this minion // supports mass returning (deportation)
 			const ownerBoard = sourceBoard.battlefield.includes(minion) ? sourceBoard : enemyBoard;
 
 			const idx = ownerBoard.battlefield.indexOf(minion);
@@ -194,22 +194,11 @@ const applyEffect = (
 			ownerBoard.hand.push(returned);
 		});
 	}
-	if(effect.type === "destroy"){
+	if (effect.type === 'destroy') {
 		targets?.forEach((t) => {
 			if (!('exhausted' in t)) return;
-			const minion = t as MinionEntity;
-			// figure out which board owns this minion
-			const ownerBoard = sourceBoard.battlefield.includes(minion) ? sourceBoard : enemyBoard;
-
-			const idx = ownerBoard.battlefield.indexOf(minion);
-			if (idx === -1) return;
-			const [returned] = ownerBoard.battlefield.splice(idx, 1);
-
-			returned.exhausted = false;
-			returned.attack = returned.baseAttack;
-			returned.defence = returned.baseDefence;
-			ownerBoard.graveyard.push(returned);
-		})
+			t.defence = 0; // checkForDeaths will handle removal and deathrattles
+		});
 	}
 };
 
@@ -373,33 +362,30 @@ export const playCard = (
 	return gameState;
 };
 
-export const tradeCard = (
-	_socketID: string,
-	data: { index: number }
-) => {
+export const tradeCard = (_socketID: string, data: { index: number }) => {
 	const sourceBoard = getSourceBoard(gameState);
 
-	if (sourceBoard.mana === 0) return null // if ur broke go home
+	if (sourceBoard.mana === 0) return null; // if ur broke go home
 
 	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
 
 	if (!card) return null;
-	if (!card.tradeable) return null
-	if (sourceBoard.deck.length === 0) return null
+	if (!card.tradeable) return null;
+	if (sourceBoard.deck.length === 0) return null;
 
-	const [ consumed ] = sourceBoard.hand.splice(data.index, 1);
+	const [consumed] = sourceBoard.hand.splice(data.index, 1);
 
 	// put at bottom of deck
 	sourceBoard.deck.push(consumed);
 
 	// draw a new card
-	sourceBoard.hand.push(...sourceBoard.deck.draw(1))
+	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
 
 	// spent one mana
 	sourceBoard.mana--;
 
-	return gameState
-}
+	return gameState;
+};
 
 export const attack = (_socketID: string, attackData: AttackData): GameStateResponse => {
 	const attacker = findEntity(attackData.originID);
