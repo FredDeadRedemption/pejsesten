@@ -21,7 +21,7 @@
 <div id="wrapper">
 	<div
 		id="deck"
-		class:available={drag.card?.tradeable && !targeting.active && gameState.self.mana !== 0}
+		class:glow-white={drag.card?.tradeable && !targeting.active && gameState.self.mana !== 0}
 		onmouseup={onDrop}
 	>
 		DECK | {gameState.self.deck.length}

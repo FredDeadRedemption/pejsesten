@@ -173,8 +173,8 @@
 			<div
 				class="hand-card"
 				class:dragged-away={draggerIndex === index}
-				class:affordable
-				class:procced
+				class:glow-blue={affordable}
+				class:glow-yellow={procced}
 			>
 				<Card {card} />
 			</div>

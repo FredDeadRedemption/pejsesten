@@ -4,6 +4,8 @@ $glow-yellow: rgba(206, 160, 87);
 $glow-yellow-peak: rgba(220, 175, 100);
 $glow-white:rgb(233, 233, 233);
 $glow-white-peak: rgb(255, 255, 255);
+$glow-green:rgb(20, 193, 32);
+$glow-green-peak: rgb(35, 229, 48);
 
 
 @mixin glow-pulse($name, $color, $color-peak, $duration: 5s) {
@@ -26,14 +28,18 @@ $glow-white-peak: rgb(255, 255, 255);
 	}
 }
 
-.affordable {
-	@include glow-pulse(glow-affordable, $glow-blue, $glow-blue-peak, 3s);
+.glow-blue {
+	@include glow-pulse(glow-blue, $glow-blue, $glow-blue-peak, 3s);
 }
 
-.procced {
-	@include glow-pulse(glow-proceed, $glow-yellow, $glow-yellow-peak, 3s);
+.glow-yellow {
+	@include glow-pulse(glow-yellow, $glow-yellow, $glow-yellow-peak, 3s);
 }
 
-.available{
-	@include glow-pulse(glow-proceed, $glow-white, $glow-white-peak, 3s);
+.glow-white{
+	@include glow-pulse(glow-white, $glow-white, $glow-white-peak, 3s);
+}
+
+.glow-green{
+	@include glow-pulse(glow-green, $glow-green, $glow-green-peak, 3s);
 }
