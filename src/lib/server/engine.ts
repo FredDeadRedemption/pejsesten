@@ -12,7 +12,7 @@ import type {
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
-import { MAX_MANA, STARTING_HAND_SIZE, STARTING_HP, STARTING_MANA } from './settings';
+import { MAX_MANA, STARTING_HAND_SIZE, STARTING_HP, STARTING_MANA } from '../shared/settings';
 
 let gameState: GameStateServer;
 

@@ -5,6 +5,8 @@ export const STARTING_HAND_SIZE = 3;
 
 export const BOT_DELAY_MS = 250;
 
+export const OPEN_CARDS = true;
+
 
 // FOR TESTING:
 

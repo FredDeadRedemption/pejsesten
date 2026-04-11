@@ -260,7 +260,7 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description: '<strong>Blitz</strong>',
+		description: '<strong>Blitz</strong> <strong>Tradeable</strong>',
 		baseCost: 1,
 		type: 'minion',
 		races: ['elf'],
@@ -541,7 +541,7 @@ const cards: Card[] = [
 		color: 'white',
 		name: 'Divine Power',
 		description: 'Give a friendly minion +4 +4',
-		baseCost: 2,
+		baseCost: 4,
 		type: 'incantation',
 		image_url: 'Divine Power.webp',
 		abilities: [

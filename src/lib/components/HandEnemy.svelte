@@ -4,6 +4,7 @@
 	import type { CardEntity } from '$lib/shared/types';
 	import { checkRequirement } from '$lib/shared/lib';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
+	import { OPEN_CARDS } from '$lib/shared/settings';
 
 	let handElement: HTMLElement;
 
@@ -44,7 +45,7 @@
 	};
 </script>
 
-<div class="hand" bind:this={handElement} class:enemy={!self}>
+<div class="hand" bind:this={handElement} class:enemy={!self} class:hidden={!OPEN_CARDS}>
 	<div class="mana" class:self>{gameState.enemy.mana}/{gameState.self.baseMana}</div>
 	{#each gameState.enemy.hand as card, index}
 		{@const affordable =
@@ -126,6 +127,9 @@
 		height: 100%;
 		width: 100%;
 		transform: translateY(-150px);
+    &.hidden{
+      display: none;
+    }
 	}
 
 	.card-container {

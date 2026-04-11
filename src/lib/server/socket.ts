@@ -5,7 +5,7 @@ import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
 import { deckToCards } from '$lib/shared/cards';
 import type { PlayerMetaData } from '$lib/shared/types';
 import { makeBotMove } from '$lib/server/bot';
-import { BOT_DELAY_MS } from './settings';
+import { BOT_DELAY_MS } from '../shared/settings';
 
 const BOT_ID = 'bot';
 
