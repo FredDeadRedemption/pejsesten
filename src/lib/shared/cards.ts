@@ -267,6 +267,7 @@ const cards: Card[] = [
 		baseAttack: 1,
 		baseDefence: 2,
 		image_url: 'Machine Elf.webp',
+		tradeable: true,
 		abilities: [],
 		attributes: ['charge']
 	},

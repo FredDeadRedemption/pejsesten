@@ -1,6 +1,6 @@
 import { Server, type Socket } from 'socket.io';
 import type { GameStateResponse } from '$lib/server/engine';
-import { endTurn, setGameState, getGameState, playCard, attack } from '$lib/server/engine';
+import { endTurn, setGameState, getGameState, playCard, attack, tradeCard } from '$lib/server/engine';
 import { coinFlip, broadcastGameState, validateTurn } from '$lib/server/lib';
 import { deckToCards } from '$lib/shared/cards';
 import type { PlayerMetaData } from '$lib/shared/types';
@@ -146,6 +146,7 @@ export const setupSocketIO = (io: Server) => {
 		// Attach the handlers to events
 		socket.on('endTurn', fireAndMaybeBot(endTurn));
 		socket.on('playCard', fireAndMaybeBot(playCard));
+		socket.on("tradeCard", fireAndMaybeBot(tradeCard))
 		socket.on('attack', fireAndMaybeBot(attack));
 
 		socket.on('resetServer', () => {

@@ -6,10 +6,10 @@
 	import { beginTargeting } from '$lib/targeting.svelte';
 	import { checkRequirement } from '$lib/shared/lib';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
+	import { drag } from '$lib/drag.svelte';
 
 	let handElement: HTMLElement;
 
-	// half card dimensions, used to find card center from top-left coords
 	const CARD_CX = 85;
 	const CARD_CY = 125;
 
@@ -20,14 +20,12 @@
 	let returning = $state(false);
 	let dragging = $derived(draggerIndex !== null && !returning);
 
-	// fan layout: rotation, arc, horizontal spread, and neighbor displacement
 	const fanStyle = (i: number, total: number) => {
 		const offset = i - (total - 1) / 2;
 		const spacing = Math.min(70, 400 / Math.max(total, 1));
 		const rot = offset * 5;
 		const arc = offset * offset * 2;
 
-		// keep neighbors spread while hovering or dragging
 		let spread = 0;
 		const activeIdx = draggerIndex ?? hoverIndex;
 		if (activeIdx !== null && i !== activeIdx) {
@@ -47,7 +45,6 @@
 	const beginDrag = (index: number, event: MouseEvent) => {
 		event.preventDefault();
 
-		// capture card's screen position before state changes
 		const cardEl = handElement
 			.querySelectorAll('.card-container')
 			[index]?.querySelector('.hand-card');
@@ -60,12 +57,27 @@
 		dragCoords = rect
 			? { x: rect.left, y: rect.top }
 			: { x: event.clientX - CARD_CX, y: event.clientY - CARD_CY };
+
+		// sync to shared drag store so battlefield can read it
+		drag.card = dragCard;
+		drag.index = index;
+		drag.consumed = false;
 	};
 
 	const endDrag = async () => {
 		if (!dragCard || draggerIndex === null) return;
 
 		const idx = draggerIndex;
+
+		// a drop zone consumed the drag — just clean up
+		if (drag.consumed) {
+			drag.consumed = false;
+			drag.card = null;
+			drag.index = null;
+			dragCard = null;
+			draggerIndex = null;
+			return;
+		}
 
 		if (!handElement) return;
 		const handRect = handElement.getBoundingClientRect();
@@ -75,7 +87,8 @@
 			cx >= handRect.left && cx <= handRect.right && cy >= handRect.top && cy <= handRect.bottom;
 
 		if (!isWithinHand) {
-			// play the card
+			// dropped outside but no drop zone caught it
+			// only play directly if no targeting needed
 			const card = gameState.self.hand[idx];
 			if (card) {
 				const needsTarget = card.abilities.some(
@@ -83,18 +96,19 @@
 						a.trigger === 'onPlay' &&
 						a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
 				);
-				if (needsTarget && !isSpellAndHasNoValidTarget(card, gameState)) {
-					beginTargeting(card, idx);
-				} else {
+				if (!needsTarget || isSpellAndHasNoValidTarget(card, gameState)) {
 					playCard({ index: idx });
 				}
+				// needs a target but wasn't dropped on one → falls through to return animation
 			}
+			drag.card = null;
+			drag.index = null;
 			dragCard = null;
 			draggerIndex = null;
 			return;
 		}
 
-		// return to hand: animate dragger back to fan position
+		// return to hand animation
 		returning = true;
 		await tick();
 		await new Promise((r) => requestAnimationFrame(r));
@@ -107,6 +121,8 @@
 
 		setTimeout(() => {
 			returning = false;
+			drag.card = null;
+			drag.index = null;
 			dragCard = null;
 			draggerIndex = null;
 		}, 250);
@@ -116,6 +132,8 @@
 		if (!dragging) return;
 		dragCoords.x += e.movementX;
 		dragCoords.y += e.movementY;
+		drag.x = dragCoords.x;
+		drag.y = dragCoords.y;
 	};
 </script>
 
@@ -123,11 +141,11 @@
 
 <div class="hand" bind:this={handElement} class:enemy={!self}>
 	{#if self}
-		<button class="end" class:self class:inactive={!gameState.yourTurn} onclick={() => endTurn()}
-			>END TURN</button
-		>
+		<button class="end" class:inactive={!gameState.yourTurn} onclick={() => endTurn()}>
+			END TURN
+		</button>
 	{/if}
-	<div class="mana" class:self>{gameState.self.mana}/{gameState.self.baseMana}</div>
+	<div class="mana">{gameState.self.mana}/{gameState.self.baseMana}</div>
 	{#each gameState.self.hand as card, index}
 		{@const affordable =
 			card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
@@ -145,9 +163,7 @@
 		<div
 			class="card-container"
 			class:hovered={hoverIndex === index && !dragging}
-			style="{self
-				? fanStyle(index, gameState.self.hand.length)
-				: `--fan-x: ${(index - (gameState.self.hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
+			style="{fanStyle(index, gameState.self.hand.length)}; z-index: {index}"
 			onmouseenter={() => setHover(index)}
 			onmouseleave={clearHover}
 			onmousedown={(e) => {
@@ -164,7 +180,8 @@
 			</div>
 		</div>
 	{/each}
-	{#if dragCard}
+	<!-- hide dragger when battlefield has consumed it (targeting mode active) -->
+	{#if dragCard && !drag.consumed}
 		<div class="dragger" class:returning style="left: {dragCoords.x}px; top: {dragCoords.y}px;">
 			<Card card={dragCard} />
 		</div>
@@ -176,7 +193,7 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		align-self: flex-end;
+		align-self: flex-start;
 		font-size: x-large;
 		color: $white;
 		height: 45px;
@@ -184,9 +201,6 @@
 		margin: 5px;
 		border-radius: 100px;
 		background-color: rgb(88, 120, 161);
-		&.self {
-			align-self: flex-start;
-		}
 	}
 
 	.dragger {
@@ -230,7 +244,6 @@
 		display: flex;
 		justify-content: flex-end;
 		margin: 0 auto;
-		width: fit-content;
 		position: relative;
 		height: 100%;
 		width: 100%;
@@ -265,6 +278,7 @@
 			opacity: 0;
 		}
 	}
+
 	.card-container.hovered .hand-card {
 		scale: 1;
 		translate: 0 -40%;

@@ -373,6 +373,34 @@ export const playCard = (
 	return gameState;
 };
 
+export const tradeCard = (
+	_socketID: string,
+	data: { index: number }
+) => {
+	const sourceBoard = getSourceBoard(gameState);
+
+	if (sourceBoard.mana === 0) return null // if ur broke go home
+
+	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
+
+	if (!card) return null;
+	if (!card.tradeable) return null
+	if (sourceBoard.deck.length === 0) return null
+
+	const [ consumed ] = sourceBoard.hand.splice(data.index, 1);
+
+	// put at bottom of deck
+	sourceBoard.deck.push(consumed);
+
+	// draw a new card
+	sourceBoard.hand.push(...sourceBoard.deck.draw(1))
+
+	// spent one mana
+	sourceBoard.mana--;
+
+	return gameState
+}
+
 export const attack = (_socketID: string, attackData: AttackData): GameStateResponse => {
 	const attacker = findEntity(attackData.originID);
 
