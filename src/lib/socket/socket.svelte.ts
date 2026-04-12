@@ -38,8 +38,6 @@ export let gameState = $state<GameStateClient>({
 	yourTurn: false
 });
 
-$inspect(gameState);
-
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
 	if (socket) return;
