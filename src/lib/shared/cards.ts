@@ -1,4 +1,4 @@
-import type { Card, CardEntity, IncantationEntity, MinionEntity } from './types';
+import type { Card, CardEntity, EntityBase, IncantationEntity, MinionEntity } from './types';
 
 const getCardByID = (id: number) => cards.find((card) => card.id === id);
 
@@ -10,24 +10,29 @@ export const deckToCards = (deck: number[]): CardEntity[] =>
 	deck
 		.map((id) => getCardByID(id)!)
 		.map((card) => {
+			const entityBase: EntityBase = {
+				entityID: crypto.randomUUID(),
+				cost: card.baseCost,
+				turnsInHand: 0,
+				justDrawn: false,
+			};
+
 			if (card.type === 'minion') {
 				return {
 					...card,
-					entityID: crypto.randomUUID(),
+					...entityBase,
 					attack: card.baseAttack,
 					defence: card.baseDefence,
-					cost: card.baseCost,
 					exhausted: false
 				} as MinionEntity;
-			} else {
-				return {
-					...card,
-					entityID: crypto.randomUUID(),
-					cost: card.baseCost
-				} as IncantationEntity;
+			} else if (card.type === 'incantation') {
+				return { ...card, ...entityBase } as IncantationEntity;
 			}
+
+			card satisfies never;
+			throw new Error(`Unhandled card type: ${(card as Card).type}`);
 		});
-		
+
 // =============================================================================
 // CARD WRITING GUIDE
 // =============================================================================
@@ -722,15 +727,59 @@ const cards: Card[] = [
 				trigger: 'onPlay',
 				effects: [
 					{
-						type: "destroy",
+						type: 'destroy',
 						targetSpec: {
-							scope: "single",
-							side: "all",
-							entityType: "minion"
+							scope: 'single',
+							side: 'all',
+							entityType: 'minion'
 						}
 					}
 				]
 			}
 		]
-	}
+	},
+	{
+		id: 18,
+		color: 'white',
+		name: 'Gunslinger',
+		description: 'Deal 1 damage <strong>Quickdraw:</strong> Deal 3 damage instead.',
+		baseCost: 1,
+		type: 'incantation',
+		image_url: '',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: 'damage',
+						damage: 1,
+						targetSpec: {
+							scope: 'single',
+							side: 'all',
+							entityType: 'all'
+						}
+					}
+				]
+			},
+			{
+				trigger: 'onPlay',
+				requirements: [
+					{
+						type: 'quickdraw'
+					}
+				], // only fires on quickdraw
+				effects: [
+					{
+						type: 'damage',
+						damage: 2,
+						targetSpec: {
+							scope: 'single',
+							side: 'all',
+							entityType: 'all'
+						}
+					}
+				]
+			}
+		]
+	},
 ];

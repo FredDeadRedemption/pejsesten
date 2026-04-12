@@ -23,7 +23,7 @@ export type TargetSpec = {
 
 export type Requirement =
 	| { type: 'combo' } // played a card before this one this turn
-	| { type: 'firstCard' }; // first card played this turn
+	| { type: 'quickdraw' }; // played same turn as drawn
 
 export type Effect =
 	| {
@@ -42,14 +42,14 @@ export type Effect =
 			drawAmount: number;
 	  }
 	| {
-      readonly type: 'returnToHand';
-      readonly targetSpec: TargetSpec;
-      readonly costReduction?: number;
-    }
+			readonly type: 'returnToHand';
+			readonly targetSpec: TargetSpec;
+			readonly costReduction?: number;
+	  }
 	| {
 			readonly type: 'destroy';
 			readonly targetSpec: TargetSpec;
-	};
+	  };
 
 export type Ability = {
 	trigger: Trigger;
@@ -88,24 +88,29 @@ export type IncantationCard = CardBase & {
 // Metadata mostly for ui
 export type Card = MinionCard | IncantationCard;
 
-// Minion Entity
-export type MinionEntity = MinionCard & {
-	entityID: string;
-	attack: number;
-	defence: number;
-	cost: number;
-	exhausted: boolean;
-};
-
-// Encantation Entity
-export type IncantationEntity = IncantationCard & {
+// !!! IF ADDING REMOVING ANYTHING HERE REMEMBER TO ALSO
+// REWORK THE deckToCards FUNCTION IN cards.ts !!!
+// Base for all entities on the board/in-play
+export type EntityBase = {
 	entityID: string;
 	cost: number;
+	turnsInHand: number;
+	justDrawn: boolean;
 };
 
 // !!! IF ADDING REMOVING ANYTHING HERE REMEMBER TO ALSO
 // REWORK THE deckToCards FUNCTION IN cards.ts !!!
+// Minion-specific runtime props (not on the card definition)
+type MinionEntityProps = {
+	attack: number;
+	defence: number;
+	exhausted: boolean;
+};
+
 // Card Entity
+export type MinionEntity = MinionCard & EntityBase & MinionEntityProps;
+export type IncantationEntity = IncantationCard & EntityBase;
+
 export type CardEntity = MinionEntity | IncantationEntity;
 
 export type Hero = {
