@@ -44,6 +44,9 @@
 		// don't allow dragging unaffordable cards
 		if (card.cost > gameState.self.mana) return;
 
+		// spell requires target that is not present = unplayable
+		if (isSpellAndHasNoValidTarget(card, gameState)) return;
+
 		event.preventDefault();
 
 		const cardEl = handElement
