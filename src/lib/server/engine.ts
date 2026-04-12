@@ -1,4 +1,5 @@
 import { getEnemyBoard, getSourceBoard, switchTurn } from '$lib/server/lib';
+import { checkRequirement } from '$lib/shared/lib';
 import type {
 	AttackData,
 	Board,
@@ -8,7 +9,6 @@ import type {
 	GameStateServer,
 	Hero,
 	MinionEntity,
-	Requirement,
 	TargetSpec,
 	Trigger
 } from '$lib/shared/types';
@@ -35,18 +35,6 @@ const findEntity = (id: string): MinionEntity | Hero | undefined => {
 	return [...gameState.white.battlefield, ...gameState.black.battlefield].find(
 		(e) => e.entityID === id
 	);
-};
-
-const checkRequirement = (
-	rec: Requirement | undefined,
-	_sourceBoard: Board,
-	_enemyBoard: Board,
-	gameState: GameStateServer | GameStateClient
-): boolean => {
-	if (!rec) return true; // no rec = always fires
-	if (rec.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
-	if (rec.type === 'firstCard') return gameState.cardsPlayedThisTurn === 0;
-	return true;
 };
 
 let effectQueue: QueuedEffect[] = [];
@@ -87,7 +75,7 @@ const checkForDeaths = () => {
 					if (
 						ability.requirements &&
 						!ability.requirements.every((r) =>
-							checkRequirement(r, sourceBoard, enemyBoard, gameState)
+							checkRequirement(r, sourceBoard, enemyBoard, gameState, minion)
 						)
 					)
 						return;
@@ -259,8 +247,20 @@ export const endTurn = (): GameStateResponse => {
 	// getSourceBoard returns the NEW active player
 	const sourceBoard = getSourceBoard(gameState);
 
-	// draw for the new active player
-	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
+	// update existing card state in whole hand
+	sourceBoard.hand.forEach((c) => {
+		c.turnsInHand++;
+		c.justDrawn = false;
+	});
+
+	// draw 1 for the new active player
+	const drawnCards = sourceBoard.deck.draw(1);
+
+	drawnCards.forEach((c) => {
+		c.justDrawn = true;
+	})
+
+	sourceBoard.hand.push(...drawnCards);
 
 	// add mana to the new activer player
 	// set current mana to base mana
@@ -326,6 +326,8 @@ export const playCard = (
 	// validation passed, now consume the card
 	const [consumed] = sourceBoard.hand.splice(data.index, 1);
 
+	console.log('justDrawn:', consumed.justDrawn);
+
 	if (consumed.type === 'minion') {
 		consumed.attributes.some((a) => a === 'charge')
 			? (consumed.exhausted = false)
@@ -337,7 +339,7 @@ export const playCard = (
 		if (ability.trigger !== 'onPlay') return;
 		if (
 			ability.requirements &&
-			!ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard, gameState))
+			!ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard, gameState, consumed))
 		)
 			return;
 		ability.effects.forEach((effect) => {
@@ -356,6 +358,8 @@ export const playCard = (
 
 	// pay for the card
 	sourceBoard.mana -= consumed.cost;
+
+	consumed.turnsInHand = 0;
 
 	gameState.cardsPlayedThisTurn++;
 
