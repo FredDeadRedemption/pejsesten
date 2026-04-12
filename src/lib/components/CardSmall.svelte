@@ -2,6 +2,7 @@
 	import type { MinionEntity } from '$lib/shared/types';
 	import { fly } from 'svelte/transition';
 	import Card from './Card.svelte';
+	import { portal } from '$lib/attachments';
 
 	let { card }: { card: MinionEntity } = $props();
 
@@ -13,11 +14,15 @@
 	let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 	let showPreview = $state(false);
 
-	const onMouseEnter = () => {
-		hoverTimer = setTimeout(() => {
-			showPreview = true;
-		}, 200);
-	};
+	let previewX = $state(0);
+	let previewY = $state(0);
+
+	const onMouseEnter = (e: MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    previewX = rect.right + 8;
+    previewY = rect.top + rect.height / 2;
+    hoverTimer = setTimeout(() => { showPreview = true; }, 200);
+};
 
 	const onMouseLeave = () => {
 		if (hoverTimer) {
@@ -37,7 +42,9 @@
 	onmouseleave={onMouseLeave}
 >
 	{#if showPreview}
-		<div transition:fly={{ duration: 150, y: 15 }} class="preview">
+		<div {@attach portal} transition:fly={{ duration: 150, y: 15 }} class="preview"
+		style="left: {previewX}px; top: {previewY}px;">
+
 			<Card {card} />
 		</div>
 	{/if}
@@ -78,7 +85,6 @@
 		outline: 1px solid $mana-white;
 		padding: 2px 1px;
 		display: flex;
-		z-index: 1;
 		flex-direction: column;
 
 		&.black {
@@ -92,14 +98,12 @@
 	}
 
 	.preview {
-		position: absolute;
-		left: calc(100% + 8px);
-		top: 50%;
-		transform: translateY(-50%);
-		z-index: 2;
-		pointer-events: none;
-		filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
-	}
+    position: fixed;
+    transform: translateY(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+}
 
 	.art-frame {
 		position: relative;
