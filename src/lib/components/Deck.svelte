@@ -4,6 +4,7 @@
 	import { targeting } from '$lib/targeting.svelte';
 
 	const onDrop = () => {
+		if (targeting.active) return
 		if (!drag.card || drag.index === null) return;
 		if (!drag.card.tradeable) return;
 		drag.consumed = true;

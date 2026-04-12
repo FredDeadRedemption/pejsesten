@@ -2,8 +2,6 @@
 	import { tick } from 'svelte';
 	import Card from './Card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
-	import type { CardEntity } from '$lib/shared/types';
-	import { beginTargeting } from '$lib/targeting.svelte';
 	import { checkRequirement } from '$lib/shared/lib';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
 	import { drag } from '$lib/drag.svelte';
@@ -14,11 +12,8 @@
 	const CARD_CY = 125;
 
 	let hoverIndex: number | null = $state(null);
-	let draggerIndex: number | null = $state(null);
-	let dragCoords = $state({ x: 0, y: 0 });
-	let dragCard: CardEntity | null = $state(null);
 	let returning = $state(false);
-	let dragging = $derived(draggerIndex !== null && !returning);
+	let dragging = $derived(drag.index !== null && !returning);
 
 	const fanStyle = (i: number, total: number) => {
 		const offset = i - (total - 1) / 2;
@@ -27,7 +22,7 @@
 		const arc = offset * offset * 2;
 
 		let spread = 0;
-		const activeIdx = draggerIndex ?? hoverIndex;
+		const activeIdx = drag.index ?? hoverIndex;
 		if (activeIdx !== null && i !== activeIdx) {
 			spread = i < activeIdx ? -45 : 45;
 		}
@@ -43,6 +38,12 @@
 	};
 
 	const beginDrag = (index: number, event: MouseEvent) => {
+		const card = gameState.self.hand[index];
+		if (!card) return;
+
+		// don't allow dragging unaffordable cards
+		if (card.cost > gameState.self.mana) return;
+
 		event.preventDefault();
 
 		const cardEl = handElement
@@ -50,39 +51,31 @@
 			[index]?.querySelector('.hand-card');
 		const rect = cardEl?.getBoundingClientRect();
 
-		draggerIndex = index;
-		dragCard = gameState.self.hand[index]!;
-		hoverIndex = null;
-
-		dragCoords = rect
-			? { x: rect.left, y: rect.top }
-			: { x: event.clientX - CARD_CX, y: event.clientY - CARD_CY };
-
-		// sync to shared drag store so battlefield can read it
-		drag.card = dragCard;
+		drag.card = card;
 		drag.index = index;
+		drag.x = rect ? rect.left : event.clientX - CARD_CX;
+		drag.y = rect ? rect.top : event.clientY - CARD_CY;
 		drag.consumed = false;
+		hoverIndex = null;
 	};
 
 	const endDrag = async () => {
-		if (!dragCard || draggerIndex === null) return;
+		if (!drag.card || drag.index === null) return;
 
-		const idx = draggerIndex;
+		const idx = drag.index;
 
 		// a drop zone consumed the drag — just clean up
 		if (drag.consumed) {
 			drag.consumed = false;
 			drag.card = null;
 			drag.index = null;
-			dragCard = null;
-			draggerIndex = null;
 			return;
 		}
 
 		if (!handElement) return;
 		const handRect = handElement.getBoundingClientRect();
-		const cx = dragCoords.x + CARD_CX;
-		const cy = dragCoords.y + CARD_CY;
+		const cx = drag.x + CARD_CX;
+		const cy = drag.y + CARD_CY;
 		const isWithinHand =
 			cx >= handRect.left && cx <= handRect.right && cy >= handRect.top && cy <= handRect.bottom;
 
@@ -99,12 +92,10 @@
 				if (!needsTarget || isSpellAndHasNoValidTarget(card, gameState)) {
 					playCard({ index: idx });
 				}
-				// needs a target but wasn't dropped on one → falls through to return animation
+				// needs a target but wasn't dropped on one --> return to hand
 			}
 			drag.card = null;
 			drag.index = null;
-			dragCard = null;
-			draggerIndex = null;
 			return;
 		}
 
@@ -116,24 +107,21 @@
 		const container = handElement.querySelectorAll('.card-container')[idx];
 		if (container) {
 			const target = container.getBoundingClientRect();
-			dragCoords = { x: target.left, y: target.top };
+			drag.x = target.left;
+			drag.y = target.top;
 		}
 
 		setTimeout(() => {
 			returning = false;
 			drag.card = null;
 			drag.index = null;
-			dragCard = null;
-			draggerIndex = null;
 		}, 250);
 	};
 
 	const onMouseMove = (e: { movementX: number; movementY: number }) => {
 		if (!dragging) return;
-		dragCoords.x += e.movementX;
-		dragCoords.y += e.movementY;
-		drag.x = dragCoords.x;
-		drag.y = dragCoords.y;
+		drag.x += e.movementX;
+		drag.y += e.movementY;
 	};
 </script>
 
@@ -172,7 +160,7 @@
 		>
 			<div
 				class="hand-card"
-				class:dragged-away={draggerIndex === index}
+				class:dragged-away={drag.index === index}
 				class:glow-blue={affordable}
 				class:glow-yellow={procced}
 			>
@@ -180,10 +168,9 @@
 			</div>
 		</div>
 	{/each}
-	<!-- hide dragger when battlefield has consumed it (targeting mode active) -->
-	{#if dragCard && !drag.consumed}
-		<div class="dragger" class:returning style="left: {dragCoords.x}px; top: {dragCoords.y}px;">
-			<Card card={dragCard} />
+	{#if drag.card && !drag.consumed}
+		<div class="dragger" class:returning style="left: {drag.x}px; top: {drag.y}px;">
+			<Card card={drag.card} />
 		</div>
 	{/if}
 </div>
