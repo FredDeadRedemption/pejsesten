@@ -44,8 +44,8 @@
 		// don't allow dragging unaffordable cards
 		if (card.cost > gameState.self.mana) return;
 
-		// spell requires target that is not present = unplayable
-		if (isSpellAndHasNoValidTarget(card, gameState)) return;
+		// spell requires target that is not present dont drag around (unless tradeable)
+		if (isSpellAndHasNoValidTarget(card, gameState) && !card.tradeable) return;
 
 		event.preventDefault();
 
