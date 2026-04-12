@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
 	import type { MinionEntity } from '$lib/shared/types';
-	import { colorMap } from '$lib/util';
 
 	let { card }: { card: MinionEntity } = $props();
 
-	let theme = $derived(colorMap[card.color]);
 
 	let attackBuffed = $derived(card.attack > card.baseAttack);
 	let attackDebuffed = $derived(card.attack < card.baseAttack);

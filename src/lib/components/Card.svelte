@@ -1,21 +1,30 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
-	import { colorMap } from '$lib/util';
 	import type { Card, CardEntity } from '$lib/shared/types';
 
-	// Card is for ui representation, CardEntity is for rendering game state.
 	let { card, compact = false }: { card: CardEntity | Card; compact?: boolean } = $props();
 
-	let theme = $derived(colorMap[card.color]);
+	const minion = $derived(card.type === 'minion');
+	const cost = $derived('cost' in card ? card.cost : card.baseCost);
 </script>
 
-<div id="card" class={theme.bg} class:compact>
+<div id="card" class:compact class={card.color}>
 	<div id="content">
-		<div class="img-wrap">
-			<div class="cost">{'cost' in card ? card.cost : card.baseCost}</div>
+		<div class="card-top">
+			<div class="cost-gem">{cost}</div>
+			<div class="card-name">{card.name}</div>
 			{#if card.tradeable}
-				<div class="tradeable">T</div>
+				<div class="tradeable-badge">
+					<span class="icon">
+						{@html getIcon("tradeable")}
+					</span>
+				</div>
+			{:else}
+				<div style="width: 28px"></div>
 			{/if}
+		</div>
+
+		<div class="art-frame" class:minion>
 			<img
 				src={card.image_url === ''
 					? '/media/cards/missing-texture.jpg'
@@ -24,248 +33,238 @@
 				draggable="false"
 			/>
 		</div>
-		<div class="tilte {theme.title}">
-			<span>{card.name}</span>
+
+		<div class="description">
+			<span class="icon-bg">{@html getIcon('manaWhite')}</span>
+			<span class="text">{@html card.description}</span>
 		</div>
-		<div class="description {theme.desc}">
-			<div class="description-inner">
-				<span class="icon-big" style="color: {theme.color}">{@html getIcon(theme.icon)}</span>
-				<span class="text">{@html card.description}</span>
-			</div>
+
+		<div class="card-bottom">
 			{#if card.type === 'minion'}
-				<div class="bottom {theme.title}">
-					{card.baseAttack} | {card.baseDefence}
+				<div class="stat atk">
+					{'attack' in card ? card.attack : card.baseAttack}
 				</div>
+				<div class="race">
+					{card.races.join(' · ')}
+				</div>
+				<div class="stat def">
+					{'defence' in card ? card.defence : card.baseDefence}
+				</div>
+			{:else}
+				<div class="spell-label">incantation</div>
 			{/if}
 		</div>
 	</div>
 </div>
 
 <style lang="scss">
-	.cost {
-		position: absolute;
-		align-self: flex-start;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		background-color: steelblue;
-		color: $white;
-		font-size: 20px;
-		padding: 5px;
-		width: 25px;
-		height: 25px;
-		border-right: 2px solid $black;
-		border-bottom: 2px solid $black;
-		transform: translateX(-65px);
-		z-index: 100;
-	}
-	.tradeable {
-		position: absolute;
-		align-self: flex-start;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		background-color: rgb(180, 151, 70);
-		color: $white;
-		font-size: 20px;
-		padding: 5px;
-		width: 25px;
-		height: 25px;
-		border-left: 2px solid $black;
-		border-bottom: 2px solid $black;
-		transform: translateX(65px);
-		z-index: 100;
-	}
-	.description-inner {
-		display: grid;
-		//place-items: center;
-		flex: 1;
-		width: 100%;
-
-		.icon-big {
-			align-self: center;
-			justify-self: center;
-			transform: translateY(5px);
-			grid-area: 1 / 1;
-		}
-
-		.icon-big {
-			scale: 6;
-			opacity: 0.5;
-		}
-
-		.text {
-			padding: 5px;
-			z-index: 1;
-		}
-	}
-	.icon {
-		font-size: 0.6rem;
-	}
-	.red-bg {
-		outline: 1px solid $red;
-		background-image: url('/media/cards/card-bg-red.webp');
-	}
-	.green-bg {
-		outline: 1px solid $green;
-		background-image: url('/media/cards/card-bg-green.webp');
-	}
-	.white-bg {
-		outline: 1px solid $mana-white;
-		background-image: url('/media/cards/card-bg-white.webp');
-	}
-	.orange-bg {
-		outline: 1px solid $mana-orange;
-		background-image: url('/media/cards/card-bg-brown.webp');
-	}
-	.purple-bg {
-		outline: 1px solid $mana-purple;
-		background-image: url('/media/cards/card-bg-purple.webp');
-	}
-	.black-bg {
-		outline: 1px solid $mana-black;
-		background-image: url('/media/cards/card-bg-black.webp');
-	}
 	#card {
-		//scale: 0.6; // game scale
-		border: 2px solid $black;
-		// width: 170px;
-		// height: 250px;
 		width: 170px;
 		height: 250px;
-		box-shadow: $box-shadow-primary;
+		border: 2px solid $black;
 		border-radius: 3px;
 		overflow: hidden;
-		user-select: none; // Prevents selection
+		user-select: none;
 		-webkit-user-drag: none;
 		-webkit-user-select: none;
 		-moz-user-select: none;
 		-ms-user-select: none;
-		padding: 3px 1px;
+		box-shadow: $box-shadow-primary;
 		background-size: cover;
 		background-repeat: no-repeat;
+		background-image: url('/media/cards/card-bg-white.webp');
+		outline: 1px solid $mana-white;
+		padding: 3px 1px;
+
+		&.black {
+			background-image: url('/media/cards/card-bg-black.webp');
+			outline: 1px solid $mana-black;
+		}
+
 		&.compact {
 			scale: 0.6;
 		}
-		#content {
-			// overflow: hidden;
-			background-size: cover;
-			background-repeat: no-repeat;
-			width: 100%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			align-items: center;
+	}
 
-			.img-wrap {
-				border: 2px solid $black;
-				border-bottom: none;
-				border-radius: 2px;
-				width: 96%;
-				height: 40%;
-				background-color: $grey-black;
-				color: $white;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				overflow: hidden;
-				img {
-					z-index: 1;
-					height: 100%;
-					width: 100%;
-					object-fit: cover;
-				}
-			}
-			.tilte {
-				width: 100%;
-				border: 2px solid $black;
-				border-radius: 3px;
-				display: flex;
-				align-items: center;
-				gap: 2px;
-				width: 100%;
-				height: 22px;
-				padding: 2px;
-				.cost {
-					color: $white;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-					width: 14px;
-					height: 14px;
-					border-radius: 100px;
-				}
-			}
-			.description {
-				display: flex;
-				flex-direction: column;
-				justify-content: space-between;
-				align-items: center;
-				border-bottom-right-radius: 3px;
-				border-bottom-left-radius: 3px;
-				width: 97%;
-				border-left: 2px solid $black;
-				border-right: 2px solid $black;
-				border-bottom: 2px solid $black;
-				font-size: 0.7rem;
-				flex-grow: 1;
-				.text {
-					padding: 5px;
-					text-align: center;
-				}
-			}
-			.bottom {
-				font-weight: 800;
-				transform: translateY(8px);
-				width: 40%;
-				justify-self: flex-end;
-				text-align: center;
-				background-color: rgb(200, 186, 186);
-				border: 2px solid $black;
-				border-radius: 3px;
-				padding: 3px;
-				justify-content: space-between;
-			}
+	#content {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.card-top {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 4px 4px 2px;
+		gap: 4px;
+	}
+
+	.cost-gem {
+		width: 28px;
+		height: 28px;
+		border-radius: 1px;
+		background: rgb(87, 152, 205);
+		border: 2px solid $black;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 14px;
+		font-weight: 500;
+		color: $white;
+		flex-shrink: 0;
+	}
+
+	.card-name {
+		flex: 1;
+		text-align: center;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: $black;
+		line-height: 1.2;
+	}
+
+	.tradeable-badge {
+		width: 28px;
+		height: 28px;
+		border-radius: 2px;
+		background: rgba(210, 193, 171, 0.7);
+		border: 2px solid $black;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 16px;
+		color: $black;
+		flex-shrink: 0;
+		.icon{
+			color: rgb(106, 93, 77);
 		}
 	}
-	.white {
-		background: linear-gradient(to right, rgb(201, 201, 201) 0%, rgba(200, 185, 169, 0.8) 100%);
+
+	.art-frame {
+		width: 97%;
+		height: 38%;
+		border: 2px solid $black;
+		border-radius: 3px 3px 0px 0px;
+		background-color: $grey-black;
+		overflow: hidden;
+		flex-shrink: 0;
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
 	}
-	.white-desc {
+
+	.keyword-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 3px;
+		justify-content: center;
+		padding: 4px 6px 2px;
+	}
+
+	.keyword {
+		font-size: 0.55rem;
+		background: rgba(76, 29, 149, 0.15);
+		color: #4c1d95;
+		border: 0.5px solid #4c1d95;
+		border-radius: 10px;
+		padding: 1px 6px;
+		text-transform: capitalize;
+	}
+
+	.divider {
+		width: 90%;
+		height: 1px;
+		background: rgba(0, 0, 0, 0.2);
+		margin: 2px 0;
+	}
+
+	.description {
+		flex: 1;
+		width: 97%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		border-left: 2px solid $black;
+		border-right: 2px solid $black;
+		font-size: 0.65rem;
 		background: rgba(210, 193, 171, 0.7);
+		overflow: hidden;
+
+		.icon-bg {
+			position: absolute;
+			scale: 5;
+			opacity: 0.15;
+			color: #7c7c7c;
+			pointer-events: none;
+		}
+
+		.text {
+			padding: 5px;
+			text-align: center;
+			z-index: 1;
+			position: relative;
+		}
 	}
 
-	.black {
-		background: linear-gradient(to right, rgb(162, 162, 162) 0%, rgba(93, 93, 93, 0.8) 100%);
-	}
-	.black-desc {
-		background: rgba(179, 179, 179, 0.7);
-	}
-
-	.purple {
-		background: linear-gradient(to right, rgb(188, 203, 254) 0%, rgba(150, 155, 190, 0.8) 100%);
-	}
-	.purple-desc {
-		background: rgba(175, 175, 190, 0.7);
-	}
-
-	.green {
-		background: linear-gradient(to right, rgb(189, 216, 176) 0%, rgba(160, 180, 150, 0.8) 100%);
-	}
-	.green-desc {
-		background: rgba(170, 189, 159, 0.8);
+	.card-bottom {
+		border: 1px solid red;
+		width: 97%;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border: 2px solid $black;
+		border-top: none;
+		border-bottom-left-radius: 3px;
+		border-bottom-right-radius: 3px;
+		padding: 3px;
+		background: rgba(210, 193, 171, 0.7);
+		min-height: 24px;
 	}
 
-	.red {
-		background: linear-gradient(to right, rgb(240, 166, 166) 0%, rgba(182, 55, 55, 0.8) 100%);
+	.stat {
+		width: 28px;
+		height: 28px;
+		border-radius: 1px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		font-weight: 800;
+		border: 2px solid $black;
+		flex-shrink: 0;
+
+		&.atk {
+			background: rgb(230, 179, 50);
+			color: $white;
+		}
+		&.def {
+			background: indianred;
+			color: $white;
+		}
 	}
-	.red-desc {
-		background: rgba(255, 178, 178, 0.8);
+
+	.race {
+		font-size: 0.65rem;
+		color: #444;
+		text-align: center;
+		flex: 1;
+		font-style: italic;
 	}
-	.orange {
-		background: linear-gradient(to right, rgb(180, 147, 119) 0%, rgba(163, 99, 60, 0.7) 100%);
-	}
-	.orange-desc {
-		background: rgba(212, 186, 163, 0.9);
+
+	.spell-label {
+		font-size: 0.55rem;
+		color: #444;
+		text-align: center;
+		width: 100%;
+		letter-spacing: 0.06em;
+		font-style: italic;
 	}
 </style>
