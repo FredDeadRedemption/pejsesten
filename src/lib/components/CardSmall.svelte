@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { MinionEntity } from '$lib/shared/types';
+	import { fly } from 'svelte/transition';
+	import Card from './Card.svelte';
 
 	let { card }: { card: MinionEntity } = $props();
 
@@ -7,9 +9,38 @@
 	const attackDebuffed = $derived(card.attack < card.baseAttack);
 	const defenceBuffed = $derived(card.defence > card.baseDefence);
 	const defenceDebuffed = $derived(card.defence < card.baseDefence);
+
+	let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+	let showPreview = $state(false);
+
+	const onMouseEnter = () => {
+		hoverTimer = setTimeout(() => {
+			showPreview = true;
+		}, 200);
+	};
+
+	const onMouseLeave = () => {
+		if (hoverTimer) {
+			clearTimeout(hoverTimer);
+			hoverTimer = null;
+		}
+		showPreview = false;
+	};
 </script>
 
-<div id="card" class={card.color} class:exhausted={card.exhausted}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	id="card"
+	class={card.color}
+	class:exhausted={card.exhausted}
+	onmouseenter={onMouseEnter}
+	onmouseleave={onMouseLeave}
+>
+	{#if showPreview}
+		<div transition:fly={{ duration: 150, y: 15 }} class="preview">
+			<Card {card} />
+		</div>
+	{/if}
 	<div class="art-frame">
 		<img
 			src={card.image_url === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.image_url}`}
@@ -30,11 +61,12 @@
 
 <style lang="scss">
 	#card {
+		position: relative;
 		width: 100px;
 		height: 147px;
 		border: 2px solid $black;
 		border-radius: 3px;
-		overflow: hidden;
+		overflow: visible;
 		user-select: none;
 		-webkit-user-select: none;
 		-moz-user-select: none;
@@ -56,6 +88,16 @@
 		&.exhausted {
 			outline: 2px solid $red;
 		}
+	}
+
+	.preview {
+		position: absolute;
+		left: calc(100% + 8px);
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 100;
+		pointer-events: none;
+		filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
 	}
 
 	.art-frame {
