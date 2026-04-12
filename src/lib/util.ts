@@ -46,8 +46,20 @@ export const isSpellAndHasNoValidTarget = (card: CardEntity, gameState: GameStat
                     e.targetSpec.entityType === 'minion'
             )
     );
+    const needsAnyMinion = card.abilities.some(
+        (a) =>
+            a.trigger === 'onPlay' &&
+            a.effects.some(
+                (e) =>
+                    'targetSpec' in e &&
+                    e.targetSpec.scope === 'single' &&
+                    e.targetSpec.side === 'all' &&
+                    e.targetSpec.entityType === 'minion'
+            )
+    );
 
     if (needsFriendlyMinion && gameState.self.battlefield.length === 0) return true;
     if (needsEnemyMinion && gameState.enemy.battlefield.length === 0) return true;
+    if (needsAnyMinion && gameState.self.battlefield.length === 0 && gameState.enemy.battlefield.length === 0) return true;
     return false;
 };
