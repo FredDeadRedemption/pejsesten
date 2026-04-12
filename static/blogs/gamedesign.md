@@ -60,7 +60,7 @@
 - [ ] Miniaturize (yes please)
 - [ ] Quest (hard to implement, but is cool as fuck)
 - [ ] Questline
-- [ ] Quickdraw
+- [x] Quickdraw
 - [x] Return to hand
 - [ ] Revive
 - [ ] Start of Game
