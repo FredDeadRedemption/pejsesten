@@ -3,7 +3,7 @@
 	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
 	import { endTargeting, targeting, beginTargeting } from '$lib/targeting.svelte';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
-	import { drag } from '$lib/drag.svelte';
+	import { drag, resetDrag } from '$lib/drag.svelte';
 
 	let mouseX = $state(0);
 	let mouseY = $state(0);
@@ -79,6 +79,7 @@
 		didFireTargeting = true;
 		playCard({ index: targeting.cardIndex!, target: entityID });
 		endTargeting();
+		resetDrag();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
 
@@ -89,6 +90,7 @@
 		didFireTargeting = true;
 		playCard({ index: targeting.cardIndex!, target: entityID });
 		endTargeting();
+		resetDrag();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
 </script>
