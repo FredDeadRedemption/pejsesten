@@ -38,6 +38,8 @@ export let gameState = $state<GameStateClient>({
 	yourTurn: false
 });
 
+$inspect(gameState);
+
 // Function to connect to the socket server
 export const connectSocket = (url: string) => {
 	if (socket) return;
@@ -92,7 +94,7 @@ export const playCard = (data: { index: number; target?: string }) => {
 	console.log('PlayCard', data.index, data.target);
 };
 
-export const tradeCard = (data: { index: number}) => fire(socket, "tradeCard", data);
+export const tradeCard = (data: { index: number }) => fire(socket, 'tradeCard', data);
 
 export const attack = (data: AttackData) => fire(socket, 'attack', data);
 
