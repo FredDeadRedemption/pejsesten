@@ -265,7 +265,7 @@ const cards: Card[] = [
 		id: 1,
 		color: 'white',
 		name: 'Macine Elf',
-		description: '<strong>Blitz</strong> <strong>Tradeable</strong>',
+		description: '<strong>Tradeable</strong><br><strong>Blitz</strong>',
 		baseCost: 1,
 		type: 'minion',
 		races: ['elf'],
@@ -393,13 +393,14 @@ const cards: Card[] = [
 		color: 'white',
 		name: 'Black Cat',
 		description:
-			'<strong>Combo:</strong> Return a friendly minion from the battlefield to your hand',
+			'<strong>Tradeable</strong><br><strong>Combo:</strong> Return a friendly minion from the battlefield to your hand',
 		baseCost: 1,
 		type: 'minion',
 		races: ['beast'],
 		baseAttack: 2,
 		baseDefence: 1,
 		image_url: 'Black Cat.webp',
+		tradeable: true,
 		abilities: [
 			{
 				trigger: 'onPlay',
@@ -717,7 +718,7 @@ const cards: Card[] = [
 		id: 17,
 		color: 'white',
 		name: 'Destruction',
-		description: 'Destroy a minion',
+		description: '<strong>Tradeable</strong><br>Destroy a minion',
 		baseCost: 5,
 		type: 'incantation',
 		image_url: '',
