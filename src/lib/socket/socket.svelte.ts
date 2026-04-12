@@ -92,7 +92,7 @@ export const playCard = (data: { index: number; target?: string }) => {
 	console.log('PlayCard', data.index, data.target);
 };
 
-export const tradeCard = (data: { index: number}) => fire(socket, "tradeCard", data);
+export const tradeCard = (data: { index: number }) => fire(socket, 'tradeCard', data);
 
 export const attack = (data: AttackData) => fire(socket, 'attack', data);
 

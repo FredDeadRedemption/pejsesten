@@ -10,6 +10,9 @@
 	import HandEnemy from '$lib/components/HandEnemy.svelte';
 	import GraveyardEnemy from '$lib/components/GraveyardEnemy.svelte';
 	import DeckEnemy from '$lib/components/DeckEnemy.svelte';
+	import { gameState } from '$lib/socket/socket.svelte';
+
+	$inspect(gameState);
 </script>
 
 <svelte:window
