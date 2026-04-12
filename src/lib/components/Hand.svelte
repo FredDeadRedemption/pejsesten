@@ -42,10 +42,13 @@
 		if (!card) return;
 
 		// don't allow dragging unaffordable cards
-		if (card.cost > gameState.self.mana) return;
+		if (card.cost > gameState.self.mana && !card.tradeable) return;
 
 		// spell requires target that is not present dont drag around (unless tradeable)
 		if (isSpellAndHasNoValidTarget(card, gameState) && !card.tradeable) return;
+
+		// if you dont have that 1 mana neccesary to trade the card
+		if (card.tradeable && gameState.self.mana === 0) return;
 
 		event.preventDefault();
 
@@ -130,12 +133,10 @@
 
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
 
-<div class="hand" bind:this={handElement} class:enemy={!self}>
-	{#if self}
-		<button class="end" class:inactive={!gameState.yourTurn} onclick={() => endTurn()}>
-			END TURN
-		</button>
-	{/if}
+<div class="hand" bind:this={handElement}>
+	<button class="end" class:inactive={!gameState.yourTurn} onclick={() => endTurn()}>
+		END TURN
+	</button>
 	<div class="mana">{gameState.self.mana}/{gameState.self.baseMana}</div>
 	{#each gameState.self.hand as card, index}
 		{@const affordable =
@@ -237,9 +238,6 @@
 		position: relative;
 		height: 100%;
 		width: 100%;
-		&.enemy {
-			transform: translateY(-150px);
-		}
 	}
 
 	.card-container {

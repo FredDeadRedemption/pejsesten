@@ -45,8 +45,8 @@
 	};
 </script>
 
-<div class="hand" bind:this={handElement} class:enemy={!self} class:hidden={!OPEN_CARDS}>
-	<div class="mana" class:self>{gameState.enemy.mana}/{gameState.self.baseMana}</div>
+<div class="hand" bind:this={handElement} class:hidden={!OPEN_CARDS}>
+	<div class="mana" >{gameState.enemy.mana}/{gameState.self.baseMana}</div>
 	{#each gameState.enemy.hand as card, index}
 		{@const affordable =
 			card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
@@ -64,9 +64,7 @@
 		<div
 			class="card-container"
 			class:hovered={hoverIndex === index && !dragging}
-			style="{self
-				? fanStyle(index, gameState.enemy.hand.length)
-				: `--fan-x: ${(index - (gameState.enemy.hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
+			style="{`--fan-x: ${(index - (gameState.enemy.hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
 		>
 			<div
 				class="hand-card"

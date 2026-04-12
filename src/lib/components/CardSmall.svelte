@@ -78,6 +78,7 @@
 		outline: 1px solid $mana-white;
 		padding: 2px 1px;
 		display: flex;
+		z-index: 1;
 		flex-direction: column;
 
 		&.black {
@@ -95,7 +96,7 @@
 		left: calc(100% + 8px);
 		top: 50%;
 		transform: translateY(-50%);
-		z-index: 100;
+		z-index: 2;
 		pointer-events: none;
 		filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
 	}
