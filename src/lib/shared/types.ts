@@ -23,7 +23,24 @@ export type TargetSpec = {
 
 export type Requirement =
 	| { type: 'combo' } // played a card before this one this turn
-	| { type: 'quickdraw' }; // played same turn as drawn
+	| { type: 'quickdraw' } // played same turn as drawn
+	| { type: "cardsInHand" };
+
+export type FollowUpRequirement =
+  | { type: 'isRace'; race: Race }
+
+export type ScaledBy = 'minionsOnBoard';
+
+export type ScaledAmount = {
+  scalar: number;
+  scaledBy?: ScaledBy;
+};
+
+export type FollowUp = {
+	requirements: FollowUpRequirement[];
+	type: 'discount';
+	scaledAmount: ScaledAmount;
+};
 
 export type Effect =
 	| {
@@ -40,6 +57,7 @@ export type Effect =
 	| {
 			readonly type: 'draw';
 			drawAmount: number;
+			followUp?: FollowUp;
 	  }
 	| {
 			readonly type: 'returnToHand';

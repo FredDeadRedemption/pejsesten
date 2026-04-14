@@ -7,7 +7,6 @@ declare global {
 		// interface Platform {}
 		interface Array<T> {
 			shuffle(): Array<T>;
-			draw(n: number): Array<T>;
 			dredge(n: number): Array<T>;
 		}
 	}

@@ -14,7 +14,7 @@ export const deckToCards = (deck: number[]): CardEntity[] =>
 				entityID: crypto.randomUUID(),
 				cost: card.baseCost,
 				turnsInHand: 0,
-				justDrawn: false,
+				justDrawn: false
 			};
 
 			if (card.type === 'minion') {
@@ -783,4 +783,68 @@ const cards: Card[] = [
 			}
 		]
 	},
+	{
+		id: 19,
+		color: 'white',
+		name: 'Drelf',
+		description:
+			`Draw a card, if it's an elf, it costs (1) less for each minion on your board`,
+		baseCost: 1,
+		type: 'incantation',
+		image_url: '',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: 'draw',
+						drawAmount: 1,
+						followUp: {
+							requirements: [
+								{
+									type: "isRace",
+									race: "elf"
+								}
+							],
+							type: 'discount',
+							scaledAmount: {
+								scalar: 1,
+								scaledBy: 'minionsOnBoard'
+							}
+						}
+					}
+				]
+			}
+		]
+	},
+	{
+		id: 20,
+		color: 'white',
+		name: 'Expensive elf',
+		description:
+			`Deal 5 damage`,
+		baseCost: 5,
+		baseAttack: 5,
+		baseDefence: 5,
+		attributes: ["charge"],
+		races: ["elf"],
+		type: "minion",
+		image_url: '',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: "damage",
+						damage: 5,
+						targetSpec: {
+							scope: "single",
+							side: "enemy",
+							entityType: "all"
+						}
+					}
+				]
+			}
+		]
+	}
 ];

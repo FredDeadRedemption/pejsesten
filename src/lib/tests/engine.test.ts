@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import '$lib/array.extensions';
 import { setGameState, playCard, attack, endTurn, getGameState } from '$lib/server/engine';
 import { deckToCards } from '$lib/shared/cards';
 import type { GameStateServer, MinionEntity } from '$lib/shared/types';

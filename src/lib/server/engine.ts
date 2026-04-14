@@ -1,10 +1,18 @@
-import { getEnemyBoard, getSourceBoard, switchTurn } from '$lib/server/lib';
+import {
+	checkFollowUpRequirements,
+	getEnemyBoard,
+	getSourceBoard,
+	isMinion,
+	shuffle,
+	switchTurn
+} from '$lib/server/lib';
 import { checkRequirement } from '$lib/shared/lib';
 import type {
 	AttackData,
 	Board,
 	CardEntity,
 	Effect,
+	FollowUp,
 	GameStateClient,
 	GameStateServer,
 	Hero,
@@ -109,6 +117,11 @@ const processEffectQueue = () => {
 	}
 };
 
+const draw = (amount: number, sourceBoard: Board) => {
+	// if adding auras later e.g custom effects that loom, preprocess them here
+	return sourceBoard.deck.splice(0, amount);
+};
+
 const resolveTargets = (
 	spec: TargetSpec,
 	sourceBoard: Board,
@@ -130,6 +143,22 @@ const resolveTargets = (
 	// resolveTargets is used as a fallback (e.g. returnToHand with no target).
 	// selfID filtering upstream ensures the source minion is excluded from the pool.
 	return spec.scope === 'single' ? pool.slice(0, 1) : pool;
+};
+
+const handleFollowUp = (card: CardEntity, sourceBoard: Board, followUp: FollowUp) => {
+	console.log('firing for:', card.name, 'current cost:', card.cost, 'battlefield:', sourceBoard.battlefield.length);
+	if (followUp.requirements && !checkFollowUpRequirements(followUp.requirements, card)) {
+		return card;
+	}
+
+	if (followUp.type === 'discount') {
+		if (followUp.scaledAmount.scaledBy === 'minionsOnBoard') {
+			const discount = sourceBoard.battlefield.length * followUp.scaledAmount.scalar;
+			card.cost = Math.max(0, card.cost - discount);
+		}
+	}
+
+	return card;
 };
 
 const applyEffect = (
@@ -160,11 +189,16 @@ const applyEffect = (
 		});
 	}
 	if (effect.type === 'draw') {
-		sourceBoard.hand.push(...sourceBoard.deck.draw(effect.drawAmount));
+		const drawn = draw(effect.drawAmount, sourceBoard);
+
+		if (effect.followUp) {
+			drawn.forEach((c) => handleFollowUp(c, sourceBoard, effect.followUp!));
+		}
+		sourceBoard.hand.push(...drawn);
 	}
 	if (effect.type === 'returnToHand') {
 		targets?.forEach((t) => {
-			if (!('exhausted' in t)) return;
+			if (!isMinion(t)) return;
 			const minion = t as MinionEntity;
 
 			// figure out which board owns this minion // supports mass returning (deportation)
@@ -184,7 +218,7 @@ const applyEffect = (
 	}
 	if (effect.type === 'destroy') {
 		targets?.forEach((t) => {
-			if (!('exhausted' in t)) return;
+			if (!isMinion(t)) return;
 			t.defence = 0; // checkForDeaths will handle removal and deathrattles
 		});
 	}
@@ -201,9 +235,11 @@ export const setGameState = (
 	const whiteDeck = isPlayer1White ? player1Deck : player2Deck;
 	const blackDeck = isPlayer1White ? player2Deck : player1Deck;
 
+	shuffle(whiteDeck);
+	shuffle(blackDeck);
 	// Draw 5 random cards from each deck
-	let startingHandWhite = whiteDeck.shuffle().draw(STARTING_HAND_SIZE);
-	let startingHandBlack = blackDeck.shuffle().draw(STARTING_HAND_SIZE + 1);
+	let startingHandWhite = whiteDeck.splice(0, STARTING_HAND_SIZE);
+	let startingHandBlack = blackDeck.splice(0, STARTING_HAND_SIZE + 1);
 
 	gameState = {
 		white: {
@@ -254,11 +290,11 @@ export const endTurn = (): GameStateResponse => {
 	});
 
 	// draw 1 for the new active player
-	const drawnCards = sourceBoard.deck.draw(1);
+	const drawnCards = draw(1, sourceBoard);
 
 	drawnCards.forEach((c) => {
 		c.justDrawn = true;
-	})
+	});
 
 	sourceBoard.hand.push(...drawnCards);
 
@@ -302,7 +338,6 @@ export const playCard = (
 		if (needsValidation && !target) return null;
 
 		if (target) {
-			const isMinion = 'exhausted' in target;
 			const isOnFriendlyBoard =
 				sourceBoard.battlefield.some((m) => m.entityID === (target as MinionEntity).entityID) ||
 				sourceBoard.hero === target;
@@ -312,8 +347,8 @@ export const playCard = (
 			const invalidTarget = card.abilities.some((a) =>
 				a.effects.some((e) => {
 					if (!('targetSpec' in e)) return false;
-					if (e.targetSpec.entityType === 'minion' && !isMinion) return true; // spell wants minion, got hero
-					if (e.targetSpec.entityType === 'hero' && isMinion) return true; // spell wants hero, got minion
+					if (e.targetSpec.entityType === 'minion' && !isMinion(target)) return true; // spell wants minion, got hero
+					if (e.targetSpec.entityType === 'hero' && isMinion(target)) return true; // spell wants hero, got minion
 					if (e.targetSpec.side === 'friendly' && !isOnFriendlyBoard) return true; // spell wants friendly, got enemy
 					if (e.targetSpec.side === 'enemy' && isOnFriendlyBoard) return true; // spell wants enemy, got friendly
 					return false;
@@ -339,7 +374,9 @@ export const playCard = (
 		if (ability.trigger !== 'onPlay') return;
 		if (
 			ability.requirements &&
-			!ability.requirements.every((r) => checkRequirement(r, sourceBoard, enemyBoard, gameState, consumed))
+			!ability.requirements.every((r) =>
+				checkRequirement(r, sourceBoard, enemyBoard, gameState, consumed)
+			)
 		)
 			return;
 		ability.effects.forEach((effect) => {
@@ -383,7 +420,7 @@ export const tradeCard = (_socketID: string, data: { index: number }) => {
 	sourceBoard.deck.push(consumed);
 
 	// draw a new card
-	sourceBoard.hand.push(...sourceBoard.deck.draw(1));
+	sourceBoard.hand.push(...draw(1, sourceBoard));
 
 	// spent one mana
 	sourceBoard.mana--;
@@ -395,13 +432,14 @@ export const attack = (_socketID: string, attackData: AttackData): GameStateResp
 	const attacker = findEntity(attackData.originID);
 
 	// invalid input || not a minion || has attacked / just spawned
-	if (!attacker || !('exhausted' in attacker) || attacker.exhausted) return null;
-	attacker.exhausted = true;
+	if (!attacker || !isMinion(attacker) || attacker.exhausted) return null;
 
 	const target = findEntity(attackData.targetID);
 	if (!target) return null;
 
 	target.defence -= attacker.attack;
+
+	attacker.exhausted = true;
 
 	// only retaliate if target is a minion
 	if ('exhausted' in target) {
