@@ -273,7 +273,7 @@ const cards: Card[] = [
 		baseDefence: 2,
 		image_url: 'Machine Elf.webp',
 		abilities: [],
-		attributes: ['charge', "tradeable"]
+		attributes: ['charge', 'tradeable']
 	},
 	{
 		id: 2,
@@ -419,7 +419,7 @@ const cards: Card[] = [
 				]
 			}
 		],
-		attributes: ["tradeable"]
+		attributes: ['tradeable']
 	},
 	{
 		id: 7,
@@ -741,7 +741,7 @@ const cards: Card[] = [
 				]
 			}
 		],
-		attributes: ["tradeable"]
+		attributes: ['tradeable']
 	},
 	{
 		id: 18,
@@ -792,8 +792,7 @@ const cards: Card[] = [
 		id: 19,
 		color: 'white',
 		name: 'Drelf',
-		description:
-			`Draw a card, if it's an elf, it costs (1) less for each minion on your board`,
+		description: `Draw a card, if it's an elf, it costs (1) less for each minion on your board`,
 		baseCost: 1,
 		type: 'incantation',
 		image_url: '',
@@ -805,17 +804,21 @@ const cards: Card[] = [
 						type: 'draw',
 						drawAmount: 1,
 						followUp: {
-							requirements: [
+							followUpRequirements: [
 								{
-									type: "isRace",
-									race: "elf"
+									type: 'isRace',
+									race: 'elf'
 								}
 							],
-							type: 'discount',
-							scaledAmount: {
-								scalar: 1,
-								scaledBy: 'minionsOnBoard'
-							}
+							followUpEffects: [
+								{
+									type: 'discount',
+									scaledAmount: {
+										scalar: 1,
+										scaledBy: 'minionsOnBoard'
+									}
+								}
+							]
 						}
 					}
 				]
@@ -827,26 +830,25 @@ const cards: Card[] = [
 		id: 20,
 		color: 'white',
 		name: 'Expensive elf',
-		description:
-			`<strong>Blitz.</strong><br>Deal 5 damage`,
+		description: `<strong>Blitz.</strong><br>Deal 5 damage`,
 		baseCost: 5,
 		baseAttack: 5,
 		baseDefence: 5,
-		attributes: ["charge", "tradeable"],
-		races: ["elf"],
-		type: "minion",
+		attributes: ['charge', 'tradeable'],
+		races: ['elf'],
+		type: 'minion',
 		image_url: '',
 		abilities: [
 			{
 				trigger: 'onPlay',
 				effects: [
 					{
-						type: "damage",
+						type: 'damage',
 						damage: 5,
 						targetSpec: {
-							scope: "single",
-							side: "enemy",
-							entityType: "all"
+							scope: 'single',
+							side: 'enemy',
+							entityType: 'all'
 						}
 					}
 				]
