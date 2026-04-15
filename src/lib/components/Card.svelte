@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
+	import { isTradeable } from '$lib/shared/lib';
 	import type { Card, CardEntity } from '$lib/shared/types';
 
 	let { card, compact = false }: { card: CardEntity | Card; compact?: boolean } = $props();
@@ -13,7 +14,7 @@
 		<div class="card-top">
 			<div class="cost-gem">{cost}</div>
 			<div class="card-name">{card.name}</div>
-			{#if card.tradeable}
+			{#if isTradeable(card)}
 				<div class="tradeable-badge">
 					<span class="icon">
 						{@html getIcon("tradeable")}

@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import Card from './Card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
-	import { checkRequirement } from '$lib/shared/lib';
+	import { checkRequirement, isTradeable } from '$lib/shared/lib';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
 	import { drag } from '$lib/drag.svelte';
 
@@ -42,13 +42,13 @@
 		if (!card) return;
 
 		// don't allow dragging unaffordable cards
-		if (card.cost > gameState.self.mana && !card.tradeable) return;
+		if (card.cost > gameState.self.mana && !isTradeable(card)) return;
 
 		// spell requires target that is not present dont drag around (unless tradeable)
-		if (isSpellAndHasNoValidTarget(card, gameState) && !card.tradeable) return;
+		if (isSpellAndHasNoValidTarget(card, gameState) && !isTradeable(card)) return;
 
 		// if you dont have that 1 mana neccesary to trade the card
-		if (card.tradeable && gameState.self.mana === 0) return;
+		if (isTradeable(card) && gameState.self.mana === 0) return;
 
 		event.preventDefault();
 

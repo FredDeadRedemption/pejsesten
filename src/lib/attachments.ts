@@ -1,5 +1,6 @@
-// moves the element to document.body, escaping any parent stacking context
+// moves the element to game-frame, escaping any parent stacking context
 export const portal = (node: HTMLElement) => {
-	document.body.appendChild(node)
+	const gameFrame = document.getElementById("game-frame");
+	gameFrame?.appendChild(node)
 	return () => node.remove()
 }

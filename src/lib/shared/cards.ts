@@ -272,9 +272,8 @@ const cards: Card[] = [
 		baseAttack: 1,
 		baseDefence: 2,
 		image_url: 'Machine Elf.webp',
-		tradeable: true,
 		abilities: [],
-		attributes: ['charge']
+		attributes: ['charge', "tradeable"]
 	},
 	{
 		id: 2,
@@ -400,7 +399,6 @@ const cards: Card[] = [
 		baseAttack: 2,
 		baseDefence: 1,
 		image_url: 'Black Cat.webp',
-		tradeable: true,
 		abilities: [
 			{
 				trigger: 'onPlay',
@@ -421,7 +419,7 @@ const cards: Card[] = [
 				]
 			}
 		],
-		attributes: []
+		attributes: ["tradeable"]
 	},
 	{
 		id: 7,
@@ -566,7 +564,8 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 12,
@@ -591,7 +590,8 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 13,
@@ -615,7 +615,8 @@ const cards: Card[] = [
 				], // only fires on combo
 				effects: [{ type: 'draw', drawAmount: 1 }] // extra 1 on top = 2 total
 			}
-		]
+		],
+		attributes: []
 	},
 
 	// ── BLACK INCANTATIONS ───────────────────────────────────
@@ -643,7 +644,8 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 15,
@@ -687,7 +689,8 @@ const cards: Card[] = [
 					}
 				] // extra 2 on top = 4 total
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 16,
@@ -712,7 +715,8 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 17,
@@ -722,7 +726,6 @@ const cards: Card[] = [
 		baseCost: 5,
 		type: 'incantation',
 		image_url: '',
-		tradeable: true,
 		abilities: [
 			{
 				trigger: 'onPlay',
@@ -737,7 +740,8 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: ["tradeable"]
 	},
 	{
 		id: 18,
@@ -781,7 +785,8 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 19,
@@ -815,18 +820,19 @@ const cards: Card[] = [
 					}
 				]
 			}
-		]
+		],
+		attributes: []
 	},
 	{
 		id: 20,
 		color: 'white',
 		name: 'Expensive elf',
 		description:
-			`Deal 5 damage`,
+			`<strong>Blitz.</strong><br>Deal 5 damage`,
 		baseCost: 5,
 		baseAttack: 5,
 		baseDefence: 5,
-		attributes: ["charge"],
+		attributes: ["charge", "tradeable"],
 		races: ["elf"],
 		type: "minion",
 		image_url: '',

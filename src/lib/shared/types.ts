@@ -24,16 +24,15 @@ export type TargetSpec = {
 export type Requirement =
 	| { type: 'combo' } // played a card before this one this turn
 	| { type: 'quickdraw' } // played same turn as drawn
-	| { type: "cardsInHand" };
+	| { type: 'cardsInHand' };
 
-export type FollowUpRequirement =
-  | { type: 'isRace'; race: Race }
+export type FollowUpRequirement = { type: 'isRace'; race: Race };
 
 export type ScaledBy = 'minionsOnBoard';
 
 export type ScaledAmount = {
-  scalar: number;
-  scaledBy?: ScaledBy;
+	scalar: number;
+	scaledBy?: ScaledBy;
 };
 
 export type FollowUp = {
@@ -75,7 +74,16 @@ export type Ability = {
 	effects: Effect[];
 };
 
-type Attributes = 'charge'; // can attack the turn it is played
+type BaseAtrributes = 
+	| "tradeable"
+
+type MinionAttributes = 
+	BaseAtrributes
+	| "charge"
+
+type IncantationAttributes = 
+	BaseAtrributes 
+	| "twinspell"
 
 // Base Card
 type CardBase = {
@@ -85,7 +93,6 @@ type CardBase = {
 	readonly color: Color;
 	readonly baseCost: number;
 	readonly image_url: string;
-	readonly tradeable?: true;
 	abilities: Ability[];
 };
 
@@ -95,12 +102,13 @@ export type MinionCard = CardBase & {
 	readonly baseAttack: number;
 	readonly baseDefence: number;
 	readonly races: Race[];
-	attributes: Attributes[];
+	attributes: MinionAttributes[];
 };
 
 // Base Incantation Card
 export type IncantationCard = CardBase & {
 	readonly type: 'incantation';
+	attributes: IncantationAttributes[];
 };
 
 // Metadata mostly for ui

@@ -6,7 +6,7 @@ import {
 	shuffle,
 	switchTurn
 } from '$lib/server/lib';
-import { checkRequirement } from '$lib/shared/lib';
+import { checkRequirement, isTradeable } from '$lib/shared/lib';
 import type {
 	AttackData,
 	Board,
@@ -411,7 +411,7 @@ export const tradeCard = (_socketID: string, data: { index: number }) => {
 	const card = sourceBoard.hand[data.index]; // peek first, don't splice yet
 
 	if (!card) return null;
-	if (!card.tradeable) return null;
+	if (!isTradeable(card)) return null;
 	if (sourceBoard.deck.length === 0) return null;
 
 	const [consumed] = sourceBoard.hand.splice(data.index, 1);
