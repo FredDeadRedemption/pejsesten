@@ -2,9 +2,9 @@
 	import Card from './Card.svelte';
 	import { gameState } from '$lib/socket/socket.svelte';
 	import type { CardEntity } from '$lib/shared/types';
-	import { checkRequirement } from '$lib/shared/lib';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
 	import { OPEN_CARDS } from '$lib/shared/settings';
+	import { checkRequirements } from '$lib/shared/lib';
 
 	let handElement: HTMLElement;
 
@@ -36,7 +36,7 @@
 		return `--fan-x: ${offset * spacing + spread}px; --fan-rot: ${rot}deg; --fan-arc: ${arc}px`;
 	};
 
-  // TODO: send hover event over seperate socket channel?
+	// TODO: send hover event over seperate socket channel?
 	const setHover = (index: number) => {
 		if (!dragging) hoverIndex = index;
 	};
@@ -46,7 +46,7 @@
 </script>
 
 <div class="hand" bind:this={handElement} class:hidden={!OPEN_CARDS}>
-	<div class="mana" >{gameState.enemy.mana}/{gameState.self.baseMana}</div>
+	<div class="mana">{gameState.enemy.mana}/{gameState.self.baseMana}</div>
 	{#each gameState.enemy.hand as card, index}
 		{@const affordable =
 			card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
@@ -56,9 +56,7 @@
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					a.requirements.every((r) =>
-						checkRequirement(r, gameState.self, gameState.enemy, gameState, card)
-					)
+					checkRequirements(a.requirements, gameState.self, gameState.enemy, gameState, card)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -125,9 +123,9 @@
 		height: 100%;
 		width: 100%;
 		transform: translateY(-150px);
-    &.hidden{
-      display: none;
-    }
+		&.hidden {
+			display: none;
+		}
 	}
 
 	.card-container {
