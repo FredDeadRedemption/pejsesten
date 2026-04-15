@@ -1,16 +1,25 @@
-import type { Card, Board, CardEntity, GameStateClient, GameStateServer, Requirement } from './types';
+import type {
+	Card,
+	Board,
+	CardEntity,
+	GameStateClient,
+	GameStateServer,
+	Requirement
+} from './types';
 
-export const checkRequirement = (
-	rec: Requirement | undefined,
+export const checkRequirements = (
+	requirements: Requirement[] | undefined,
 	_sourceBoard: Board,
 	_enemyBoard: Board,
 	gameState: GameStateServer | GameStateClient,
 	card: CardEntity
 ): boolean => {
-	if (!rec) return true; // no rec = always fires
-	if (rec.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
-	if (rec.type === 'quickdraw') return card.justDrawn === true;
-	return true;
+	if (!requirements) return true; // no reqs = always fires
+	return requirements.every((r) => {
+		if (r.type === 'combo') return gameState.cardsPlayedThisTurn > 0;
+		if (r.type === 'quickdraw') return card.justDrawn === true;
+	});
 };
 
-export const isTradeable = (card: CardEntity | Card) => card.attributes.some((a) => a === 'tradeable');
+export const isTradeable = (card: CardEntity | Card) =>
+	card.attributes.some((a) => a === 'tradeable');
