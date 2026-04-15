@@ -6,14 +6,14 @@ import {
 	shuffle,
 	switchTurn
 } from '$lib/server/lib';
-import { checkRequirement, isTradeable } from '$lib/shared/lib';
+import { checkRequirements, isTradeable } from '$lib/shared/lib';
 import type {
 	AttackData,
 	Board,
 	CardEntity,
 	Effect,
-	FollowUp,
-	GameStateClient,
+	FollowUpAbillity,
+	FollowUpEffect,
 	GameStateServer,
 	Hero,
 	MinionEntity,
@@ -80,12 +80,7 @@ const checkForDeaths = () => {
 				// enqueue onDeath abilities before removing
 				minion.abilities.forEach((ability) => {
 					if (ability.trigger !== 'onDeath') return;
-					if (
-						ability.requirements &&
-						!ability.requirements.every((r) =>
-							checkRequirement(r, sourceBoard, enemyBoard, gameState, minion)
-						)
-					)
+					if (!checkRequirements(ability.requirements, sourceBoard, enemyBoard, gameState, minion))
 						return;
 					anyOnDeathTriggers = true;
 					ability.effects.forEach((effect) => {
@@ -145,20 +140,29 @@ const resolveTargets = (
 	return spec.scope === 'single' ? pool.slice(0, 1) : pool;
 };
 
-const handleFollowUp = (card: CardEntity, sourceBoard: Board, followUp: FollowUp) => {
-	console.log('firing for:', card.name, 'current cost:', card.cost, 'battlefield:', sourceBoard.battlefield.length);
-	if (followUp.requirements && !checkFollowUpRequirements(followUp.requirements, card)) {
-		return card;
-	}
-
-	if (followUp.type === 'discount') {
-		if (followUp.scaledAmount.scaledBy === 'minionsOnBoard') {
-			const discount = sourceBoard.battlefield.length * followUp.scaledAmount.scalar;
+const applyFollowUpEffect = (card: CardEntity, sourceBoard: Board, effect: FollowUpEffect) => {
+	if (effect.type === 'discount') {
+		// TODO: make a resolve scaledAmount function
+		if (effect.scaledAmount.scaledBy === 'minionsOnBoard') {
+			const discount = sourceBoard.battlefield.length * effect.scaledAmount.scalar;
 			card.cost = Math.max(0, card.cost - discount);
 		}
+	} else if (effect.type === 'copy') {
+		const copies = Array.from({ length: effect.copyAmount }, () => structuredClone(card));
+		sourceBoard.hand.push(...copies);
 	}
+};
 
-	return card;
+const processFollowUpAbility = (
+	card: CardEntity,
+	sourceBoard: Board,
+	followUpAbility: FollowUpAbillity
+) => {
+	if (!checkFollowUpRequirements(followUpAbility.followUpRequirements, card)) return;
+
+	followUpAbility.followUpEffects.forEach((e) => {
+		applyFollowUpEffect(card, sourceBoard, e);
+	});
 };
 
 const applyEffect = (
@@ -192,7 +196,7 @@ const applyEffect = (
 		const drawn = draw(effect.drawAmount, sourceBoard);
 
 		if (effect.followUp) {
-			drawn.forEach((c) => handleFollowUp(c, sourceBoard, effect.followUp!));
+			drawn.forEach((c) => processFollowUpAbility(c, sourceBoard, effect.followUp!));
 		}
 		sourceBoard.hand.push(...drawn);
 	}
@@ -372,12 +376,7 @@ export const playCard = (
 
 	consumed.abilities.forEach((ability) => {
 		if (ability.trigger !== 'onPlay') return;
-		if (
-			ability.requirements &&
-			!ability.requirements.every((r) =>
-				checkRequirement(r, sourceBoard, enemyBoard, gameState, consumed)
-			)
-		)
+		if (!checkRequirements(ability.requirements, sourceBoard, enemyBoard, gameState, consumed))
 			return;
 		ability.effects.forEach((effect) => {
 			effectQueue.push({

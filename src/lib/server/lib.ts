@@ -19,6 +19,7 @@ export const shuffle = (deck: CardEntity[]) => {
 export const isMinion = (entity: CardEntity | Hero) => 'exhausted' in entity;
 
 export const checkFollowUpRequirements = (requirements: FollowUpRequirement[], card: CardEntity) => {
+	if (!requirements) return true;
 	return requirements.every((r) => {
 		if (r.type === 'isRace') {
       if (!isMinion(card)) return false;

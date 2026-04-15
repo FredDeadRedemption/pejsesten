@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import Card from './Card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
-	import { checkRequirement, isTradeable } from '$lib/shared/lib';
+	import { checkRequirements, isTradeable } from '$lib/shared/lib';
 	import { isSpellAndHasNoValidTarget } from '$lib/util';
 	import { drag } from '$lib/drag.svelte';
 
@@ -147,9 +147,7 @@
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					a.requirements.every((r) =>
-						checkRequirement(r, gameState.self, gameState.enemy, gameState, card)
-					)
+					checkRequirements(a.requirements, gameState.self, gameState.enemy, gameState, card)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
