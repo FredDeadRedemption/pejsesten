@@ -854,5 +854,35 @@ const cards: Card[] = [
 				]
 			}
 		]
-	}
+	},
+	{
+		id: 21,
+		color: 'white',
+		name: 'Copy Cat',
+		description: `Draw a card, add a copy to your hand`,
+		baseCost: 1,
+		type: 'incantation',
+		image_url: 'Black Cat.webp',
+		abilities: [
+			{
+				trigger: 'onPlay',
+				effects: [
+					{
+						type: 'draw',
+						drawAmount: 1,
+						followUp: {
+							followUpRequirements: [],
+							followUpEffects: [
+								{
+									type: "copy",
+									copyAmount: 1,
+								}
+							]
+						}
+					}
+				]
+			}
+		],
+		attributes: []
+	},
 ];
