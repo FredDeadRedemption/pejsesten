@@ -24,7 +24,6 @@ enum TargetRef {
 struct QueuedEffect {
     effect: Effect,
     target_id: Option<String>,
-    white_is_source: bool,
     self_id: Option<String>,
 }
 
@@ -144,7 +143,7 @@ impl Game {
 
     // --- Entity lookup ---
 
-    fn find_target_ref(&self, id: &str, white_is_source: bool) -> Option<TargetRef> {
+    fn find_target_ref(&self, id: &str) -> Option<TargetRef> {
         match id {
             "heroSelf" => return Some(TargetRef::HeroSource),
             "heroEnemy" => return Some(TargetRef::HeroEnemy),
@@ -211,13 +210,12 @@ impl Game {
     fn get_target_refs(
         &self,
         spec: &TargetSpec,
-        white_is_source: bool,
         target_id: Option<&str>,
         self_id: Option<&str>,
     ) -> Vec<TargetRef> {
         if let Some(id) = target_id {
             return self
-                .find_target_ref(id, white_is_source)
+                .find_target_ref(id)
                 .map(|t| vec![t])
                 .unwrap_or_default();
         }
@@ -256,7 +254,6 @@ impl Game {
     // --- Effect queue ---
 
     fn enqueue_trigger(&mut self, trigger: Trigger) {
-        let white_is_source = self.state.white_turn;
         let mut to_queue: Vec<QueuedEffect> = vec![];
 
         let source_board  = self.source_board();
@@ -269,7 +266,6 @@ impl Game {
                     to_queue.push(QueuedEffect {
                         effect: effect.clone(),
                         target_id: None,
-                        white_is_source,
                         self_id: None,
                     });
                 }
@@ -284,7 +280,6 @@ impl Game {
             let queued = self.effect_queue.remove(0);
             self.apply_effect(
                 queued.effect,
-                queued.white_is_source,
                 queued.target_id.as_deref(),
                 queued.self_id.as_deref(),
             );
@@ -320,7 +315,6 @@ impl Game {
                                 to_queue.push(QueuedEffect {
                                     effect: effect.clone(),
                                     target_id: None,
-                                    white_is_source: white_is_board,
                                     self_id: Some(dead.base.entity_id.clone()),
                                 });
                             }
@@ -346,7 +340,6 @@ impl Game {
     fn apply_effect(
         &mut self,
         effect: Effect,
-        white_is_source: bool,
         target_id: Option<&str>,
         self_id: Option<&str>,
     ) {
@@ -356,7 +349,7 @@ impl Game {
                 attack,
                 defence,
             } => {
-                let refs = self.get_target_refs(&target_spec, white_is_source, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec,  target_id, self_id);
                 for tr in refs {
                     let (source, enemy) = self.boards_mut();
                     match tr {
@@ -384,7 +377,7 @@ impl Game {
                 target_spec,
                 damage,
             } => {
-                let refs = self.get_target_refs(&target_spec, white_is_source, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, target_id, self_id);
                 for tr in refs {
                     let (source, enemy) = self.boards_mut();
                     match tr {
@@ -446,7 +439,7 @@ impl Game {
                 target_spec,
                 cost_reduction,
             } => {
-                let refs = self.get_target_refs(&target_spec, white_is_source, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, target_id, self_id);
                 // Reverse so removing by index doesn't shift remaining indices
                 for tr in refs.into_iter().rev() {
                     let is_source = matches!(tr, TargetRef::MinionSource(_));
@@ -481,7 +474,7 @@ impl Game {
             }
 
             Effect::Destroy { target_spec } => {
-                let refs = self.get_target_refs(&target_spec, white_is_source, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, target_id, self_id);
                 for tr in refs {
                     let (source, enemy) = self.boards_mut();
                     match tr {
@@ -525,8 +518,6 @@ impl Game {
     }
 
     pub fn play_card(&mut self, index: usize, target_id: Option<String>) -> bool {
-        let white_is_source = self.state.white_turn;
-
         // Validate without consuming
         {
             let source_board = self.source_board_mut();
@@ -577,7 +568,6 @@ impl Game {
                 self.effect_queue.push(QueuedEffect {
                     effect: effect.clone(),
                     target_id: tid,
-                    white_is_source,
                     self_id: Some(entity_id.clone()),
                 });
             }
@@ -593,9 +583,7 @@ impl Game {
     }
 
     pub fn attack(&mut self, data: AttackData) -> bool {
-        let white_is_source = self.state.white_turn;
-
-        let attacker_idx = match self.find_target_ref(&data.origin_id, white_is_source) {
+        let attacker_idx = match self.find_target_ref(&data.origin_id) {
             Some(TargetRef::MinionSource(i)) => i,
             _ => return false,
         };
@@ -604,7 +592,7 @@ impl Game {
             return false;
         }
 
-        let target_ref = match self.find_target_ref(&data.target_id, white_is_source) {
+        let target_ref = match self.find_target_ref(&data.target_id) {
             Some(t) => t,
             None => return false,
         };
@@ -637,8 +625,6 @@ impl Game {
     }
 
     pub fn trade_card(&mut self, index: usize) -> bool {
-        let white_is_source = self.state.white_turn;
-
         {
             let source_board = self.source_board_mut();
             if source_board.mana == 0 || source_board.deck.is_empty() {
