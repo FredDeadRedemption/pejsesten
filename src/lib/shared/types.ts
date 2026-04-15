@@ -35,10 +35,20 @@ export type ScaledAmount = {
 	scaledBy?: ScaledBy;
 };
 
-export type FollowUp = {
-	requirements: FollowUpRequirement[];
-	type: 'discount';
-	scaledAmount: ScaledAmount;
+export type FollowUpEffect =
+	| {
+			type: 'discount';
+			scaledAmount: ScaledAmount;
+	  }
+	| {
+			type: 'copy';
+			copyAmount: number;
+	  };
+
+// abilities that fire after another ability like draw / reveal and then ->
+export type FollowUpAbillity = {
+	followUpRequirements: FollowUpRequirement[];
+	followUpEffects: FollowUpEffect[];
 };
 
 export type Effect =
@@ -56,7 +66,7 @@ export type Effect =
 	| {
 			readonly type: 'draw';
 			drawAmount: number;
-			followUp?: FollowUp;
+			followUp?: FollowUpAbillity;
 	  }
 	| {
 			readonly type: 'returnToHand';
@@ -74,16 +84,11 @@ export type Ability = {
 	effects: Effect[];
 };
 
-type BaseAtrributes = 
-	| "tradeable"
+type BaseAtrributes = 'tradeable';
 
-type MinionAttributes = 
-	BaseAtrributes
-	| "charge"
+type MinionAttributes = BaseAtrributes | 'charge';
 
-type IncantationAttributes = 
-	BaseAtrributes 
-	| "twinspell"
+type IncantationAttributes = BaseAtrributes | 'twinspell';
 
 // Base Card
 type CardBase = {
