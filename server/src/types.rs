@@ -1,88 +1,103 @@
 #![allow(unused)]
 #![allow(dead_code)]
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum Color {
     White,
     Black,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum Race {
     Human,
     Elf,
     Beast,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum Trigger {
     OnPlay,
     OnDeath,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum TargetMode {
     Targeted, // player must choose a target
     Auto,     // resolves automatically
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum TargetSide {
     Friendly,
     Enemy,
     All,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum EntityType {
     Minion,
     Hero,
     All,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct TargetSpec {
     pub target_mode: TargetMode,
     pub side: TargetSide,
     pub entity_type: EntityType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum Requirement {
     Combo,
     Quickdraw,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum FollowUpRequirement {
     IsRace { race: Race },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum ScaledBy {
     MinionsOnBoard,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct ScaledAmount {
     pub scalar: i32,
     pub scaled_by: Option<ScaledBy>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum FollowUpEffect {
     Discount { scaled_amount: ScaledAmount },
     Copy { copy_amount: usize },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct FollowUpAbility {
     pub follow_up_requirements: Vec<FollowUpRequirement>,
     pub follow_up_effects: Vec<FollowUpEffect>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum Effect {
     Buff {
         target_spec: TargetSpec,
@@ -106,30 +121,35 @@ pub enum Effect {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Ability {
     pub trigger: Trigger,
     pub requirements: Vec<Requirement>, // empty vec = no requirements
     pub effects: Vec<Effect>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum MinionAttribute {
     Tradeable,
     Charge,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum IncantationAttribute {
     Tradeable,
     Twinspell,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct MinionCard {
     pub id: u32,
     pub name: String,
     pub description: Option<String>,
+    pub flavor_text: Option<String>,
     pub color: Color,
     pub base_cost: i32,
     pub image_url: String,
@@ -140,11 +160,13 @@ pub struct MinionCard {
     pub attributes: Vec<MinionAttribute>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct IncantationCard {
     pub id: u32,
     pub name: String,
     pub description: Option<String>,
+    pub flavor_text: Option<String>,
     pub color: Color,
     pub base_cost: i32,
     pub image_url: String,
@@ -152,13 +174,15 @@ pub struct IncantationCard {
     pub attributes: Vec<IncantationAttribute>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum Card {
     Minion(MinionCard),
     Incantation(IncantationCard),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct EntityBase {
     pub entity_id: String,
     pub cost: i32,
@@ -166,7 +190,8 @@ pub struct EntityBase {
     pub just_drawn: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct MinionEntity {
     pub card: MinionCard,
     pub base: EntityBase,
@@ -175,25 +200,29 @@ pub struct MinionEntity {
     pub exhausted: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct IncantationEntity {
     pub card: IncantationCard,
     pub base: EntityBase,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum CardEntity {
     Minion(MinionEntity),
     Incantation(IncantationEntity),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Hero {
     pub attack: i32,
     pub defence: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Board {
     pub deck: Vec<CardEntity>,
     pub hand: Vec<CardEntity>,
@@ -204,7 +233,8 @@ pub struct Board {
     pub mana: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct GameState {
     pub white: Board,
     pub black: Board,
@@ -215,7 +245,8 @@ pub struct GameState {
     pub cards_played_this_turn: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct GameStateClient {
     pub self_board: Board,
     pub enemy_board: Board,
@@ -228,14 +259,16 @@ pub struct GameStateClient {
     pub cards_played_this_turn: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]
+#[ts(export)]
 pub struct PlayerMetaData {
     pub username: String,
     pub choosen_deck: Vec<u32>,
     pub avatar: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct AttackData {
     pub origin_id: String,
     pub target_id: String,
