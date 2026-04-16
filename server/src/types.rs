@@ -250,9 +250,7 @@ pub struct GameState {
 pub struct GameStateClient {
     pub self_board: Board,
     pub enemy_board: Board,
-    #[serde(rename = "whitePlayerID")]
     pub white_player_id: String,
-    #[serde(rename = "blackPlayerID")]
     pub black_player_id: String,
     pub your_turn: bool,
     pub turn_count: u32,
