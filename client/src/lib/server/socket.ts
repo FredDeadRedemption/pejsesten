@@ -99,8 +99,8 @@ export const setupSocketIO = (io: Server) => {
 					socket1.id,
 					socket2.id,
 					isPlayer1White,
-					deckToCards(player1MetaData.choosenDeck),
-					deckToCards(player2MetaData.choosenDeck)
+					deckToCards(player1MetaData.choosen_deck),
+					deckToCards(player2MetaData.choosen_deck)
 				);
 
 				broadcastGameState(newGameState, activeGame);
@@ -112,7 +112,7 @@ export const setupSocketIO = (io: Server) => {
 		});
 
 		socket.on('queueBot', (playerMetaData: PlayerMetaData) => {
-			console.log(playerMetaData.choosenDeck);
+			console.log(playerMetaData.choosen_deck);
 			const isPlayer1White = coinFlip();
 			const botIsWhite = !isPlayer1White;
 			activeGame = {
@@ -127,8 +127,8 @@ export const setupSocketIO = (io: Server) => {
 				socket.id,
 				BOT_ID,
 				isPlayer1White,
-				deckToCards(playerMetaData.choosenDeck),
-				deckToCards(playerMetaData.choosenDeck)
+				deckToCards(playerMetaData.choosen_deck),
+				deckToCards(playerMetaData.choosen_deck)
 			);
 
 			broadcastGameState(newGameState, activeGame);

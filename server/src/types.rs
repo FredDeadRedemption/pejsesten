@@ -181,6 +181,7 @@ pub enum Card {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntityBase {
+    #[serde(rename = "entityID")]
     pub entity_id: String,
     pub cost: i32,
     pub turns_in_hand: u32,
@@ -190,7 +191,9 @@ pub struct EntityBase {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MinionEntity {
+    #[serde(flatten)]
     pub card: MinionCard,
+    #[serde(flatten)]
     pub base: EntityBase,
     pub attack: i32,
     pub defence: i32,
@@ -200,7 +203,9 @@ pub struct MinionEntity {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IncantationEntity {
+    #[serde(flatten)]
     pub card: IncantationCard,
+    #[serde(flatten)]
     pub base: EntityBase,
 }
 
@@ -235,7 +240,9 @@ pub struct Board {
 pub struct GameState {
     pub white: Board,
     pub black: Board,
+    #[serde(rename = "whitePlayerID")]
     pub white_player_id: String,
+    #[serde(rename = "blackPlayerID")]
     pub black_player_id: String,
     pub white_turn: bool,
     pub turn_count: u32,
@@ -248,18 +255,19 @@ pub struct GameStateClient {
     #[serde(rename = "self")]
     pub self_board: Board,
     pub enemy: Board,
+    #[serde(rename = "whitePlayerID")]
     pub white_player_id: String,
+    #[serde(rename = "blackPlayerID")]
     pub black_player_id: String,
     pub your_turn: bool,
     pub turn_count: u32,
     pub cards_played_this_turn: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PlayerMetaData {
     pub username: String,
-    pub chosen_deck: Vec<u32>,
+    pub choosen_deck: Vec<u32>,  // exact match, no serde rename
     pub avatar: String,
 }
 

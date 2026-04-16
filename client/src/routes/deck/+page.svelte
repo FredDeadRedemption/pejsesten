@@ -145,8 +145,8 @@
 					<div
 						transition:slide={{ axis: 'x', duration: 250 }}
 						class="card-in-deck-view"
-						style="background-image: url('{getCardData(id)?.image_url
-							? `/media/${getCardData(id)?.image_url}`
+						style="background-image: url('{getCardData(id)?.imageUrl
+							? `/media/${getCardData(id)?.imageUrl}`
 							: '/media/cards/missing-texture.jpg'}');"
 						onclick={() => {
 							const cardIndex = deck.findIndex((c) => c === id);

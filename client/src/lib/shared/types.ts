@@ -97,7 +97,7 @@ type CardBase = {
 	readonly description: string | null;
 	readonly color: Color;
 	readonly baseCost: number;
-	readonly image_url: string;
+	readonly imageUrl: string;
 	abilities: Ability[];
 };
 
@@ -181,7 +181,7 @@ export type GameStateClient = {
 
 export type PlayerMetaData = {
 	username: string;
-	choosenDeck: number[];
+	choosen_deck: number[];
 	avatar: string;
 };
 

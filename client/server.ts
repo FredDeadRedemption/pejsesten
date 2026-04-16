@@ -9,7 +9,7 @@ const io = new Server(server, { cors: { origin: '*' } });
 const { setupSocketIO } = await import('./src/lib/server/socket.js');
 setupSocketIO(io);
 
-const PORT = parseInt(process.env.PORT || '3000');
+const PORT = parseInt(process.env.PORT || '3002');
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Running on port ${PORT}`);
 });

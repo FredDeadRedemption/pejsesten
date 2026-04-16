@@ -22,4 +22,4 @@ export const checkRequirements = (
 };
 
 export const isTradeable = (card: CardEntity | Card) =>
-	card.attributes.some((a) => a === 'tradeable');
+	card?.attributes?.some((a) => a === 'tradeable');

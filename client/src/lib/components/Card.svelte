@@ -17,7 +17,7 @@
 			{#if isTradeable(card)}
 				<div class="tradeable-badge">
 					<span class="icon">
-						{@html getIcon("tradeable")}
+						{@html getIcon('tradeable')}
 					</span>
 				</div>
 			{:else}
@@ -27,9 +27,7 @@
 
 		<div class="art-frame" class:minion>
 			<img
-				src={card.image_url === ''
-					? '/media/cards/missing-texture.jpg'
-					: `/media/${card.image_url}`}
+				src={card.imageUrl === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.imageUrl}`}
 				alt=""
 				draggable="false"
 			/>
@@ -140,7 +138,7 @@
 		font-size: 16px;
 		color: $black;
 		flex-shrink: 0;
-		.icon{
+		.icon {
 			color: rgb(106, 93, 77);
 		}
 	}

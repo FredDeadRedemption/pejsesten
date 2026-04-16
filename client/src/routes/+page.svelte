@@ -5,9 +5,7 @@
 		invalidateSocket,
 		connectSocket,
 		resetServer,
-
 		queueUpBot
-
 	} from '$lib/socket/socket.svelte';
 	import type { PlayerMetaData } from '$lib/shared/types';
 	import { fly } from 'svelte/transition';
@@ -28,12 +26,12 @@
 		choosenDeckJson = decks[0]?.cards ?? [];
 	});
 
-	const DEV_URL = 'http://localhost:3002/';
+	const DEV_URL = 'http://localhost:3000/';
 	const PRODUCTION_URL = 'https://pejsesten.finrod.dk';
 
 	let playerMetaData: PlayerMetaData = $derived({
 		username: 'Out-of-Towner',
-		choosenDeck: choosenDeckJson,
+		choosen_deck: choosenDeckJson,
 		avatar: 'uaogidsogijsogij'
 	});
 
