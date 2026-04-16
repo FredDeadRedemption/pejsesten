@@ -3,14 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum Color {
     White,
     Black,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum Race {
     Human,
     Elf,
@@ -18,21 +16,18 @@ pub enum Race {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum Trigger {
     OnPlay,
     OnDeath,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum TargetMode {
     Targeted, // player must choose a target
     Auto,     // resolves automatically
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum TargetSide {
     Friendly,
     Enemy,
@@ -40,7 +35,6 @@ pub enum TargetSide {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum EntityType {
     Minion,
     Hero,
@@ -48,55 +42,47 @@ pub enum EntityType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct TargetSpec {
-    pub targeted: bool,
+    pub target_mode: TargetMode,
     pub side: TargetSide,
     pub entity_type: EntityType,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Requirement {
     Combo,
     Quickdraw,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum FollowUpRequirement {
     IsRace { race: Race },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum ScaledBy {
     MinionsOnBoard,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ScaledAmount {
     pub scalar: i32,
     pub scaled_by: Option<ScaledBy>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum FollowUpEffect {
     Discount { scaled_amount: ScaledAmount },
     Copy { copy_amount: usize },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct FollowUpAbility {
     pub follow_up_requirements: Vec<FollowUpRequirement>,
     pub follow_up_effects: Vec<FollowUpEffect>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Effect {
     Buff {
         target_spec: TargetSpec,
@@ -121,7 +107,6 @@ pub enum Effect {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Ability {
     pub trigger: Trigger,
     pub requirements: Vec<Requirement>, // empty vec = no requirements
@@ -129,21 +114,18 @@ pub struct Ability {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum MinionAttribute {
     Tradeable,
     Charge,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub enum IncantationAttribute {
     Tradeable,
     Twinspell,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct MinionCard {
     pub id: u32,
     pub name: String,
@@ -159,7 +141,6 @@ pub struct MinionCard {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct IncantationCard {
     pub id: u32,
     pub name: String,
@@ -172,16 +153,13 @@ pub struct IncantationCard {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Card {
     Minion(MinionCard),
     Incantation(IncantationCard),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct EntityBase {
-    #[serde(rename = "entityID")]
     pub entity_id: String,
     pub cost: i32,
     pub turns_in_hand: u32,
@@ -189,11 +167,8 @@ pub struct EntityBase {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct MinionEntity {
-    #[serde(flatten)]
     pub card: MinionCard,
-    #[serde(flatten)]
     pub base: EntityBase,
     pub attack: i32,
     pub defence: i32,
@@ -201,30 +176,24 @@ pub struct MinionEntity {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct IncantationEntity {
-    #[serde(flatten)]
     pub card: IncantationCard,
-    #[serde(flatten)]
     pub base: EntityBase,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum CardEntity {
     Minion(MinionEntity),
     Incantation(IncantationEntity),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Hero {
     pub attack: i32,
     pub defence: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Board {
     pub deck: Vec<CardEntity>,
     pub hand: Vec<CardEntity>,
@@ -236,13 +205,10 @@ pub struct Board {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GameState {
     pub white: Board,
     pub black: Board,
-    #[serde(rename = "whitePlayerID")]
     pub white_player_id: String,
-    #[serde(rename = "blackPlayerID")]
     pub black_player_id: String,
     pub white_turn: bool,
     pub turn_count: u32,
@@ -250,11 +216,9 @@ pub struct GameState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GameStateClient {
-    #[serde(rename = "self")]
     pub self_board: Board,
-    pub enemy: Board,
+    pub enemy_board: Board,
     #[serde(rename = "whitePlayerID")]
     pub white_player_id: String,
     #[serde(rename = "blackPlayerID")]
@@ -267,12 +231,11 @@ pub struct GameStateClient {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PlayerMetaData {
     pub username: String,
-    pub choosen_deck: Vec<u32>,  // exact match, no serde rename
+    pub choosen_deck: Vec<u32>,
     pub avatar: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct AttackData {
     pub origin_id: String,
     pub target_id: String,

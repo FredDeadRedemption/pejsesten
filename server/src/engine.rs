@@ -652,7 +652,7 @@ impl Game {
             } else {
                 self.state.black.clone()
             },
-            enemy: if for_white {
+            enemy_board: if for_white {
                 self.state.black.clone()
             } else {
                 self.state.white.clone()
