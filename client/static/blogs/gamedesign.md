@@ -62,6 +62,8 @@
 - [ ] Questline
 - [x] Quickdraw
 - [x] Return to hand
+- [x] Add copy to hand
+- [x] Cost (n) less
 - [ ] Revive
 - [ ] Start of Game
 - [ ] Twinspell
@@ -117,7 +119,7 @@
 - [ ] Cast spell
 - [ ] Change cost type
 - [ ] Copy
-- [ ] Damage
+- [x] Damage
 - [x] Destroy
 - [ ] Upgradable
 
