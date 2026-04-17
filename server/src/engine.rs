@@ -6,9 +6,9 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 
 const STARTING_HP: i32 = 30;
-const STARTING_MANA: i32 = 1;
+const STARTING_MANA: i32 = 7;
 const MAX_MANA: i32 = 10;
-const STARTING_HAND_SIZE: usize = 3;
+const STARTING_HAND_SIZE: usize = 7;
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
@@ -467,8 +467,8 @@ impl Game {
     }
 
     pub fn play_card(&mut self, index: usize, target_id: Option<String>) -> bool {
-        // Validate without consuming
-        {
+        // Validate without consuming — clone card so mutable borrow can be released before check_requirements
+        let card_clone = {
             let source_board = self.source_board_mut();
             let card = match source_board.hand.get(index) {
                 Some(c) => c,
@@ -477,13 +477,15 @@ impl Game {
             if card.cost() > source_board.mana {
                 return false;
             }
-            let needs_target = card
-    .abilities()
-    .iter()
-    .any(|a| a.effects.iter().filter_map(effect_target_spec).any(|ts| ts.target_mode == TargetMode::Targeted));
-            if needs_target && target_id.is_none() {
-                return false;
-            }
+            card.clone()
+        };
+        let needs_target = card_clone
+            .abilities()
+            .iter()
+            .any(|a| self.check_requirements(&a.requirements, &card_clone)
+                && a.effects.iter().filter_map(effect_target_spec).any(|ts| ts.target_mode == TargetMode::Targeted));
+        if needs_target && target_id.is_none() {
+            return false;
         }
 
         // Consume from hand

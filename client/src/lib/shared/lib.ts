@@ -9,8 +9,6 @@ import type { Requirement } from "./bindings/Requirement";
 
 export const checkRequirements = (
 	requirements: Requirement[] | undefined,
-	_sourceBoard: Board,
-	_enemyBoard: Board,
 	gameState: GameStateServer | GameStateClient,
 	cardEntity: MinionEntity | IncantationEntity
 ): boolean => {

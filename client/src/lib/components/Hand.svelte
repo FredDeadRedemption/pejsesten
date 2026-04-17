@@ -3,7 +3,7 @@
 	import Card from './Card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
 	import { checkRequirements, isTradeable } from '$lib/shared/lib';
-	import { getEntity, isSpellAndHasNoValidTarget, needsTarget } from '$lib/util';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/util';
 	import { drag } from '$lib/drag.svelte';
 
 	let handElement: HTMLElement;
@@ -90,7 +90,7 @@
 			const raw = gameState.self_board.hand[idx];
 			const card = getEntity(raw);
 			if (card) {
-				if (!needsTarget(card) || isSpellAndHasNoValidTarget(card, gameState)) {
+				if (!needsTarget(card, gameState) || hasNoValidTarget(card, gameState)) {
 					playCard({ index: idx });
 				}
 				// needs a target but wasn't dropped on one --> return to hand
@@ -143,8 +143,6 @@
 					a.requirements.length > 0 &&
 					checkRequirements(
 						a.requirements,
-						gameState.self_board,
-						gameState.enemy_board,
 						gameState,
 						card
 					)

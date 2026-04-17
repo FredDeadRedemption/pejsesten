@@ -5,6 +5,7 @@ import type { GameStateClient } from './shared/bindings/GameStateClient';
 import type { IncantationEntity } from './shared/bindings/IncantationEntity';
 import type { MinionEntity } from './shared/bindings/MinionEntity';
 import type { TargetSpec } from './shared/bindings/TargetSpec';
+import { checkRequirements } from './shared/lib';
 
 export const enterFullscreen = (divID: string) => {
 	if (!browser) return;
@@ -45,8 +46,12 @@ const getTargetSpec = (effect: Effect): TargetSpec | null => {
 	return null;
 };
 
-export const needsTarget = (card: MinionEntity | IncantationEntity) => {
+const abilityWillFire = (a: { trigger: string; requirements: unknown[] }, card: MinionEntity | IncantationEntity, gameState: GameStateClient) =>
+	checkRequirements(a.requirements as never, gameState, card);
+
+export const needsTarget = (card: MinionEntity | IncantationEntity, gameState: GameStateClient) => {
 	return card.card.abilities.some((a) =>
+		abilityWillFire(a, card, gameState) &&
 		a.effects.some((e) => {
 			const spec = getTargetSpec(e as Effect);
 			return spec?.target_mode === 'Targeted';
@@ -54,13 +59,16 @@ export const needsTarget = (card: MinionEntity | IncantationEntity) => {
 	);
 };
 
-export const isSpellAndHasNoValidTarget = (
+export const hasNoValidTarget = (
 	card: MinionEntity | IncantationEntity,
 	gameState: GameStateClient
 ): boolean => {
+	const activeAbility = (a: { trigger: string; requirements: unknown[] }) =>
+		a.trigger === 'OnPlay' && abilityWillFire(a, card, gameState);
+
 	const needsFriendlyMinion = card.card.abilities.some(
 		(a) =>
-			a.trigger === 'OnPlay' &&
+			activeAbility(a) &&
 			a.effects.some((e) => {
 				const spec = getTargetSpec(e as Effect);
 				return spec?.target_mode === 'Targeted' && spec.side === 'Friendly' && spec.entity_type === 'Minion';
@@ -68,7 +76,7 @@ export const isSpellAndHasNoValidTarget = (
 	);
 	const needsEnemyMinion = card.card.abilities.some(
 		(a) =>
-			a.trigger === 'OnPlay' &&
+			activeAbility(a) &&
 			a.effects.some((e) => {
 				const spec = getTargetSpec(e as Effect);
 				return spec?.target_mode === 'Targeted' && spec.side === 'Enemy' && spec.entity_type === 'Minion';
@@ -76,7 +84,7 @@ export const isSpellAndHasNoValidTarget = (
 	);
 	const needsAnyMinion = card.card.abilities.some(
 		(a) =>
-			a.trigger === 'OnPlay' &&
+			activeAbility(a) &&
 			a.effects.some((e) => {
 				const spec = getTargetSpec(e as Effect);
 				return spec?.target_mode === 'Targeted' && spec.side === 'All' && spec.entity_type === 'Minion';
@@ -92,4 +100,12 @@ export const isSpellAndHasNoValidTarget = (
 	)
 		return true;
 	return false;
+};
+
+export const isSpellAndHasNoValidTarget = (
+	card: MinionEntity | IncantationEntity,
+	gameState: GameStateClient
+): boolean => {
+	if (isMinion(card)) return false;
+	return hasNoValidTarget(card, gameState);
 };

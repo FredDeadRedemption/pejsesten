@@ -2,7 +2,7 @@
 	import CardSmall from './CardSmall.svelte';
 	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
 	import { endTargeting, targeting, beginTargeting } from '$lib/targeting.svelte';
-	import { getEntity, isSpellAndHasNoValidTarget, needsTarget } from '$lib/util';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/util';
 	import { drag, resetDrag } from '$lib/drag.svelte';
 
 	let mouseX = $state(0);
@@ -43,7 +43,7 @@
 		if (!raw) return;
 		const card = getEntity(raw);
 
-		if (needsTarget(card) && !isSpellAndHasNoValidTarget(card, gameState)) {
+		if (needsTarget(card, gameState) && !hasNoValidTarget(card, gameState)) {
 			// switch to targeting mode — hide the dragger, show targeting arrow
 			drag.consumed = true;
 			beginTargeting(card, drag.index);
@@ -60,7 +60,7 @@
 		const card = getEntity(raw);
 
 		// only play directly if no target needed or no valid targets exist
-		if (!needsTarget(card) || isSpellAndHasNoValidTarget(card, gameState)) {
+		if (!needsTarget(card, gameState) || hasNoValidTarget(card, gameState)) {
 			drag.consumed = true;
 			playCard({ index: drag.index });
 		}
