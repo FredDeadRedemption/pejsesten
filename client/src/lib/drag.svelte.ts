@@ -1,7 +1,8 @@
-import type { CardEntity } from '$lib/shared/types';
+import type { IncantationEntity } from "./shared/bindings/IncantationEntity";
+import type { MinionEntity } from "./shared/bindings/MinionEntity";
 
 export const drag = $state({
-	card: null as CardEntity | null,
+	card: null as (MinionEntity | IncantationEntity) | null,
 	index: null as number | null,
 	x: 0,
 	y: 0,
