@@ -1,5 +1,10 @@
 import { browser } from '$app/environment';
-import type { CardEntity, GameStateClient } from './shared/types';
+import type { CardEntity } from './shared/bindings/CardEntity';
+import type { Effect } from './shared/bindings/Effect';
+import type { GameStateClient } from './shared/bindings/GameStateClient';
+import type { IncantationEntity } from './shared/bindings/IncantationEntity';
+import type { MinionEntity } from './shared/bindings/MinionEntity';
+import type { TargetSpec } from './shared/bindings/TargetSpec';
 
 export const enterFullscreen = (divID: string) => {
 	if (!browser) return;
@@ -21,45 +26,80 @@ export const getRandomDeckName = () => {
 	return names[Math.floor(Math.random() * names.length)];
 };
 
-export const isSpellAndHasNoValidTarget = (card: CardEntity, gameState: GameStateClient): boolean => {
-    if (card.type === 'minion') return false;
+export const getEntity = (card: CardEntity): MinionEntity | IncantationEntity => {
+	if ('Minion' in card) return card.Minion;
+	return (card as { Incantation: IncantationEntity }).Incantation;
+};
 
-    const needsFriendlyMinion = card.abilities.some(
-        (a) =>
-            a.trigger === 'onPlay' &&
-            a.effects.some(
-                (e) =>
-                    'targetSpec' in e &&
-                    e.targetSpec.scope === 'single' &&
-                    e.targetSpec.side === 'friendly' &&
-                    e.targetSpec.entityType === 'minion'
-            )
-    );
-    const needsEnemyMinion = card.abilities.some(
-        (a) =>
-            a.trigger === 'onPlay' &&
-            a.effects.some(
-                (e) =>
-                    'targetSpec' in e &&
-                    e.targetSpec.scope === 'single' &&
-                    e.targetSpec.side === 'enemy' &&
-                    e.targetSpec.entityType === 'minion'
-            )
-    );
-    const needsAnyMinion = card.abilities.some(
-        (a) =>
-            a.trigger === 'onPlay' &&
-            a.effects.some(
-                (e) =>
-                    'targetSpec' in e &&
-                    e.targetSpec.scope === 'single' &&
-                    e.targetSpec.side === 'all' &&
-                    e.targetSpec.entityType === 'minion'
-            )
-    );
+export const isMinion = (
+	card: CardEntity | MinionEntity | IncantationEntity
+): card is { Minion: MinionEntity } | MinionEntity => {
+	return 'Minion' in card || 'attack' in card;
+};
 
-    if (needsFriendlyMinion && gameState.self.battlefield.length === 0) return true;
-    if (needsEnemyMinion && gameState.enemy.battlefield.length === 0) return true;
-    if (needsAnyMinion && gameState.self.battlefield.length === 0 && gameState.enemy.battlefield.length === 0) return true;
-    return false;
+export const needsTarget = (card: MinionEntity | IncantationEntity) => {
+	return card.card.abilities.some((a) => {
+		a.effects.some((e) => {
+			const effect = e as Effect;
+			if (!('target_spec' in effect)) return false;
+			const spec = (effect as { target_spec: TargetSpec }).target_spec;
+			return spec.target_mode === 'Targeted';
+		});
+	});
+};
+
+export const isSpellAndHasNoValidTarget = (
+	card: MinionEntity | IncantationEntity,
+	gameState: GameStateClient
+): boolean => {
+	if (isMinion(card)) return false;
+
+	const needsFriendlyMinion = card.card.abilities.some(
+		(a) =>
+			a.trigger === 'OnPlay' &&
+			a.effects.some((e) => {
+				const effect = e as Effect;
+				if (!('target_spec' in effect)) return false;
+				const spec = (effect as { target_spec: TargetSpec }).target_spec;
+				return (
+					spec.target_mode === 'Targeted' &&
+					spec.side === 'Friendly' &&
+					spec.entity_type === 'Minion'
+				);
+			})
+	);
+	const needsEnemyMinion = card.card.abilities.some(
+		(a) =>
+			a.trigger === 'OnPlay' &&
+			a.effects.some((e) => {
+				const effect = e as Effect;
+				if (!('target_spec' in effect)) return false;
+				const spec = (effect as { target_spec: TargetSpec }).target_spec;
+				return (
+					spec.target_mode === 'Targeted' && spec.side === 'Enemy' && spec.entity_type === 'Minion'
+				);
+			})
+	);
+	const needsAnyMinion = card.card.abilities.some(
+		(a) =>
+			a.trigger === 'OnPlay' &&
+			a.effects.some((e) => {
+				const effect = e as Effect;
+				if (!('target_spec' in effect)) return false;
+				const spec = (effect as { target_spec: TargetSpec }).target_spec;
+				return (
+					spec.target_mode === 'Targeted' && spec.side === 'All' && spec.entity_type === 'Minion'
+				);
+			})
+	);
+
+	if (needsFriendlyMinion && gameState.self_board.battlefield.length === 0) return true;
+	if (needsEnemyMinion && gameState.enemy_board.battlefield.length === 0) return true;
+	if (
+		needsAnyMinion &&
+		gameState.self_board.battlefield.length === 0 &&
+		gameState.enemy_board.battlefield.length === 0
+	)
+		return true;
+	return false;
 };
