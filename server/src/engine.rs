@@ -152,6 +152,13 @@ impl Game {
         }
     }
 
+    fn boards_for(&self, owner: PlayerSide) -> (&Board, &Board) {
+        match owner {
+            PlayerSide::White => (&self.state.white, &self.state.black),
+            PlayerSide::Black => (&self.state.black, &self.state.white),
+        }
+    }
+
     fn boards_for_mut(&mut self, owner: PlayerSide) -> (&mut Board, &mut Board) {
         match owner {
             PlayerSide::White => (&mut self.state.white, &mut self.state.black),
@@ -241,11 +248,11 @@ impl Game {
         refs
     }
 
-    fn get_target_refs(&self, spec: &TargetSpec, target_id: Option<&str>, self_id: Option<&str>) -> Vec<TargetRef> {
+    fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<&str>, self_id: Option<&str>) -> Vec<TargetRef> {
         if let Some(id) = target_id {
             return self.find_target_ref(id).map(|t| vec![t]).unwrap_or_default();
         }
-        let (source, enemy) = self.boards();
+        let (source, enemy) = self.boards_for(owner);
         Self::resolve_target_refs(spec, source, enemy, self_id)
     }
 
@@ -360,7 +367,7 @@ impl Game {
     fn apply_effect(&mut self, effect: Effect, owner: PlayerSide, target_id: Option<&str>, self_id: Option<&str>) {
         match effect {
             Effect::Buff { target_spec, attack, defence } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
                 for tr in refs {
                     let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
@@ -385,7 +392,7 @@ impl Game {
             }
 
             Effect::Damage { target_spec, damage } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
                 for tr in refs {
                     let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
@@ -439,11 +446,11 @@ impl Game {
             }
 
             Effect::ReturnToHand { target_spec, cost_reduction } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
+
+                let (source, enemy) = self.boards_for_mut(owner);
 
                 for tr in refs.into_iter().rev() {
-                    let (source, enemy) = self.boards_for_mut(owner);
-
                     let minion = match tr {
                         TargetRef::MinionSource(i) if i < source.battlefield.len() => Some(source.battlefield.remove(i)),
                         TargetRef::MinionEnemy(i) if i < enemy.battlefield.len() => Some(enemy.battlefield.remove(i)),
@@ -473,9 +480,11 @@ impl Game {
             }
 
             Effect::Destroy { target_spec } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
+
+                let (source, enemy) = self.boards_for_mut(owner);
+
                 for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
                         TargetRef::MinionSource(i) => source.battlefield[i].defence = 0,
                         TargetRef::MinionEnemy(i) => enemy.battlefield[i].defence = 0,
