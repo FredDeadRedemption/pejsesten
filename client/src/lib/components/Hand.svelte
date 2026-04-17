@@ -58,7 +58,6 @@
 			[index]?.querySelector('.hand-card');
 		const rect = cardEl?.getBoundingClientRect();
 
-		drag.card = card;
 		drag.index = index;
 		drag.x = rect ? rect.left : event.clientX - CARD_CX;
 		drag.y = rect ? rect.top : event.clientY - CARD_CY;
@@ -67,14 +66,13 @@
 	};
 
 	const endDrag = async () => {
-		if (!drag.card || drag.index === null) return;
+		if (drag.index === null) return;
 
 		const idx = drag.index;
 
 		// a drop zone consumed the drag — just clean up
 		if (drag.consumed) {
 			drag.consumed = false;
-			drag.card = null;
 			drag.index = null;
 			return;
 		}
@@ -97,7 +95,6 @@
 				}
 				// needs a target but wasn't dropped on one --> return to hand
 			}
-			drag.card = null;
 			drag.index = null;
 			return;
 		}
@@ -116,7 +113,6 @@
 
 		setTimeout(() => {
 			returning = false;
-			drag.card = null;
 			drag.index = null;
 		}, 250);
 	};
@@ -145,7 +141,13 @@
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					checkRequirements(a.requirements, gameState.self_board, gameState.enemy_board, gameState, card)
+					checkRequirements(
+						a.requirements,
+						gameState.self_board,
+						gameState.enemy_board,
+						gameState,
+						card
+					)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -168,9 +170,10 @@
 			</div>
 		</div>
 	{/each}
-	{#if drag.card && !drag.consumed}
+	{#if drag.index !== null && !drag.consumed}
+		{@const draggedCard = getEntity(gameState.self_board.hand[drag.index])}
 		<div class="dragger" class:returning style="left: {drag.x}px; top: {drag.y}px;">
-			<Card card={drag.card} />
+			<Card card={draggedCard} />
 		</div>
 	{/if}
 </div>
