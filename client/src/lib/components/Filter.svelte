@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
-	import type { Card } from '$lib/shared/types';
+	import type { IncantationCard } from '$lib/shared/bindings/IncantationCard';
+	import type { MinionCard } from '$lib/shared/bindings/MinionCard';
 
 	let {
 		cards = $bindable(),
 		filteredCards = $bindable()
-	}: { cards: Card[]; filteredCards: Card[] } = $props();
+	}: { cards: (MinionCard | IncantationCard)[]; filteredCards: (MinionCard | IncantationCard)[] } = $props();
 
 	let searchTerm: string = $state('');
 
@@ -26,16 +27,16 @@
 	let showBlack: boolean = $state(false);
 
 	const filter = () => {
-		filteredCards = cards?.filter((card: Card) => {
+		filteredCards = cards?.filter((card) => {
 			const a = card.name.toLowerCase().includes(searchTerm.toLowerCase());
-			const b = showGreen ? card.color === "black" : true;
-			const c = showOrange ? card.color === "black" : true;
-			const d = showRed ? card.color === "black" : true;
-			const e = showPurple ? card.color === "black" : true;
-			const f = showWhite ? card.color === "white" : true;
-			const g = showBlack ? card.color === "black" : true;
-			const h = showMinions ? card.type === "minion" : true;
-			const i = showIncantations ? card.type === "incantation" : true;
+			const b = showGreen ? card.color === "Black" : true;
+			const c = showOrange ? card.color === "Black" : true;
+			const d = showRed ? card.color === "Black" : true;
+			const e = showPurple ? card.color === "Black" : true;
+			const f = showWhite ? card.color === "White" : true;
+			const g = showBlack ? card.color === "Black" : true;
+			const h = showMinions ? "base_attack" in card : true;
+			const i = showIncantations ? !('base_attack' in card) : true;
 
 			return a && b && c && d && e && f && g && h && i;
 		});
