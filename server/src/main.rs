@@ -296,8 +296,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(layer)
         .layer(CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    println!("Server running on port 3000");
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
+    println!("Server running on port {port}");
     axum::serve(listener, app).await?;
     Ok(())
 }
