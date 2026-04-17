@@ -50,7 +50,7 @@
 	{/if}
 	<div class="art-frame">
 		<img
-			src={card.card.image_url === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.imageUrl}`}
+			src={card.card.image_url === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.card.image_url}`}
 			alt=""
 			draggable="false"
 		/>
