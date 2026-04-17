@@ -43,7 +43,10 @@ const getTargetSpec = (effect: Effect): TargetSpec | null => {
 	if ('Damage' in effect) return effect.Damage.target_spec;
 	if ('ReturnToHand' in effect) return effect.ReturnToHand.target_spec;
 	if ('Destroy' in effect) return effect.Destroy.target_spec;
-	return null;
+	if ('Draw' in effect) return null;
+
+	const _exhaustive: never = effect;
+	return _exhaustive;
 };
 
 const abilityWillFire = (a: { trigger: string; requirements: unknown[] }, card: MinionEntity | IncantationEntity, gameState: GameStateClient) =>
