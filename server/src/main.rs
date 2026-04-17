@@ -3,6 +3,7 @@ mod engine;
 mod types;
 
 use axum::routing::get;
+use axum::Json;
 use engine::Game;
 use serde::Deserialize;
 use socketioxide::{
@@ -200,6 +201,10 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
     });
 }
 
+async fn get_cards_handler() -> Json<Vec<Card>> {
+    Json(cards::get_cards())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = ServerState::default();
@@ -212,6 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/", get(async || "Hello World"))
+        .route("/cards", get(get_cards_handler))
         .layer(layer)
         .layer(CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any));
 

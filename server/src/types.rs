@@ -235,7 +235,7 @@ pub struct Board {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
-pub struct GameState {
+pub struct GameStateServer {
     pub white: Board,
     pub black: Board,
     pub white_player_id: String,

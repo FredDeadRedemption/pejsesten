@@ -1,11 +1,7 @@
-import type {
-	Card,
-	Board,
-	CardEntity,
-	GameStateClient,
-	GameStateServer,
-	Requirement
-} from './types';
+import type { Board } from "./bindings/Board";
+import type { GameStateClient } from "./bindings/GameStateClient";
+import type { Requirement } from "./bindings/Requirement";
+
 
 export const checkRequirements = (
 	requirements: Requirement[] | undefined,

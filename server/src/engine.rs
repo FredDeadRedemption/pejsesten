@@ -28,7 +28,7 @@ struct QueuedEffect {
 }
 
 pub struct Game {
-    pub state: GameState,
+    pub state: GameStateServer,
     effect_queue: Vec<QueuedEffect>,
 }
 
@@ -67,7 +67,7 @@ impl Game {
         };
 
         Game {
-            state: GameState {
+            state: GameStateServer {
                 white: Board {
                     deck: white_deck,
                     hand: white_hand,
