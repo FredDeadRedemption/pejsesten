@@ -1,10 +1,11 @@
 <script lang="ts">
 	import Card from './Card.svelte';
 	import { gameState } from '$lib/socket/socket.svelte';
-	import type { CardEntity } from '$lib/shared/types';
-	import { isSpellAndHasNoValidTarget } from '$lib/util';
+	import { getEntity, isSpellAndHasNoValidTarget } from '$lib/util';
 	import { OPEN_CARDS } from '$lib/shared/settings';
 	import { checkRequirements } from '$lib/shared/lib';
+	import type { IncantationEntity } from '$lib/shared/bindings/IncantationEntity';
+	import type { MinionEntity } from '$lib/shared/bindings/MinionEntity';
 
 	let handElement: HTMLElement;
 
@@ -15,7 +16,7 @@
 	let hoverIndex: number | null = $state(null);
 	let draggerIndex: number | null = $state(null);
 	let dragCoords = $state({ x: 0, y: 0 });
-	let dragCard: CardEntity | null = $state(null);
+	let dragCard: (MinionEntity | IncantationEntity) | null = $state(null);
 	let returning = $state(false);
 	let dragging = $derived(draggerIndex !== null && !returning);
 
@@ -46,23 +47,24 @@
 </script>
 
 <div class="hand" bind:this={handElement} class:hidden={!OPEN_CARDS}>
-	<div class="mana">{gameState.enemy.mana}/{gameState.self.baseMana}</div>
-	{#each gameState.enemy.hand as card, index}
+	<div class="mana">{gameState.enemy_board.mana}/{gameState.self_board.base_mana}</div>
+	{#each gameState.enemy_board.hand as raw, index}
+		{@const card = getEntity(raw)}
 		{@const affordable =
-			card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
+			card.cost <= gameState.self_board.mana && !isSpellAndHasNoValidTarget(card, gameState)}
 		{@const procced =
 			affordable &&
-			card.abilities?.some(
+			card.card.abilities?.some(
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					checkRequirements(a.requirements, gameState.self, gameState.enemy, gameState, card)
+					checkRequirements(a.requirements, gameState.self_board, gameState.enemy_board, gameState, card)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
 			class:hovered={hoverIndex === index && !dragging}
-			style="{`--fan-x: ${(index - (gameState.enemy.hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
+			style="{`--fan-x: ${(index - (gameState.enemy_board.hand.length - 1) / 2) * 40}px; --fan-rot: 0deg; --fan-arc: 0px`}; z-index: {index}"
 		>
 			<div
 				class="hand-card"
@@ -94,7 +96,7 @@
 		margin: 5px;
 		border-radius: 100px;
 		background-color: rgb(88, 120, 161);
-		&.self {
+		&.self_board {
 			align-self: flex-start;
 		}
 	}
