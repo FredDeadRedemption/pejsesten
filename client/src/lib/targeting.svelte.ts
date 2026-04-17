@@ -1,13 +1,14 @@
-import type { CardEntity } from '$lib/shared/types';
+import type { IncantationEntity } from './shared/bindings/IncantationEntity';
+import type { MinionEntity } from './shared/bindings/MinionEntity';
 
 export const targeting = $state({
   active: false,
-  card: null as CardEntity | null,
+  card: null as (MinionEntity | IncantationEntity) | null,
   cardIndex: null as number | null,
   hoveredTarget: null as string | null,
 })
 
-export const beginTargeting = (card: CardEntity, index: number) => {
+export const beginTargeting = (card: MinionEntity | IncantationEntity, index: number) => {
   targeting.card = card;
   targeting.cardIndex = index;
   targeting.active = true;
