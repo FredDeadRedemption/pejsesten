@@ -1,15 +1,15 @@
 <script lang="ts">
-	import type { MinionEntity } from '$lib/shared/types';
 	import { fly } from 'svelte/transition';
 	import Card from './Card.svelte';
 	import { portal } from '$lib/attachments';
+	import type { MinionEntity } from '$lib/shared/bindings/MinionEntity';
 
 	let { card }: { card: MinionEntity } = $props();
 
-	const attackBuffed = $derived(card.attack > card.baseAttack);
-	const attackDebuffed = $derived(card.attack < card.baseAttack);
-	const defenceBuffed = $derived(card.defence > card.baseDefence);
-	const defenceDebuffed = $derived(card.defence < card.baseDefence);
+	const attackBuffed = $derived(card.attack > card.card.base_attack);
+	const attackDebuffed = $derived(card.attack < card.card.base_attack);
+	const defenceBuffed = $derived(card.defence > card.card.base_defence);
+	const defenceDebuffed = $derived(card.defence < card.card.base_defence);
 
 	let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 	let showPreview = $state(false);
@@ -36,7 +36,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	id="card"
-	class={card.color}
+	class={card.card.color}
 	class:exhausted={card.exhausted}
 	onmouseenter={onMouseEnter}
 	onmouseleave={onMouseLeave}
@@ -50,12 +50,12 @@
 	{/if}
 	<div class="art-frame">
 		<img
-			src={card.imageUrl === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.imageUrl}`}
+			src={card.card.image_url === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.imageUrl}`}
 			alt=""
 			draggable="false"
 		/>
 	</div>
-	<div class="name">{card.name}</div>
+	<div class="name">{card.card.name}</div>
 	<div class="card-bottom">
 		<div class="stat atk" class:buffed={attackBuffed} class:debuffed={attackDebuffed}>
 			{card.attack}
