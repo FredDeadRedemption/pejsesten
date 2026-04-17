@@ -7,10 +7,10 @@
 		resetServer,
 		queueUpBot
 	} from '$lib/socket/socket.svelte';
-	import type { PlayerMetaData } from '$lib/shared/types';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import type { PlayerMetaData } from '$lib/shared/bindings/PlayerMetaData';
 
 	type Deck = {
 		id: number;

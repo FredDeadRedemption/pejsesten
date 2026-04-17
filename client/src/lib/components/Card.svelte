@@ -1,19 +1,37 @@
 <script lang="ts">
 	import { getIcon } from '$lib/icons';
+	import type { IncantationCard } from '$lib/shared/bindings/IncantationCard';
+	import type { IncantationEntity } from '$lib/shared/bindings/IncantationEntity';
+	import type { MinionCard } from '$lib/shared/bindings/MinionCard';
+	import type { MinionEntity } from '$lib/shared/bindings/MinionEntity';
 	import { isTradeable } from '$lib/shared/lib';
-	import type { Card, CardEntity } from '$lib/shared/types';
 
-	let { card, compact = false }: { card: CardEntity | Card; compact?: boolean } = $props();
+	let {
+		card,
+		compact = false
+	}: {
+		card: MinionEntity | IncantationEntity | MinionCard | IncantationCard;
+		compact?: boolean;
+	} = $props();
 
-	const minion = $derived(card.type === 'minion');
-	const cost = $derived('cost' in card ? card.cost : card.baseCost);
+	const isEntity = $derived('cost' in card);
+	const cost = $derived(isEntity ? (card as MinionEntity).cost : (card as MinionCard).base_cost);
+	const name = $derived(isEntity ? (card as MinionEntity).card.name : (card as MinionCard).name);
+	const description = $derived(
+		isEntity ? (card as MinionEntity).card.description : (card as MinionCard).description
+	);
+	const color = $derived(isEntity ? (card as MinionEntity).card.color : (card as MinionCard).color);
+	const imageUrl = $derived(
+		isEntity ? (card as MinionEntity).card.image_url : (card as MinionCard).image_url
+	);
+	const minion = $derived(isEntity ? 'attack' in card : (card as MinionCard).type === 'minion');
 </script>
 
-<div id="card" class:compact class={card.color}>
+<div id="card" class:compact class={color}>
 	<div id="content">
 		<div class="card-top">
 			<div class="cost-gem">{cost}</div>
-			<div class="card-name">{card.name}</div>
+			<div class="card-name">{name}</div>
 			{#if isTradeable(card)}
 				<div class="tradeable-badge">
 					<span class="icon">
@@ -27,7 +45,9 @@
 
 		<div class="art-frame" class:minion>
 			<img
-				src={card.imageUrl === '' ? '/media/cards/missing-texture.jpg' : `/media/${card.imageUrl}`}
+				src={imageUrl === ''
+					? '/media/cards/missing-texture.jpg'
+					: `/media/${imageUrl}`}
 				alt=""
 				draggable="false"
 			/>
@@ -35,19 +55,19 @@
 
 		<div class="description">
 			<span class="icon-bg">{@html getIcon('manaWhite')}</span>
-			<span class="text">{@html card.description}</span>
+			<span class="text">{@html description}</span>
 		</div>
 
 		<div class="card-bottom">
-			{#if card.type === 'minion'}
+			{#if minion}
 				<div class="stat atk">
-					{'attack' in card ? card.attack : card.baseAttack}
+					{isEntity ? (card as MinionEntity).attack : (card as MinionCard).base_attack}
 				</div>
 				<div class="race">
-					{card.races.join(' · ')}
+					{isEntity ? (card as MinionEntity).card.races.join(' · ') : (card as MinionCard).races.join(' · ')}
 				</div>
 				<div class="stat def">
-					{'defence' in card ? card.defence : card.baseDefence}
+					{isEntity ? (card as MinionEntity).defence : (card as MinionCard).base_defence}
 				</div>
 			{:else}
 				<div class="spell-label">incantation</div>
