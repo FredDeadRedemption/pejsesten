@@ -40,7 +40,6 @@ struct TradeCardData {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct AttackInput {
     origin_id: String,
     target_id: String,

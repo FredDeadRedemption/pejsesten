@@ -2,7 +2,7 @@
 	import CardSmall from './CardSmall.svelte';
 	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
 	import { endTargeting, targeting, beginTargeting } from '$lib/targeting.svelte';
-	import { isSpellAndHasNoValidTarget, needsTarget } from '$lib/util';
+	import { getEntity, isSpellAndHasNoValidTarget, needsTarget } from '$lib/util';
 	import { drag, resetDrag } from '$lib/drag.svelte';
 
 	let mouseX = $state(0);
@@ -38,29 +38,31 @@
 	// when a dragged card enters the battlefield area, check if it needs targeting
 	// if so: switch from drag mode to targeting mode immediately
 	const onBattlefieldEnter = () => {
-		if (!drag.card || drag.index === null) return;
-		const card = drag.card;
-		const idx = drag.index;
+		if (drag.index === null) return;
+		const raw = gameState.self_board.hand[drag.index];
+		if (!raw) return;
+		const card = getEntity(raw);
 
 		if (needsTarget(card) && !isSpellAndHasNoValidTarget(card, gameState)) {
 			// switch to targeting mode — hide the dragger, show targeting arrow
 			drag.consumed = true;
-			beginTargeting(card, idx);
+			beginTargeting(card, drag.index);
 		}
 	};
 
 	// dropping a non-targeting card onto the battlefield plays it
 	const onBattlefieldDrop = () => {
-		if (!drag.card || drag.index === null) return;
+		if (drag.index === null) return;
 		if (drag.consumed) return; // already handled (targeting mode)
-
-		const card = drag.card;
-		const idx = drag.index;
+		if (drag.index === null) return;
+		const raw = gameState.self_board.hand[drag.index];
+		if (!raw) return;
+		const card = getEntity(raw);
 
 		// only play directly if no target needed or no valid targets exist
 		if (!needsTarget(card) || isSpellAndHasNoValidTarget(card, gameState)) {
 			drag.consumed = true;
-			playCard({ index: idx });
+			playCard({ index: drag.index });
 		}
 	};
 

@@ -37,15 +37,21 @@ export const isMinion = (
 	return 'Minion' in card || 'attack' in card;
 };
 
+const getTargetSpec = (effect: Effect): TargetSpec | null => {
+	if ('Buff' in effect) return effect.Buff.target_spec;
+	if ('Damage' in effect) return effect.Damage.target_spec;
+	if ('ReturnToHand' in effect) return effect.ReturnToHand.target_spec;
+	if ('Destroy' in effect) return effect.Destroy.target_spec;
+	return null;
+};
+
 export const needsTarget = (card: MinionEntity | IncantationEntity) => {
-	return card.card.abilities.some((a) => {
+	return card.card.abilities.some((a) =>
 		a.effects.some((e) => {
-			const effect = e as Effect;
-			if (!('target_spec' in effect)) return false;
-			const spec = (effect as { target_spec: TargetSpec }).target_spec;
-			return spec.target_mode === 'Targeted';
-		});
-	});
+			const spec = getTargetSpec(e as Effect);
+			return spec?.target_mode === 'Targeted';
+		})
+	);
 };
 
 export const isSpellAndHasNoValidTarget = (
@@ -58,38 +64,24 @@ export const isSpellAndHasNoValidTarget = (
 		(a) =>
 			a.trigger === 'OnPlay' &&
 			a.effects.some((e) => {
-				const effect = e as Effect;
-				if (!('target_spec' in effect)) return false;
-				const spec = (effect as { target_spec: TargetSpec }).target_spec;
-				return (
-					spec.target_mode === 'Targeted' &&
-					spec.side === 'Friendly' &&
-					spec.entity_type === 'Minion'
-				);
+				const spec = getTargetSpec(e as Effect);
+				return spec?.target_mode === 'Targeted' && spec.side === 'Friendly' && spec.entity_type === 'Minion';
 			})
 	);
 	const needsEnemyMinion = card.card.abilities.some(
 		(a) =>
 			a.trigger === 'OnPlay' &&
 			a.effects.some((e) => {
-				const effect = e as Effect;
-				if (!('target_spec' in effect)) return false;
-				const spec = (effect as { target_spec: TargetSpec }).target_spec;
-				return (
-					spec.target_mode === 'Targeted' && spec.side === 'Enemy' && spec.entity_type === 'Minion'
-				);
+				const spec = getTargetSpec(e as Effect);
+				return spec?.target_mode === 'Targeted' && spec.side === 'Enemy' && spec.entity_type === 'Minion';
 			})
 	);
 	const needsAnyMinion = card.card.abilities.some(
 		(a) =>
 			a.trigger === 'OnPlay' &&
 			a.effects.some((e) => {
-				const effect = e as Effect;
-				if (!('target_spec' in effect)) return false;
-				const spec = (effect as { target_spec: TargetSpec }).target_spec;
-				return (
-					spec.target_mode === 'Targeted' && spec.side === 'All' && spec.entity_type === 'Minion'
-				);
+				const spec = getTargetSpec(e as Effect);
+				return spec?.target_mode === 'Targeted' && spec.side === 'All' && spec.entity_type === 'Minion';
 			})
 	);
 
