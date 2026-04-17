@@ -85,7 +85,7 @@ export const resetServer = () => fire(socket, 'resetServer');
 
 export const queueUp = (data: PlayerMetaData) => fire(socket, 'queueUp', data);
 
-export const queueUpBot = (data: PlayerMetaData) => fire(socket, 'queueBot', data);
+export const queueUpBot = (data: PlayerMetaData) => fire(socket, 'queueUpBot', data);
 
 export const leaveQueue = () => fire(socket, 'leaveQueue');
 

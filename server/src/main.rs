@@ -1,3 +1,4 @@
+mod bot;
 mod cards;
 mod engine;
 mod types;
@@ -100,20 +101,95 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
         }
     });
 
+    socket.on("queueUpBot", {
+        let io = io.clone();
+        let state = state.clone();
+        move |socket: SocketRef, Data::<PlayerMetaData>(meta)| async move {
+            let mut inner = state.inner.lock().await;
+
+            if inner.game.is_some() {
+                println!("game already in progress, ignoring queueUpBot");
+                return;
+            }
+
+            println!("starting bot game for {}", socket.id);
+            let player_id = socket.id.to_string();
+            let player_deck = cards::deck_to_cards(&meta.choosen_deck);
+            let bot_deck = cards::deck_to_cards(&bot::default_deck());
+
+            // randomize who goes first (white always moves first in Game)
+            let is_player_white = rand::random::<bool>();
+            let game = Game::new(
+                player_id.clone(),
+                bot::BOT_ID.to_string(),
+                is_player_white,
+                player_deck,
+                bot_deck,
+            );
+
+            let bot_starts = bot::is_bot_turn(&game);
+            broadcast(&io, &game).await;
+
+            let url = format!(
+                "{}{}",
+                rand::random::<u16>(),
+                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()
+            );
+            io.to(player_id).emit("redirect", &url).await.ok();
+
+            inner.game = Some(game);
+            drop(inner);
+
+            if bot_starts {
+                let state = state.clone();
+                let io = io.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                    let mut inner = state.inner.lock().await;
+                    if let Some(game) = inner.game.as_mut() {
+                        if bot::is_bot_turn(game) {
+                            let bot_white = bot::bot_is_white(game);
+                            bot::make_bot_move(game, bot_white, &io).await;
+                            broadcast(&io, game).await;
+                        }
+                    }
+                });
+            }
+        }
+    });
+
     socket.on("endTurn", {
         let io = io.clone();
         let state = state.clone();
         move |socket: SocketRef| async move {
-            let mut inner = state.inner.lock().await;
-            let game = match inner.game.as_mut() {
-                Some(g) => g,
-                None => return,
-            };
-            if !validate_turn(&socket.id.to_string(), game) {
-                return;
+            // Phase 1: end the player's turn, broadcast immediately so client sees "not your turn"
+            let is_bot = {
+                let mut inner = state.inner.lock().await;
+                let game = match inner.game.as_mut() {
+                    Some(g) => g,
+                    None => return,
+                };
+                if !validate_turn(&socket.id.to_string(), game) {
+                    return;
+                }
+                game.end_turn();
+                let is_bot = bot::is_bot_turn(game);
+                broadcast(&io, game).await;
+                is_bot
+            }; // lock released here — spammed endTurn events will now fail validate_turn
+
+            // Phase 2: delay then run bot move
+            if is_bot {
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                let mut inner = state.inner.lock().await;
+                if let Some(game) = inner.game.as_mut() {
+                    if bot::is_bot_turn(game) {
+                        let bot_white = bot::bot_is_white(game);
+                        bot::make_bot_move(game, bot_white, &io).await;
+                        broadcast(&io, game).await;
+                    }
+                }
             }
-            game.end_turn();
-            broadcast(&io, game).await;
         }
     });
 
