@@ -58,8 +58,6 @@ export const isSpellAndHasNoValidTarget = (
 	card: MinionEntity | IncantationEntity,
 	gameState: GameStateClient
 ): boolean => {
-	if (isMinion(card)) return false;
-
 	const needsFriendlyMinion = card.card.abilities.some(
 		(a) =>
 			a.trigger === 'OnPlay' &&
