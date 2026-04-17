@@ -14,17 +14,17 @@
 		compact?: boolean;
 	} = $props();
 
-	const isEntity = $derived('cost' in card);
-	const cost = $derived(isEntity ? (card as MinionEntity).cost : (card as MinionCard).base_cost);
-	const name = $derived(isEntity ? (card as MinionEntity).card.name : (card as MinionCard).name);
-	const description = $derived(
-		isEntity ? (card as MinionEntity).card.description : (card as MinionCard).description
-	);
-	const color = $derived(isEntity ? (card as MinionEntity).card.color : (card as MinionCard).color);
-	const imageUrl = $derived(
-		isEntity ? (card as MinionEntity).card.image_url : (card as MinionCard).image_url
-	);
-	const minion = $derived(isEntity ? 'attack' in card : 'base_attack' in card);
+	const isEntity = 'cost' in card;
+	const cost = isEntity ? (card as MinionEntity).cost : (card as MinionCard).base_cost;
+	const name = isEntity ? (card as MinionEntity).card.name : (card as MinionCard).name;
+	const description = isEntity
+		? (card as MinionEntity).card.description
+		: (card as MinionCard).description;
+	const color = isEntity ? (card as MinionEntity).card.color : (card as MinionCard).color;
+	const imageUrl = isEntity
+		? (card as MinionEntity).card.image_url
+		: (card as MinionCard).image_url;
+	const minion = isEntity ? 'attack' in card : 'base_attack' in card;
 </script>
 
 <div id="card" class:compact class={color}>
