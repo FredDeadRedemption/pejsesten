@@ -1,15 +1,17 @@
 import { goto } from '$app/navigation';
+import type { AttackData } from '$lib/shared/bindings/AttackData';
+import type { GameStateClient } from '$lib/shared/bindings/GameStateClient';
+import type { PlayerMetaData } from '$lib/shared/bindings/PlayerMetaData';
 import { io, type Socket } from 'socket.io-client';
-import type { PlayerMetaData, GameStateClient, AttackData } from '$lib/shared/types';
 
 let socket: Socket | null = null;
 
 // Function to invalidate (disconnect) the socket
 
 export let gameState = $state<GameStateClient>({
-	whitePlayerID: '',
-	blackPlayerID: '',
-	enemy: {
+	white_player_id: '',
+	black_player_id: '',
+	enemy_board: {
 		battlefield: [],
 		hand: [],
 		hero: {
@@ -18,10 +20,10 @@ export let gameState = $state<GameStateClient>({
 		},
 		graveyard: [],
 		deck: [],
-		baseMana: 0,
+		base_mana: 0,
 		mana: 0
 	},
-	self: {
+	self_board: {
 		battlefield: [],
 		hand: [],
 		hero: {
@@ -30,12 +32,12 @@ export let gameState = $state<GameStateClient>({
 		},
 		graveyard: [],
 		deck: [],
-		baseMana: 0,
+		base_mana: 0,
 		mana: 0
 	},
-	turnCount: 0,
-	cardsPlayedThisTurn: 0,
-	yourTurn: false
+	turn_count: 0,
+	cards_played_this_turn: 0,
+	your_turn: false
 });
 
 // Function to connect to the socket server
