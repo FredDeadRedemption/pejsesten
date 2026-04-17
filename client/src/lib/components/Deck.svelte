@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { gameState, tradeCard } from '$lib/socket/socket.svelte';
+	import { gameState, tradeCard } from '$lib/socket.svelte';
 	import { drag } from '$lib/drag.svelte';
 	import { targeting } from '$lib/targeting.svelte';
-	import { isTradeable } from '$lib/shared/lib';
-	import { getEntity } from '$lib/util';
+	import { isTradeable } from '$lib/lib';
+	import { getEntity } from '$lib/lib';
 
 	const getCardFromBoard = (i: number) => {
 		const raw = gameState.self_board.hand[i];

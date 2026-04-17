@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import Card from './Card.svelte';
-	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
-	import { checkRequirements, isTradeable } from '$lib/shared/lib';
-	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/util';
+	import { endTurn, gameState, playCard } from '$lib/socket.svelte';
+	import { checkRequirements, isTradeable } from '$lib/lib';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/lib';
 	import { drag } from '$lib/drag.svelte';
 
 	let handElement: HTMLElement;

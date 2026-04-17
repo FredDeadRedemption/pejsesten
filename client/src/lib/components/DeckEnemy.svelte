@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gameState } from '$lib/socket/socket.svelte';
+	import { gameState } from '$lib/socket.svelte';
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->

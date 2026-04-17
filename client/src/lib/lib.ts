@@ -2,10 +2,13 @@ import { browser } from '$app/environment';
 import type { CardEntity } from './shared/bindings/CardEntity';
 import type { Effect } from './shared/bindings/Effect';
 import type { GameStateClient } from './shared/bindings/GameStateClient';
+import type { GameStateServer } from './shared/bindings/GameStateServer';
+import type { IncantationCard } from './shared/bindings/IncantationCard';
 import type { IncantationEntity } from './shared/bindings/IncantationEntity';
+import type { MinionCard } from './shared/bindings/MinionCard';
 import type { MinionEntity } from './shared/bindings/MinionEntity';
+import type { Requirement } from './shared/bindings/Requirement';
 import type { TargetSpec } from './shared/bindings/TargetSpec';
-import { checkRequirements } from './shared/lib';
 
 export const enterFullscreen = (divID: string) => {
 	if (!browser) return;
@@ -47,6 +50,23 @@ const getTargetSpec = (effect: Effect): TargetSpec | null => {
 
 	const _exhaustive: never = effect;
 	return _exhaustive;
+};
+
+export const checkRequirements = (
+	requirements: Requirement[] | undefined,
+	gameState: GameStateServer | GameStateClient,
+	cardEntity: MinionEntity | IncantationEntity
+): boolean => {
+	if (!requirements) return true; // no reqs = always fires
+	return requirements.every((r) => {
+		if (r === 'Combo') return gameState.cards_played_this_turn > 0;
+		if (r === 'Quickdraw') return cardEntity.just_drawn;
+	});
+};
+
+export const isTradeable = (card: MinionEntity | IncantationEntity | MinionCard | IncantationCard) => {
+		const attributes = 'card' in card ? card.card.attributes : card.attributes;
+		return attributes.some((a) => a === 'Tradeable');
 };
 
 const abilityWillFire = (a: { trigger: string; requirements: unknown[] }, card: MinionEntity | IncantationEntity, gameState: GameStateClient) =>

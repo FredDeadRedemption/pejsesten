@@ -6,7 +6,7 @@
 		connectSocket,
 		resetServer,
 		queueUpBot
-	} from '$lib/socket/socket.svelte';
+	} from '$lib/socket.svelte';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';

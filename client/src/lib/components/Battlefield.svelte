@@ -1,8 +1,8 @@
 <script lang="ts">
 	import CardSmall from './CardSmall.svelte';
-	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
+	import { attack, gameState, playCard } from '$lib/socket.svelte';
 	import { endTargeting, targeting, beginTargeting } from '$lib/targeting.svelte';
-	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/util';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/lib';
 	import { drag, resetDrag } from '$lib/drag.svelte';
 
 	let mouseX = $state(0);

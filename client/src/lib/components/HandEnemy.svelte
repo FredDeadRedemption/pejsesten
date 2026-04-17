@@ -1,14 +1,15 @@
 <script lang="ts">
 	import Card from './Card.svelte';
-	import { gameState } from '$lib/socket/socket.svelte';
-	import { getEntity, isSpellAndHasNoValidTarget } from '$lib/util';
-	import { OPEN_CARDS } from '$lib/shared/settings';
-	import { checkRequirements } from '$lib/shared/lib';
+	import { gameState } from '$lib/socket.svelte';
+	import { getEntity, isSpellAndHasNoValidTarget } from '$lib/lib';
+	import { checkRequirements } from '$lib/lib';
 	import type { IncantationEntity } from '$lib/shared/bindings/IncantationEntity';
 	import type { MinionEntity } from '$lib/shared/bindings/MinionEntity';
 
 	let handElement: HTMLElement;
 
+
+	const OPEN_CARDS = true;
 	// half card dimensions, used to find card center from top-left coords
 	const CARD_CX = 85;
 	const CARD_CY = 125;
@@ -58,7 +59,7 @@
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					checkRequirements(a.requirements, gameState.self_board, gameState.enemy_board, gameState, card)
+					checkRequirements(a.requirements, gameState, card)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div

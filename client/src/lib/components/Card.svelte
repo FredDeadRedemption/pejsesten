@@ -4,7 +4,7 @@
 	import type { IncantationEntity } from '$lib/shared/bindings/IncantationEntity';
 	import type { MinionCard } from '$lib/shared/bindings/MinionCard';
 	import type { MinionEntity } from '$lib/shared/bindings/MinionEntity';
-	import { isTradeable } from '$lib/shared/lib';
+	import { isTradeable } from '$lib/lib';
 
 	let {
 		card,

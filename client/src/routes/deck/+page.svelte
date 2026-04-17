@@ -2,7 +2,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import Filter from '$lib/components/Filter.svelte';
 	import { getIcon } from '$lib/icons.js';
-	import { getRandomDeckName } from '$lib/util.js';
+	import { getRandomDeckName } from '$lib/lib.js';
 	import { slide } from 'svelte/transition';
 	import { getCards } from '$lib/shared/cards.js';
 	import { goto } from '$app/navigation';
