@@ -4,7 +4,7 @@
 
 <div id="wrapper">
   <div id="graveyard">
-    {gameState.enemy.graveyard.length}
+    {gameState.enemy_board.graveyard.length}
   </div>
 </div>
 
