@@ -5,10 +5,6 @@ declare global {
 		interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
-		interface Array<T> {
-			shuffle(): Array<T>;
-			dredge(n: number): Array<T>;
-		}
 	}
 }
 

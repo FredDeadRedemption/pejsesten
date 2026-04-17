@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { gameState } from "$lib/socket/socket.svelte";
+	import { gameState } from "$lib/socket.svelte";
 </script>
 
 <div id="wrapper">
   <div id="graveyard">
-    {gameState.enemy.graveyard.length}
+    {gameState.enemy_board.graveyard.length}
   </div>
 </div>
 

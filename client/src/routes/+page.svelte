@@ -5,14 +5,12 @@
 		invalidateSocket,
 		connectSocket,
 		resetServer,
-
 		queueUpBot
-
-	} from '$lib/socket/socket.svelte';
-	import type { PlayerMetaData } from '$lib/shared/types';
+	} from '$lib/socket.svelte';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import type { PlayerMetaData } from '$lib/shared/bindings/PlayerMetaData';
 
 	type Deck = {
 		id: number;
@@ -28,12 +26,12 @@
 		choosenDeckJson = decks[0]?.cards ?? [];
 	});
 
-	const DEV_URL = 'http://localhost:3002/';
+	const DEV_URL = 'http://localhost:3000/';
 	const PRODUCTION_URL = 'https://pejsesten.finrod.dk';
 
 	let playerMetaData: PlayerMetaData = $derived({
 		username: 'Out-of-Towner',
-		choosenDeck: choosenDeckJson,
+		choosen_deck: choosenDeckJson,
 		avatar: 'uaogidsogijsogij'
 	});
 

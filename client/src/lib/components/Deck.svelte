@@ -1,13 +1,21 @@
 <script lang="ts">
-	import { gameState, tradeCard } from '$lib/socket/socket.svelte';
+	import { gameState, tradeCard } from '$lib/socket.svelte';
 	import { drag } from '$lib/drag.svelte';
 	import { targeting } from '$lib/targeting.svelte';
-	import { isTradeable } from '$lib/shared/lib';
+	import { isTradeable } from '$lib/lib';
+	import { getEntity } from '$lib/lib';
+
+	const getCardFromBoard = (i: number) => {
+		const raw = gameState.self_board.hand[i];
+    if (!raw) return;
+    return getEntity(raw);
+	}
 
 	const onDrop = () => {
 		if (targeting.active) return
-		if (!drag.card || drag.index === null) return;
-		if (!isTradeable(drag.card)) return;
+		if (drag.index === null) return;
+		const card = getCardFromBoard(drag.index);
+		if (!isTradeable(card!)) return;
 		drag.consumed = true;
 		tradeCard({ index: drag.index });
 	};
@@ -18,10 +26,10 @@
 <div id="wrapper">
 	<div
 		id="deck"
-		class:glow-white={drag.card && isTradeable(drag.card) && !targeting.active && gameState.self.mana !== 0}
+		class:glow-white={drag.index && isTradeable(getCardFromBoard(drag.index)!) && !targeting.active && gameState.self_board.mana !== 0}
 		onmouseup={onDrop}
 	>
-		DECK | {gameState.self.deck.length}
+		DECK | {gameState.self_board.deck.length}
 	</div>
 </div>
 

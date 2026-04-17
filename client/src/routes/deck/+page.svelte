@@ -2,28 +2,27 @@
 	import Card from '$lib/components/Card.svelte';
 	import Filter from '$lib/components/Filter.svelte';
 	import { getIcon } from '$lib/icons.js';
-	import { getRandomDeckName } from '$lib/util.js';
+	import { getRandomDeckName } from '$lib/lib.js';
 	import { slide } from 'svelte/transition';
-	import type { Card as CardT } from '$lib/shared/types';
 	import { getCards } from '$lib/shared/cards.js';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import type { MinionCard } from '$lib/shared/bindings/MinionCard';
+	import type { IncantationCard } from '$lib/shared/bindings/IncantationCard';
 
-
-	let filteredCards = $state<CardT[]>([]);
+	let filteredCards = $state<(MinionCard | IncantationCard)[]>([]);
+	let cards = $state<(MinionCard | IncantationCard)[]>([]);
 
 	type Deck = {
 		id: number;
 		name: string;
-		cards: number[]; // array of card id's
+		cards: number[];
 	};
 
 	let mounted = $state(false);
-	let cards = $state(getCards());
 
-	// Save decks to localStorage whenever they change
 	$effect(() => {
-		if (!mounted) return; // don't save before decks are loaded
+		if (!mounted) return;
 		localStorage?.setItem('decks', JSON.stringify(decks));
 	});
 
@@ -31,14 +30,17 @@
 
 	let decks = $state<Deck[]>([]);
 
-	onMount(() => {
+	onMount(async () => {
 		mounted = true;
 		decks = JSON.parse(localStorage.getItem('decks') ?? '[]');
+		cards = await getCards();
+		filteredCards = cards; 
+		console.log(cards)
 	});
 
 	let selectedDeckID: number | null = $state(null);
-	let deck: number[] = $state([]); // contains id's of all cards
-	let deckUniques: number[] = $derived([...new Set(deck)]); // contains id's of all cards (no duplicates)
+	let deck: number[] = $state([]);
+	let deckUniques: number[] = $derived([...new Set(deck)]);
 	let selectedDeckName: string | null = $state(null);
 	let inspectingDeck: boolean = $state(false);
 
@@ -75,13 +77,13 @@
 			selectedDeckName = selectedDeck.name;
 			inspectingDeck = true;
 			if (Array.isArray(selectedDeck.cards)) {
-				deck = selectedDeck.cards.map((cardId: number) => Number(cardId)); // Convert each item to a number
+				deck = selectedDeck.cards.map((cardId: number) => Number(cardId));
 			} else {
-				deck = []; // Fallback to an empty array if `cards` is not an array
+				deck = [];
 			}
 		} else {
 			selectedDeckID = null;
-			deck = []; // Reset the deck if "New Deck" is selected
+			deck = [];
 		}
 	};
 
@@ -122,7 +124,7 @@
 				<button
 					class="invisible"
 					onclick={() => {
-						if (deck.length >= 50) return; // deck cant have more than 50 cards
+						if (deck.length >= 50) return;
 						deck.push(card.id);
 					}}
 				>
@@ -131,8 +133,8 @@
 			{/each}
 		</div>
 	</div>
+
 	<div class="deck">
-		<!-- RENDER CARDS IN SELECTED DECK -->
 		{#if inspectingDeck}
 			<div class="name-length">
 				<input id="name-input" type="text" maxlength="36" bind:value={selectedDeckName} />
@@ -166,7 +168,6 @@
 				</button>
 			</div>
 		{:else}
-			<!-- RENDER ALL USERS DECKS -->
 			{#if decks.length > 0}
 				{#each decks as deck}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -188,24 +189,9 @@
 				<p>Seems you have no decks</p>
 			{/if}
 
-			<button
-				class="button primary new"
-				onclick={() => {
-					loadNewDeck();
-				}}>New Deck</button
-			>
-			<button
-				class="button primary import"
-				onclick={() => {
-					importDecks();
-				}}>Import Decks</button
-			>
-			<button
-				class="button primary export"
-				onclick={() => {
-					exportDecks();
-				}}>Export Decks</button
-			>
+			<button class="button primary new" onclick={() => loadNewDeck()}>New Deck</button>
+			<button class="button primary import" onclick={() => importDecks()}>Import Decks</button>
+			<button class="button primary export" onclick={() => exportDecks()}>Export Decks</button>
 			<button class="button primary play" onclick={() => goto('/')}>Play</button>
 		{/if}
 	</div>

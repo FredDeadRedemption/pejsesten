@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { gameState } from '$lib/socket/socket.svelte';
+	import { gameState } from '$lib/socket.svelte';
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div id="wrapper">
 	<div id="deck">
-		DECK | {gameState.enemy.deck.length}
+		DECK | {gameState.enemy_board.deck.length}
 	</div>
 </div>
 

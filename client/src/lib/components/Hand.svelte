@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import Card from './Card.svelte';
-	import { endTurn, gameState, playCard } from '$lib/socket/socket.svelte';
-	import { checkRequirements, isTradeable } from '$lib/shared/lib';
-	import { isSpellAndHasNoValidTarget } from '$lib/util';
+	import { endTurn, gameState, playCard } from '$lib/socket.svelte';
+	import { checkRequirements, isTradeable } from '$lib/lib';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/lib';
 	import { drag } from '$lib/drag.svelte';
 
 	let handElement: HTMLElement;
@@ -38,17 +38,18 @@
 	};
 
 	const beginDrag = (index: number, event: MouseEvent) => {
-		const card = gameState.self.hand[index];
-		if (!card) return;
+		const raw = gameState.self_board.hand[index];
+		if (!raw) return;
+		const card = getEntity(raw);
 
 		// don't allow dragging unaffordable cards
-		if (card.cost > gameState.self.mana && !isTradeable(card)) return;
+		if (card.cost > gameState.self_board.mana && !isTradeable(card)) return;
 
 		// spell requires target that is not present dont drag around (unless tradeable)
 		if (isSpellAndHasNoValidTarget(card, gameState) && !isTradeable(card)) return;
 
 		// if you dont have that 1 mana neccesary to trade the card
-		if (isTradeable(card) && gameState.self.mana === 0) return;
+		if (isTradeable(card) && gameState.self_board.mana === 0) return;
 
 		event.preventDefault();
 
@@ -57,7 +58,6 @@
 			[index]?.querySelector('.hand-card');
 		const rect = cardEl?.getBoundingClientRect();
 
-		drag.card = card;
 		drag.index = index;
 		drag.x = rect ? rect.left : event.clientX - CARD_CX;
 		drag.y = rect ? rect.top : event.clientY - CARD_CY;
@@ -66,14 +66,13 @@
 	};
 
 	const endDrag = async () => {
-		if (!drag.card || drag.index === null) return;
+		if (drag.index === null) return;
 
 		const idx = drag.index;
 
 		// a drop zone consumed the drag — just clean up
 		if (drag.consumed) {
 			drag.consumed = false;
-			drag.card = null;
 			drag.index = null;
 			return;
 		}
@@ -88,19 +87,14 @@
 		if (!isWithinHand) {
 			// dropped outside but no drop zone caught it
 			// only play directly if no targeting needed
-			const card = gameState.self.hand[idx];
+			const raw = gameState.self_board.hand[idx];
+			const card = getEntity(raw);
 			if (card) {
-				const needsTarget = card.abilities.some(
-					(a) =>
-						a.trigger === 'onPlay' &&
-						a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
-				);
-				if (!needsTarget || isSpellAndHasNoValidTarget(card, gameState)) {
+				if (!needsTarget(card, gameState) || hasNoValidTarget(card, gameState)) {
 					playCard({ index: idx });
 				}
 				// needs a target but wasn't dropped on one --> return to hand
 			}
-			drag.card = null;
 			drag.index = null;
 			return;
 		}
@@ -119,7 +113,6 @@
 
 		setTimeout(() => {
 			returning = false;
-			drag.card = null;
 			drag.index = null;
 		}, 250);
 	};
@@ -134,26 +127,31 @@
 <svelte:window onmouseup={endDrag} onmousemove={onMouseMove} />
 
 <div class="hand" bind:this={handElement}>
-	<button class="end" class:inactive={!gameState.yourTurn} onclick={() => endTurn()}>
+	<button class="end" class:inactive={!gameState.your_turn} onclick={() => endTurn()}>
 		END TURN
 	</button>
-	<div class="mana">{gameState.self.mana}/{gameState.self.baseMana}</div>
-	{#each gameState.self.hand as card, index}
+	<div class="mana">{gameState.self_board.mana}/{gameState.self_board.base_mana}</div>
+	{#each gameState.self_board.hand as raw, index}
+		{@const card = getEntity(raw)}
 		{@const affordable =
-			card.cost <= gameState.self.mana && !isSpellAndHasNoValidTarget(card, gameState)}
+			card.cost <= gameState.self_board.mana && !isSpellAndHasNoValidTarget(card, gameState)}
 		{@const procced =
 			affordable &&
-			card.abilities?.some(
+			card.card.abilities?.some(
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					checkRequirements(a.requirements, gameState.self, gameState.enemy, gameState, card)
+					checkRequirements(
+						a.requirements,
+						gameState,
+						card
+					)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
 			class:hovered={hoverIndex === index && !dragging}
-			style="{fanStyle(index, gameState.self.hand.length)}; z-index: {index}"
+			style="{fanStyle(index, gameState.self_board.hand.length)}; z-index: {index}"
 			onmouseenter={() => setHover(index)}
 			onmouseleave={clearHover}
 			onmousedown={(e) => {
@@ -170,9 +168,10 @@
 			</div>
 		</div>
 	{/each}
-	{#if drag.card && !drag.consumed}
+	{#if drag.index !== null && !drag.consumed}
+		{@const draggedCard = getEntity(gameState.self_board.hand[drag.index])}
 		<div class="dragger" class:returning style="left: {drag.x}px; top: {drag.y}px;">
-			<Card card={drag.card} />
+			<Card card={draggedCard} />
 		</div>
 	{/if}
 </div>

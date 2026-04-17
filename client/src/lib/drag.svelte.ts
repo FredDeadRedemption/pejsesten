@@ -1,7 +1,4 @@
-import type { CardEntity } from '$lib/shared/types';
-
 export const drag = $state({
-	card: null as CardEntity | null,
 	index: null as number | null,
 	x: 0,
 	y: 0,
@@ -11,6 +8,5 @@ export const drag = $state({
 
 export const resetDrag = () => {
 	drag.consumed = false;
-	drag.card = null;
 	drag.index = null;
 };

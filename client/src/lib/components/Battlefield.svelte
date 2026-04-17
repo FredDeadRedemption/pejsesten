@@ -1,8 +1,8 @@
 <script lang="ts">
 	import CardSmall from './CardSmall.svelte';
-	import { attack, gameState, playCard } from '$lib/socket/socket.svelte';
+	import { attack, gameState, playCard } from '$lib/socket.svelte';
 	import { endTargeting, targeting, beginTargeting } from '$lib/targeting.svelte';
-	import { isSpellAndHasNoValidTarget } from '$lib/util';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/lib';
 	import { drag, resetDrag } from '$lib/drag.svelte';
 
 	let mouseX = $state(0);
@@ -16,9 +16,9 @@
 		mouseY = e.clientY;
 	};
 
-	const beginAttack = (entityID: string, e: MouseEvent) => {
+	const beginAttack = (entity_id: string, e: MouseEvent) => {
 		e.preventDefault();
-		attackOrigin = entityID;
+		attackOrigin = entity_id;
 		const el = e.currentTarget as HTMLElement;
 		attackOriginRect = el.getBoundingClientRect();
 	};
@@ -28,9 +28,9 @@
 		attackOriginRect = null;
 	};
 
-	const endAttack = (entityID: string) => {
+	const endAttack = (entity_id: string) => {
 		if (attackOrigin === null) return;
-		attack({ originID: attackOrigin, targetID: entityID });
+		attack({ origin_id: attackOrigin, target_id: entity_id });
 		attackOrigin = null;
 		attackOriginRect = null;
 	};
@@ -38,47 +38,37 @@
 	// when a dragged card enters the battlefield area, check if it needs targeting
 	// if so: switch from drag mode to targeting mode immediately
 	const onBattlefieldEnter = () => {
-		if (!drag.card || drag.index === null) return;
-		const card = drag.card;
-		const idx = drag.index;
+		if (drag.index === null) return;
+		const raw = gameState.self_board.hand[drag.index];
+		if (!raw) return;
+		const card = getEntity(raw);
 
-		const needsTarget = card.abilities.some(
-			(a) =>
-				a.trigger === 'onPlay' &&
-				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
-		);
-
-		if (needsTarget && !isSpellAndHasNoValidTarget(card, gameState)) {
+		if (needsTarget(card, gameState) && !hasNoValidTarget(card, gameState)) {
 			// switch to targeting mode — hide the dragger, show targeting arrow
 			drag.consumed = true;
-			beginTargeting(card, idx);
+			beginTargeting(card, drag.index);
 		}
 	};
 
 	// dropping a non-targeting card onto the battlefield plays it
 	const onBattlefieldDrop = () => {
-		if (!drag.card || drag.index === null) return;
+		if (drag.index === null) return;
 		if (drag.consumed) return; // already handled (targeting mode)
-
-		const card = drag.card;
-		const idx = drag.index;
-
-		const needsTarget = card.abilities.some(
-			(a) =>
-				a.trigger === 'onPlay' &&
-				a.effects.some((e) => 'targetSpec' in e && e.targetSpec.scope === 'single')
-		);
+		if (drag.index === null) return;
+		const raw = gameState.self_board.hand[drag.index];
+		if (!raw) return;
+		const card = getEntity(raw);
 
 		// only play directly if no target needed or no valid targets exist
-		if (!needsTarget || isSpellAndHasNoValidTarget(card, gameState)) {
+		if (!needsTarget(card, gameState) || hasNoValidTarget(card, gameState)) {
 			drag.consumed = true;
-			playCard({ index: idx });
+			playCard({ index: drag.index });
 		}
 	};
 
 	let didFireTargeting = $state(false);
 
-	const handleTargetInteraction = (e: MouseEvent, entityID: string) => {
+	const handleTargetInteraction = (e: MouseEvent, entity_id: string) => {
 		e.stopPropagation();
 		if (!targeting.active) return;
 		if (didFireTargeting) {
@@ -86,7 +76,7 @@
 			return;
 		}
 		didFireTargeting = true;
-		playCard({ index: targeting.cardIndex!, target: entityID });
+		playCard({ index: targeting.cardIndex!, target: entity_id });
 		endTargeting();
 		resetDrag();
 		setTimeout(() => (didFireTargeting = false), 50);
@@ -148,29 +138,29 @@
 			else endAttack('heroEnemy');
 		}}
 	>
-		<span class="hp">{gameState.enemy.hero.defence}</span>
+		<span class="hp">{gameState.enemy_board.hero.defence}</span>
 	</div>
 
-	{#each gameState.enemy.battlefield as card, index (`${card.id}-${index}`)}
+	{#each gameState.enemy_board.battlefield as card, index (`${card.card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			style="--i: {index}; --total: {gameState.enemy.battlefield.length}"
+			style="--i: {index}; --total: {gameState.enemy_board.battlefield.length}"
 			onmouseenter={() => {
-				if (targeting.active) targeting.hoveredTarget = card.entityID;
+				if (targeting.active) targeting.hoveredTarget = card.entity_id;
 			}}
 			onmouseleave={() => {
 				if (targeting.active) targeting.hoveredTarget = null;
 			}}
 			onmouseup={(e) => {
-				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else if (attackOrigin) endAttack(card.entityID);
-				else endAttack(card.entityID);
+				if (targeting.active) handleTargetInteraction(e, card.entity_id);
+				else if (attackOrigin) endAttack(card.entity_id);
+				else endAttack(card.entity_id);
 			}}
 			onclick={(e) => {
-				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else endAttack(card.entityID);
+				if (targeting.active) handleTargetInteraction(e, card.entity_id);
+				else endAttack(card.entity_id);
 			}}
 		>
 			<CardSmall {card} />
@@ -193,34 +183,34 @@
 			if (targeting.active) handleTargetInteraction(e, 'heroSelf');
 		}}
 	>
-		<span class="hp">{gameState.self.hero.defence}</span>
+		<span class="hp">{gameState.self_board.hero.defence}</span>
 	</div>
 
-	{#each gameState.self.battlefield as card, index (`${card.id}-${index}`)}
+	{#each gameState.self_board.battlefield as card, index (`${card.card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"
-			style="--i: {index}; --total: {gameState.self.battlefield.length}"
-			class:selected={attackOrigin === card.entityID}
+			style="--i: {index}; --total: {gameState.self_board.battlefield.length}"
+			class:selected={attackOrigin === card.entity_id}
 			onmouseenter={() => {
-				if (targeting.active) targeting.hoveredTarget = card.entityID;
+				if (targeting.active) targeting.hoveredTarget = card.entity_id;
 			}}
 			onmouseleave={() => {
 				if (targeting.active) targeting.hoveredTarget = null;
 			}}
 			onmousedown={(e) => {
 				e.stopPropagation();
-				if (!targeting.active) beginAttack(card.entityID, e);
+				if (!targeting.active) beginAttack(card.entity_id, e);
 			}}
 			onmouseup={(e) => {
 				e.stopPropagation();
-				if (targeting.active) handleTargetInteraction(e, card.entityID);
+				if (targeting.active) handleTargetInteraction(e, card.entity_id);
 			}}
 			onclick={(e) => {
 				e.stopPropagation();
-				if (targeting.active) handleTargetInteraction(e, card.entityID);
-				else beginAttack(card.entityID, e);
+				if (targeting.active) handleTargetInteraction(e, card.entity_id);
+				else beginAttack(card.entity_id, e);
 			}}
 		>
 			<CardSmall {card} />

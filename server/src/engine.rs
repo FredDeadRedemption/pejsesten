@@ -6,9 +6,9 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 
 const STARTING_HP: i32 = 30;
-const STARTING_MANA: i32 = 1;
+const STARTING_MANA: i32 = 7;
 const MAX_MANA: i32 = 10;
-const STARTING_HAND_SIZE: usize = 3;
+const STARTING_HAND_SIZE: usize = 7;
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
@@ -20,15 +20,22 @@ enum TargetRef {
     MinionEnemy(usize),
 }
 
+#[derive(Clone, Copy)]
+enum PlayerSide {
+    White,
+    Black,
+}
+
 #[derive(Clone)]
 struct QueuedEffect {
     effect: Effect,
+    owner: PlayerSide,
     target_id: Option<String>,
     self_id: Option<String>,
 }
 
 pub struct Game {
-    pub state: GameState,
+    pub state: GameStateServer,
     effect_queue: Vec<QueuedEffect>,
 }
 
@@ -45,13 +52,7 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
 }
 
 impl Game {
-    pub fn new(
-        player1_id: String,
-        player2_id: String,
-        is_player1_white: bool,
-        player1_deck: Vec<CardEntity>,
-        player2_deck: Vec<CardEntity>,
-    ) -> Self {
+    pub fn new(player1_id: String, player2_id: String, is_player1_white: bool, player1_deck: Vec<CardEntity>, player2_deck: Vec<CardEntity>) -> Self {
         let mut rng = rand::rng();
 
         let (mut white_deck, mut black_deck) = if is_player1_white {
@@ -63,12 +64,8 @@ impl Game {
         white_deck.shuffle(&mut rng);
         black_deck.shuffle(&mut rng);
 
-        let white_hand: Vec<CardEntity> = white_deck
-            .drain(0..STARTING_HAND_SIZE.min(white_deck.len()))
-            .collect();
-        let black_hand: Vec<CardEntity> = black_deck
-            .drain(0..(STARTING_HAND_SIZE + 1).min(black_deck.len()))
-            .collect();
+        let white_hand: Vec<CardEntity> = white_deck.drain(0..STARTING_HAND_SIZE.min(white_deck.len())).collect();
+        let black_hand: Vec<CardEntity> = black_deck.drain(0..(STARTING_HAND_SIZE + 1).min(black_deck.len())).collect();
 
         let (white_player_id, black_player_id) = if is_player1_white {
             (player1_id, player2_id)
@@ -77,7 +74,7 @@ impl Game {
         };
 
         Game {
-            state: GameState {
+            state: GameStateServer {
                 white: Board {
                     deck: white_deck,
                     hand: white_hand,
@@ -124,44 +121,92 @@ impl Game {
     }
 
     fn source_board_mut(&mut self) -> &mut Board {
-        if self.state.white_turn { &mut self.state.white } else { &mut self.state.black }
+        if self.state.white_turn {
+            &mut self.state.white
+        } else {
+            &mut self.state.black
+        }
     }
 
     fn enemy_board_mut(&mut self) -> &mut Board {
-        if self.state.white_turn { &mut self.state.black } else { &mut self.state.white }
+        if self.state.white_turn {
+            &mut self.state.black
+        } else {
+            &mut self.state.white
+        }
     }
 
     fn boards(&self) -> (&Board, &Board) {
-        if self.state.white_turn { (&self.state.white, &self.state.black) }
-        else { (&self.state.black, &self.state.white) } 
+        if self.state.white_turn {
+            (&self.state.white, &self.state.black)
+        } else {
+            (&self.state.black, &self.state.white)
+        }
     }
 
     fn boards_mut(&mut self) -> (&mut Board, &mut Board) {
-        if self.state.white_turn { (&mut self.state.white, &mut self.state.black) }
-        else { (&mut self.state.black, &mut self.state.white) }
+        if self.state.white_turn {
+            (&mut self.state.white, &mut self.state.black)
+        } else {
+            (&mut self.state.black, &mut self.state.white)
+        }
+    }
+
+    fn boards_for(&self, owner: PlayerSide) -> (&Board, &Board) {
+        match owner {
+            PlayerSide::White => (&self.state.white, &self.state.black),
+            PlayerSide::Black => (&self.state.black, &self.state.white),
+        }
+    }
+
+    fn boards_for_mut(&mut self, owner: PlayerSide) -> (&mut Board, &mut Board) {
+        match owner {
+            PlayerSide::White => (&mut self.state.white, &mut self.state.black),
+            PlayerSide::Black => (&mut self.state.black, &mut self.state.white),
+        }
+    }
+
+    fn source_board_for(&self, owner: PlayerSide) -> (&Board) {
+        match owner {
+            PlayerSide::White => (&self.state.white),
+            PlayerSide::Black => (&self.state.black),
+        }
+    }
+
+    fn source_board_for_mut(&mut self, owner: PlayerSide) -> (&mut Board) {
+        match owner {
+            PlayerSide::White => (&mut self.state.white),
+            PlayerSide::Black => (&mut self.state.black),
+        }
+    }
+
+    fn enemy_board_for(&self, owner: PlayerSide) -> (&Board) {
+        match owner {
+            PlayerSide::White => (&self.state.black),
+            PlayerSide::Black => (&self.state.white),
+        }
+    }
+
+    fn enemy_board_for_mut(&mut self, owner: PlayerSide) -> (&mut Board) {
+        match owner {
+            PlayerSide::White => (&mut self.state.black),
+            PlayerSide::Black => (&mut self.state.white),
+        }
     }
 
     // --- Entity lookup ---
 
-    fn find_target_ref(&self, id: &str) -> Option<TargetRef> {
+    fn find_target_ref(&self, id: &str, owner: PlayerSide) -> Option<TargetRef> {
         match id {
             "heroSelf" => return Some(TargetRef::HeroSource),
             "heroEnemy" => return Some(TargetRef::HeroEnemy),
             _ => {}
         }
-        let (source, enemy) = self.boards();
-        if let Some(i) = source
-            .battlefield
-            .iter()
-            .position(|m| m.base.entity_id == id)
-        {
+        let (source, enemy) = self.boards_for(owner);
+        if let Some(i) = source.battlefield.iter().position(|m| m.entity_id == id) {
             return Some(TargetRef::MinionSource(i));
         }
-        if let Some(i) = enemy
-            .battlefield
-            .iter()
-            .position(|m| m.base.entity_id == id)
-        {
+        if let Some(i) = enemy.battlefield.iter().position(|m| m.entity_id == id) {
             return Some(TargetRef::MinionEnemy(i));
         }
         None
@@ -169,18 +214,13 @@ impl Game {
 
     // --- Target resolution ---
 
-    fn resolve_target_refs(
-        spec: &TargetSpec,
-        source: &Board,
-        enemy: &Board,
-        self_id: Option<&str>,
-    ) -> Vec<TargetRef> {
+    fn resolve_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<&str>) -> Vec<TargetRef> {
         let mut refs = vec![];
 
         if matches!(spec.entity_type, EntityType::Minion | EntityType::All) {
             if matches!(spec.side, TargetSide::Friendly | TargetSide::All) {
                 for (i, m) in source.battlefield.iter().enumerate() {
-                    if self_id.map_or(true, |id| m.base.entity_id != id) {
+                    if self_id.map_or(true, |id| m.entity_id != id) {
                         refs.push(TargetRef::MinionSource(i));
                     }
                 }
@@ -201,25 +241,18 @@ impl Game {
             }
         }
 
-        if spec.targeted {
-            refs.truncate(1);
+        match spec.target_mode {
+            TargetMode::Targeted => refs.truncate(1),
+            TargetMode::Auto => {}
         }
         refs
     }
 
-    fn get_target_refs(
-        &self,
-        spec: &TargetSpec,
-        target_id: Option<&str>,
-        self_id: Option<&str>,
-    ) -> Vec<TargetRef> {
+    fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<&str>, self_id: Option<&str>) -> Vec<TargetRef> {
         if let Some(id) = target_id {
-            return self
-                .find_target_ref(id)
-                .map(|t| vec![t])
-                .unwrap_or_default();
+            return self.find_target_ref(id, owner).map(|t| vec![t]).unwrap_or_default();
         }
-        let (source, enemy) = self.boards();
+        let (source, enemy) = self.boards_for(owner);
         Self::resolve_target_refs(spec, source, enemy, self_id)
     }
 
@@ -232,10 +265,7 @@ impl Game {
         })
     }
 
-    fn check_follow_up_requirements(
-        requirements: &[FollowUpRequirement],
-        card: &CardEntity,
-    ) -> bool {
+    fn check_follow_up_requirements(requirements: &[FollowUpRequirement], card: &CardEntity) -> bool {
         requirements.iter().all(|r| match r {
             FollowUpRequirement::IsRace { race } => match card {
                 CardEntity::Minion(m) => m.card.races.contains(race),
@@ -256,15 +286,17 @@ impl Game {
     fn enqueue_trigger(&mut self, trigger: Trigger) {
         let mut to_queue: Vec<QueuedEffect> = vec![];
 
-        let source_board  = self.source_board();
+        let source_board = self.source_board();
         for minion in &source_board.battlefield {
             for ability in &minion.card.abilities {
                 if ability.trigger != trigger {
                     continue;
                 }
+                let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
                 for effect in &ability.effects {
                     to_queue.push(QueuedEffect {
                         effect: effect.clone(),
+                        owner: owner,
                         target_id: None,
                         self_id: None,
                     });
@@ -278,11 +310,7 @@ impl Game {
         // drain one at a time so effects enqueued by effects are processed in order
         while !self.effect_queue.is_empty() {
             let queued = self.effect_queue.remove(0);
-            self.apply_effect(
-                queued.effect,
-                queued.target_id.as_deref(),
-                queued.self_id.as_deref(),
-            );
+            self.apply_effect(queued.effect, queued.owner, queued.target_id.as_deref(), queued.self_id.as_deref());
         }
     }
 
@@ -295,11 +323,7 @@ impl Game {
 
             // Check both boards each iteration
             for white_is_board in [true, false] {
-                let board = if white_is_board {
-                    &mut self.state.white
-                } else {
-                    &mut self.state.black
-                };
+                let board = if white_is_board { &mut self.state.white } else { &mut self.state.black };
 
                 let mut i = 0;
                 while i < board.battlefield.len() {
@@ -312,10 +336,13 @@ impl Game {
                                 continue;
                             }
                             for effect in &ability.effects {
+                                let owner = if white_is_board { PlayerSide::White } else { PlayerSide::Black };
+
                                 to_queue.push(QueuedEffect {
                                     effect: effect.clone(),
+                                    owner: owner,
                                     target_id: None,
-                                    self_id: Some(dead.base.entity_id.clone()),
+                                    self_id: Some(dead.entity_id.clone()),
                                 });
                             }
                         }
@@ -337,21 +364,12 @@ impl Game {
 
     // --- Apply effect ---
 
-    fn apply_effect(
-        &mut self,
-        effect: Effect,
-        target_id: Option<&str>,
-        self_id: Option<&str>,
-    ) {
+    fn apply_effect(&mut self, effect: Effect, owner: PlayerSide, target_id: Option<&str>, self_id: Option<&str>) {
         match effect {
-            Effect::Buff {
-                target_spec,
-                attack,
-                defence,
-            } => {
-                let refs = self.get_target_refs(&target_spec,  target_id, self_id);
+            Effect::Buff { target_spec, attack, defence } => {
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
                 for tr in refs {
-                    let (source, enemy) = self.boards_mut();
+                    let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
                         TargetRef::HeroSource => {
                             source.hero.attack += attack;
@@ -373,13 +391,10 @@ impl Game {
                 }
             }
 
-            Effect::Damage {
-                target_spec,
-                damage,
-            } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
+            Effect::Damage { target_spec, damage } => {
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
                 for tr in refs {
-                    let (source, enemy) = self.boards_mut();
+                    let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
                         TargetRef::HeroSource => source.hero.defence -= damage,
                         TargetRef::HeroEnemy => enemy.hero.defence -= damage,
@@ -389,19 +404,16 @@ impl Game {
                 }
             }
 
-            Effect::Draw {
-                draw_amount,
-                follow_up,
-            } => {
+            Effect::Draw { draw_amount, follow_up } => {
                 // Step 1: draw (needs mut borrow)
                 let mut drawn = {
-                    let source_board = self.source_board_mut();
-                    Self::draw_cards(source_board, draw_amount)
+                    let (source, _) = self.boards_for_mut(owner);
+                    Self::draw_cards(source, draw_amount)
                 };
 
                 // Step 2: follow-up (collect battlefield len while immutably borrowed)
                 if let Some(ref fu) = follow_up {
-                    let battlefield_len = self.source_board().battlefield.len();
+                    let battlefield_len = self.source_board_for(owner).battlefield.len();
                     let mut extra: Vec<CardEntity> = vec![];
 
                     for card in drawn.iter_mut() {
@@ -412,9 +424,7 @@ impl Game {
                             match fu_effect {
                                 FollowUpEffect::Discount { scaled_amount } => {
                                     let discount = match &scaled_amount.scaled_by {
-                                        Some(ScaledBy::MinionsOnBoard) => {
-                                            battlefield_len as i32 * scaled_amount.scalar
-                                        }
+                                        Some(ScaledBy::MinionsOnBoard) => battlefield_len as i32 * scaled_amount.scalar,
                                         None => scaled_amount.scalar,
                                     };
                                     *card.cost_mut() = (*card.cost_mut() - discount).max(0);
@@ -431,52 +441,50 @@ impl Game {
                 }
 
                 // Step 3: push to hand
-                let source_board = self.source_board_mut();
+                let source_board = self.source_board_for_mut(owner);
                 source_board.hand.extend(drawn);
             }
 
-            Effect::ReturnToHand {
-                target_spec,
-                cost_reduction,
-            } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
-                // Reverse so removing by index doesn't shift remaining indices
-                for tr in refs.into_iter().rev() {
-                    let is_source = matches!(tr, TargetRef::MinionSource(_));
-                    let (source, enemy) = self.boards_mut();
+            Effect::ReturnToHand { target_spec, cost_reduction } => {
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
 
-                    let minion = match &tr {
-                        TargetRef::MinionSource(i) if *i < source.battlefield.len() => {
-                            Some(source.battlefield.remove(*i))
-                        }
-                        TargetRef::MinionEnemy(i) if *i < enemy.battlefield.len() => {
-                            Some(enemy.battlefield.remove(*i))
-                        }
+                let (source, enemy) = self.boards_for_mut(owner);
+
+                for tr in refs.into_iter().rev() {
+                    let minion = match tr {
+                        TargetRef::MinionSource(i) if i < source.battlefield.len() => Some(source.battlefield.remove(i)),
+                        TargetRef::MinionEnemy(i) if i < enemy.battlefield.len() => Some(enemy.battlefield.remove(i)),
                         _ => None,
                     };
 
                     if let Some(mut minion) = minion {
                         if let Some(reduction) = cost_reduction {
-                            minion.base.cost = (minion.card.base_cost - reduction).max(0);
+                            minion.cost = (minion.card.base_cost - reduction).max(0);
                         }
+
                         minion.exhausted = false;
                         minion.attack = minion.card.base_attack;
                         minion.defence = minion.card.base_defence;
 
-                        let (source, enemy) = self.boards_mut();
-                        if is_source {
-                            source.hand.push(CardEntity::Minion(minion));
-                        } else {
-                            enemy.hand.push(CardEntity::Minion(minion));
+                        match tr {
+                            TargetRef::MinionSource(_) => {
+                                source.hand.push(CardEntity::Minion(minion));
+                            }
+                            TargetRef::MinionEnemy(_) => {
+                                enemy.hand.push(CardEntity::Minion(minion));
+                            }
+                            _ => {}
                         }
                     }
                 }
             }
 
             Effect::Destroy { target_spec } => {
-                let refs = self.get_target_refs(&target_spec, target_id, self_id);
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
+
+                let (source, enemy) = self.boards_for_mut(owner);
+
                 for tr in refs {
-                    let (source, enemy) = self.boards_mut();
                     match tr {
                         TargetRef::MinionSource(i) => source.battlefield[i].defence = 0,
                         TargetRef::MinionEnemy(i) => enemy.battlefield[i].defence = 0,
@@ -518,8 +526,8 @@ impl Game {
     }
 
     pub fn play_card(&mut self, index: usize, target_id: Option<String>) -> bool {
-        // Validate without consuming
-        {
+        // Validate without consuming — clone card so mutable borrow can be released before check_requirements
+        let card_clone = {
             let source_board = self.source_board_mut();
             let card = match source_board.hand.get(index) {
                 Some(c) => c,
@@ -528,15 +536,14 @@ impl Game {
             if card.cost() > source_board.mana {
                 return false;
             }
-            let needs_target = card.abilities().iter().any(|a| {
-                a.effects
-                    .iter()
-                    .filter_map(effect_target_spec)
-                    .any(|ts| ts.targeted)
-            });
-            if needs_target && target_id.is_none() {
-                return false;
-            }
+            card.clone()
+        };
+        let needs_target = card_clone.abilities().iter().any(|a| {
+            self.check_requirements(&a.requirements, &card_clone)
+                && a.effects.iter().filter_map(effect_target_spec).any(|ts| ts.target_mode == TargetMode::Targeted)
+        });
+        if needs_target && target_id.is_none() {
+            return false;
         }
 
         // Consume from hand
@@ -563,10 +570,13 @@ impl Game {
             }
             for effect in &ability.effects {
                 let tid = effect_target_spec(effect)
-                    .filter(|ts| ts.targeted)
+                    .filter(|ts| ts.target_mode == TargetMode::Targeted)
                     .and_then(|_| target_id.clone());
+
+                let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
                 self.effect_queue.push(QueuedEffect {
                     effect: effect.clone(),
+                    owner: owner,
                     target_id: tid,
                     self_id: Some(entity_id.clone()),
                 });
@@ -583,7 +593,8 @@ impl Game {
     }
 
     pub fn attack(&mut self, data: AttackData) -> bool {
-        let attacker_idx = match self.find_target_ref(&data.origin_id) {
+        let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
+        let attacker_idx = match self.find_target_ref(&data.origin_id, owner) {
             Some(TargetRef::MinionSource(i)) => i,
             _ => return false,
         };
@@ -592,7 +603,7 @@ impl Game {
             return false;
         }
 
-        let target_ref = match self.find_target_ref(&data.target_id) {
+        let target_ref = match self.find_target_ref(&data.target_id, owner) {
             Some(t) => t,
             None => return false,
         };
@@ -647,16 +658,8 @@ impl Game {
 
     pub fn parse_client_state(&self, for_white: bool) -> GameStateClient {
         GameStateClient {
-            self_board: if for_white {
-                self.state.white.clone()
-            } else {
-                self.state.black.clone()
-            },
-            enemy: if for_white {
-                self.state.black.clone()
-            } else {
-                self.state.white.clone()
-            },
+            self_board: if for_white { self.state.white.clone() } else { self.state.black.clone() },
+            enemy_board: if for_white { self.state.black.clone() } else { self.state.white.clone() },
             white_player_id: self.state.white_player_id.clone(),
             black_player_id: self.state.black_player_id.clone(),
             your_turn: for_white == self.state.white_turn,

@@ -3,14 +3,14 @@
 	import Battlefield from '$lib/components/Battlefield.svelte';
 	import Deck from '$lib/components/Deck.svelte';
 	import Graveyard from '$lib/components/Graveyard.svelte';
-	import { enterFullscreen } from '$lib/util.js';
+	import { enterFullscreen } from '$lib/lib.js';
 	import { updateMouse } from '$lib/mouse.svelte';
 	import { endTargeting, targeting } from '$lib/targeting.svelte';
 	import Crosshair from '$lib/components/Crosshair.svelte';
 	import HandEnemy from '$lib/components/HandEnemy.svelte';
 	import GraveyardEnemy from '$lib/components/GraveyardEnemy.svelte';
 	import DeckEnemy from '$lib/components/DeckEnemy.svelte';
-	import { gameState } from '$lib/socket/socket.svelte';
+	import { gameState } from '$lib/socket.svelte';
 
 	$inspect(gameState);
 </script>
