@@ -154,10 +154,10 @@ impl Game {
             _ => {}
         }
         let (source, enemy) = self.boards();
-        if let Some(i) = source.battlefield.iter().position(|m| m.base.entity_id == id) {
+        if let Some(i) = source.battlefield.iter().position(|m| m.entity_id == id) {
             return Some(TargetRef::MinionSource(i));
         }
-        if let Some(i) = enemy.battlefield.iter().position(|m| m.base.entity_id == id) {
+        if let Some(i) = enemy.battlefield.iter().position(|m| m.entity_id == id) {
             return Some(TargetRef::MinionEnemy(i));
         }
         None
@@ -171,7 +171,7 @@ impl Game {
         if matches!(spec.entity_type, EntityType::Minion | EntityType::All) {
             if matches!(spec.side, TargetSide::Friendly | TargetSide::All) {
                 for (i, m) in source.battlefield.iter().enumerate() {
-                    if self_id.map_or(true, |id| m.base.entity_id != id) {
+                    if self_id.map_or(true, |id| m.entity_id != id) {
                         refs.push(TargetRef::MinionSource(i));
                     }
                 }
@@ -288,7 +288,7 @@ impl Game {
                                 to_queue.push(QueuedEffect {
                                     effect: effect.clone(),
                                     target_id: None,
-                                    self_id: Some(dead.base.entity_id.clone()),
+                                    self_id: Some(dead.entity_id.clone()),
                                 });
                             }
                         }
@@ -406,7 +406,7 @@ impl Game {
 
                     if let Some(mut minion) = minion {
                         if let Some(reduction) = cost_reduction {
-                            minion.base.cost = (minion.card.base_cost - reduction).max(0);
+                            minion.cost = (minion.card.base_cost - reduction).max(0);
                         }
                         minion.exhausted = false;
                         minion.attack = minion.card.base_attack;

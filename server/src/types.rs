@@ -99,26 +99,11 @@ pub struct FollowUpAbility {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub enum Effect {
-    Buff {
-        target_spec: TargetSpec,
-        attack: i32,
-        defence: i32,
-    },
-    Damage {
-        target_spec: TargetSpec,
-        damage: i32,
-    },
-    Draw {
-        draw_amount: usize,
-        follow_up: Option<FollowUpAbility>,
-    },
-    ReturnToHand {
-        target_spec: TargetSpec,
-        cost_reduction: Option<i32>,
-    },
-    Destroy {
-        target_spec: TargetSpec,
-    },
+    Buff { target_spec: TargetSpec, attack: i32, defence: i32 },
+    Damage { target_spec: TargetSpec, damage: i32 },
+    Draw { draw_amount: usize, follow_up: Option<FollowUpAbility> },
+    ReturnToHand { target_spec: TargetSpec, cost_reduction: Option<i32> },
+    Destroy { target_spec: TargetSpec },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -183,18 +168,12 @@ pub enum Card {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
-pub struct EntityBase {
+pub struct MinionEntity {
     pub entity_id: String,
     pub cost: i32,
     pub turns_in_hand: u32,
     pub just_drawn: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct MinionEntity {
     pub card: MinionCard,
-    pub base: EntityBase,
     pub attack: i32,
     pub defence: i32,
     pub exhausted: bool,
@@ -203,8 +182,11 @@ pub struct MinionEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct IncantationEntity {
+    pub entity_id: String,
+    pub cost: i32,
+    pub turns_in_hand: u32,
+    pub just_drawn: bool,
     pub card: IncantationCard,
-    pub base: EntityBase,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -275,50 +257,50 @@ pub struct AttackData {
 impl CardEntity {
     pub fn cost(&self) -> i32 {
         match self {
-            CardEntity::Minion(m) => m.base.cost,
-            CardEntity::Incantation(i) => i.base.cost,
+            CardEntity::Minion(m) => m.cost,
+            CardEntity::Incantation(i) => i.cost,
         }
     }
     pub fn cost_mut(&mut self) -> &mut i32 {
         match self {
-            CardEntity::Minion(m) => &mut m.base.cost,
-            CardEntity::Incantation(i) => &mut i.base.cost,
-        }
-    }
-    pub fn entity_id(&self) -> &str {
-        match self {
-            CardEntity::Minion(m) => &m.base.entity_id,
-            CardEntity::Incantation(i) => &i.base.entity_id,
-        }
-    }
-    pub fn just_drawn(&self) -> bool {
-        match self {
-            CardEntity::Minion(m) => m.base.just_drawn,
-            CardEntity::Incantation(i) => i.base.just_drawn,
-        }
-    }
-    pub fn just_drawn_mut(&mut self) -> &mut bool {
-        match self {
-            CardEntity::Minion(m) => &mut m.base.just_drawn,
-            CardEntity::Incantation(i) => &mut i.base.just_drawn,
-        }
-    }
-    pub fn turns_in_hand_mut(&mut self) -> &mut u32 {
-        match self {
-            CardEntity::Minion(m) => &mut m.base.turns_in_hand,
-            CardEntity::Incantation(i) => &mut i.base.turns_in_hand,
-        }
-    }
-    pub fn abilities(&self) -> &[Ability] {
-        match self {
-            CardEntity::Minion(m) => &m.card.abilities,
-            CardEntity::Incantation(i) => &i.card.abilities,
+            CardEntity::Minion(m) => &mut m.cost,
+            CardEntity::Incantation(i) => &mut i.cost,
         }
     }
     pub fn base_cost(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.card.base_cost,
             CardEntity::Incantation(i) => i.card.base_cost,
+        }
+    }
+    pub fn entity_id(&self) -> &str {
+        match self {
+            CardEntity::Minion(m) => &m.entity_id,
+            CardEntity::Incantation(i) => &i.entity_id,
+        }
+    }
+    pub fn just_drawn(&self) -> bool {
+        match self {
+            CardEntity::Minion(m) => m.just_drawn,
+            CardEntity::Incantation(i) => i.just_drawn,
+        }
+    }
+    pub fn just_drawn_mut(&mut self) -> &mut bool {
+        match self {
+            CardEntity::Minion(m) => &mut m.just_drawn,
+            CardEntity::Incantation(i) => &mut i.just_drawn,
+        }
+    }
+    pub fn turns_in_hand_mut(&mut self) -> &mut u32 {
+        match self {
+            CardEntity::Minion(m) => &mut m.turns_in_hand,
+            CardEntity::Incantation(i) => &mut i.turns_in_hand,
+        }
+    }
+    pub fn abilities(&self) -> &[Ability] {
+        match self {
+            CardEntity::Minion(m) => &m.card.abilities,
+            CardEntity::Incantation(i) => &i.card.abilities,
         }
     }
     pub fn is_tradeable(&self) -> bool {

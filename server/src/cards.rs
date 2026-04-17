@@ -34,7 +34,10 @@ pub fn get_cards() -> Vec<Card> {
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
-                effects: vec![Effect::Draw { draw_amount: 1, follow_up: None }],
+                effects: vec![Effect::Draw {
+                    draw_amount: 1,
+                    follow_up: None,
+                }],
             }],
         }),
         Card::Minion(MinionCard {
@@ -52,7 +55,10 @@ pub fn get_cards() -> Vec<Card> {
             abilities: vec![Ability {
                 trigger: Trigger::OnDeath,
                 requirements: vec![],
-                effects: vec![Effect::Draw { draw_amount: 1, follow_up: None }],
+                effects: vec![Effect::Draw {
+                    draw_amount: 1,
+                    follow_up: None,
+                }],
             }],
         }),
         Card::Minion(MinionCard {
@@ -71,7 +77,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Damage {
-                    target_spec: TargetSpec { target_mode: TargetMode::Auto, side: TargetSide::All, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::All,
+                        entity_type: EntityType::Minion,
+                    },
                     damage: 2,
                 }],
             }],
@@ -93,10 +103,17 @@ pub fn get_cards() -> Vec<Card> {
                 requirements: vec![],
                 effects: vec![
                     Effect::Damage {
-                        target_spec: TargetSpec { target_mode: TargetMode::Auto, side: TargetSide::Enemy, entity_type: EntityType::Hero },
+                        target_spec: TargetSpec {
+                            target_mode: TargetMode::Auto,
+                            side: TargetSide::Enemy,
+                            entity_type: EntityType::Hero,
+                        },
                         damage: 5,
                     },
-                    Effect::Draw { draw_amount: 1, follow_up: None },
+                    Effect::Draw {
+                        draw_amount: 1,
+                        follow_up: None,
+                    },
                 ],
             }],
         }),
@@ -116,7 +133,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![Requirement::Combo],
                 effects: vec![Effect::ReturnToHand {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::Friendly, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                    },
                     cost_reduction: None,
                 }],
             }],
@@ -137,7 +158,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Buff {
-                    target_spec: TargetSpec { target_mode: TargetMode::Auto, side: TargetSide::All, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::All,
+                        entity_type: EntityType::Minion,
+                    },
                     attack: 1,
                     defence: 1,
                 }],
@@ -159,7 +184,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Damage {
-                    target_spec: TargetSpec { target_mode: TargetMode::Auto, side: TargetSide::Friendly, entity_type: EntityType::Hero },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Hero,
+                    },
                     damage: 10,
                 }],
             }],
@@ -180,7 +209,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnDeath,
                 requirements: vec![],
                 effects: vec![Effect::ReturnToHand {
-                    target_spec: TargetSpec { target_mode: TargetMode::Auto, side: TargetSide::All, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::All,
+                        entity_type: EntityType::Minion,
+                    },
                     cost_reduction: None,
                 }],
             }],
@@ -201,13 +234,16 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Buff {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::Friendly, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                    },
                     attack: 3,
                     defence: 3,
                 }],
             }],
         }),
-
         // ── WHITE INCANTATIONS ───────────────────────────────────
         Card::Incantation(IncantationCard {
             id: 11,
@@ -222,7 +258,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Buff {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::Friendly, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                    },
                     attack: 4,
                     defence: 4,
                 }],
@@ -241,7 +281,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Damage {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::All, entity_type: EntityType::All },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::All,
+                        entity_type: EntityType::All,
+                    },
                     damage: 4,
                 }],
             }],
@@ -259,12 +303,18 @@ pub fn get_cards() -> Vec<Card> {
                 Ability {
                     trigger: Trigger::OnPlay,
                     requirements: vec![],
-                    effects: vec![Effect::Draw { draw_amount: 1, follow_up: None }],
+                    effects: vec![Effect::Draw {
+                        draw_amount: 1,
+                        follow_up: None,
+                    }],
                 },
                 Ability {
                     trigger: Trigger::OnPlay,
                     requirements: vec![Requirement::Combo],
-                    effects: vec![Effect::Draw { draw_amount: 1, follow_up: None }],
+                    effects: vec![Effect::Draw {
+                        draw_amount: 1,
+                        follow_up: None,
+                    }],
                 },
             ],
         }),
@@ -281,7 +331,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Buff {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::Friendly, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                    },
                     attack: 3,
                     defence: 2,
                 }],
@@ -301,7 +355,11 @@ pub fn get_cards() -> Vec<Card> {
                     trigger: Trigger::OnPlay,
                     requirements: vec![],
                     effects: vec![Effect::Damage {
-                        target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::All, entity_type: EntityType::All },
+                        target_spec: TargetSpec {
+                            target_mode: TargetMode::Targeted,
+                            side: TargetSide::All,
+                            entity_type: EntityType::All,
+                        },
                         damage: 2,
                     }],
                 },
@@ -309,7 +367,11 @@ pub fn get_cards() -> Vec<Card> {
                     trigger: Trigger::OnPlay,
                     requirements: vec![Requirement::Combo],
                     effects: vec![Effect::Damage {
-                        target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::All, entity_type: EntityType::All },
+                        target_spec: TargetSpec {
+                            target_mode: TargetMode::Targeted,
+                            side: TargetSide::All,
+                            entity_type: EntityType::All,
+                        },
                         damage: 2,
                     }],
                 },
@@ -328,7 +390,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::ReturnToHand {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::Friendly, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                    },
                     cost_reduction: Some(2),
                 }],
             }],
@@ -346,7 +412,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Destroy {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::All, entity_type: EntityType::Minion },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::All,
+                        entity_type: EntityType::Minion,
+                    },
                 }],
             }],
         }),
@@ -364,7 +434,11 @@ pub fn get_cards() -> Vec<Card> {
                     trigger: Trigger::OnPlay,
                     requirements: vec![],
                     effects: vec![Effect::Damage {
-                        target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::All, entity_type: EntityType::All },
+                        target_spec: TargetSpec {
+                            target_mode: TargetMode::Targeted,
+                            side: TargetSide::All,
+                            entity_type: EntityType::All,
+                        },
                         damage: 1,
                     }],
                 },
@@ -372,7 +446,11 @@ pub fn get_cards() -> Vec<Card> {
                     trigger: Trigger::OnPlay,
                     requirements: vec![Requirement::Quickdraw],
                     effects: vec![Effect::Damage {
-                        target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::All, entity_type: EntityType::All },
+                        target_spec: TargetSpec {
+                            target_mode: TargetMode::Targeted,
+                            side: TargetSide::All,
+                            entity_type: EntityType::All,
+                        },
                         damage: 2,
                     }],
                 },
@@ -395,7 +473,10 @@ pub fn get_cards() -> Vec<Card> {
                     follow_up: Some(FollowUpAbility {
                         follow_up_requirements: vec![FollowUpRequirement::IsRace { race: Race::Elf }],
                         follow_up_effects: vec![FollowUpEffect::Discount {
-                            scaled_amount: ScaledAmount { scalar: 1, scaled_by: Some(ScaledBy::MinionsOnBoard) },
+                            scaled_amount: ScaledAmount {
+                                scalar: 1,
+                                scaled_by: Some(ScaledBy::MinionsOnBoard),
+                            },
                         }],
                     }),
                 }],
@@ -417,7 +498,11 @@ pub fn get_cards() -> Vec<Card> {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
                 effects: vec![Effect::Damage {
-                    target_spec: TargetSpec { target_mode: TargetMode::Targeted, side: TargetSide::Enemy, entity_type: EntityType::All },
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Enemy,
+                        entity_type: EntityType::All,
+                    },
                     damage: 5,
                 }],
             }],
@@ -461,21 +546,17 @@ pub fn deck_to_cards(deck: &[u32]) -> Vec<CardEntity> {
                 attack: c.base_attack,
                 defence: c.base_defence,
                 exhausted: false,
-                base: EntityBase {
-                    entity_id: uuid(),
-                    cost: c.base_cost,
-                    turns_in_hand: 0,
-                    just_drawn: false,
-                },
+                entity_id: uuid(),
+                cost: c.base_cost,
+                turns_in_hand: 0,
+                just_drawn: false,
                 card: c,
             }),
             Card::Incantation(c) => CardEntity::Incantation(IncantationEntity {
-                base: EntityBase {
-                    entity_id: uuid(),
-                    cost: c.base_cost,
-                    turns_in_hand: 0,
-                    just_drawn: false,
-                },
+                entity_id: uuid(),
+                cost: c.base_cost,
+                turns_in_hand: 0,
+                just_drawn: false,
                 card: c,
             }),
         })
