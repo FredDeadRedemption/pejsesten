@@ -196,13 +196,13 @@ impl Game {
 
     // --- Entity lookup ---
 
-    fn find_target_ref(&self, id: &str) -> Option<TargetRef> {
+    fn find_target_ref(&self, id: &str, owner: PlayerSide) -> Option<TargetRef> {
         match id {
             "heroSelf" => return Some(TargetRef::HeroSource),
             "heroEnemy" => return Some(TargetRef::HeroEnemy),
             _ => {}
         }
-        let (source, enemy) = self.boards();
+        let (source, enemy) = self.boards_for(owner);
         if let Some(i) = source.battlefield.iter().position(|m| m.entity_id == id) {
             return Some(TargetRef::MinionSource(i));
         }
@@ -250,7 +250,7 @@ impl Game {
 
     fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<&str>, self_id: Option<&str>) -> Vec<TargetRef> {
         if let Some(id) = target_id {
-            return self.find_target_ref(id).map(|t| vec![t]).unwrap_or_default();
+            return self.find_target_ref(id, owner).map(|t| vec![t]).unwrap_or_default();
         }
         let (source, enemy) = self.boards_for(owner);
         Self::resolve_target_refs(spec, source, enemy, self_id)
@@ -593,7 +593,8 @@ impl Game {
     }
 
     pub fn attack(&mut self, data: AttackData) -> bool {
-        let attacker_idx = match self.find_target_ref(&data.origin_id) {
+        let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
+        let attacker_idx = match self.find_target_ref(&data.origin_id, owner) {
             Some(TargetRef::MinionSource(i)) => i,
             _ => return false,
         };
@@ -602,7 +603,7 @@ impl Game {
             return false;
         }
 
-        let target_ref = match self.find_target_ref(&data.target_id) {
+        let target_ref = match self.find_target_ref(&data.target_id, owner) {
             Some(t) => t,
             None => return false,
         };
