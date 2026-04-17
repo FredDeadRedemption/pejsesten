@@ -24,7 +24,7 @@
 	const imageUrl = $derived(
 		isEntity ? (card as MinionEntity).card.image_url : (card as MinionCard).image_url
 	);
-	const minion = $derived(isEntity ? 'attack' in card : (card as MinionCard).type === 'minion');
+	const minion = $derived(isEntity ? 'attack' in card : 'base_attack' in card);
 </script>
 
 <div id="card" class:compact class={color}>
@@ -45,9 +45,7 @@
 
 		<div class="art-frame" class:minion>
 			<img
-				src={imageUrl === ''
-					? '/media/cards/missing-texture.jpg'
-					: `/media/${imageUrl}`}
+				src={imageUrl === '' ? '/media/cards/missing-texture.jpg' : `/media/${imageUrl}`}
 				alt=""
 				draggable="false"
 			/>
@@ -64,7 +62,9 @@
 					{isEntity ? (card as MinionEntity).attack : (card as MinionCard).base_attack}
 				</div>
 				<div class="race">
-					{isEntity ? (card as MinionEntity).card.races.join(' · ') : (card as MinionCard).races.join(' · ')}
+					{isEntity
+						? (card as MinionEntity).card.races.join(' · ')
+						: (card as MinionCard).races.join(' · ')}
 				</div>
 				<div class="stat def">
 					{isEntity ? (card as MinionEntity).defence : (card as MinionCard).base_defence}
