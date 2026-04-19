@@ -11,6 +11,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import type { PlayerMetaData } from '$lib/shared/bindings/PlayerMetaData';
+	import { PUBLIC_SERVER_URL } from '$env/static/public';
 
 	type Deck = {
 		id: number;
@@ -27,7 +28,7 @@
 	});
 
 	const DEV_URL = 'http://localhost:3000/';
-	const PRODUCTION_URL = 'https://pejsesten.finrod.dk';
+	const PRODUCTION_URL = PUBLIC_SERVER_URL;
 
 	let playerMetaData: PlayerMetaData = $derived({
 		username: 'Out-of-Towner',
