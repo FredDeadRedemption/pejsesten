@@ -2,13 +2,9 @@
 // engine.rs
 
 use crate::types::*;
+use crate::settings;
 use rand::Rng;
 use rand::seq::SliceRandom;
-
-const STARTING_HP: i32 = 30;
-const STARTING_MANA: i32 = 1;
-const MAX_MANA: i32 = 10;
-const STARTING_HAND_SIZE: usize = 3;
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
@@ -64,8 +60,8 @@ impl Game {
         white_deck.shuffle(&mut rng);
         black_deck.shuffle(&mut rng);
 
-        let white_hand: Vec<CardEntity> = white_deck.drain(0..STARTING_HAND_SIZE.min(white_deck.len())).collect();
-        let black_hand: Vec<CardEntity> = black_deck.drain(0..(STARTING_HAND_SIZE + 1).min(black_deck.len())).collect();
+        let white_hand: Vec<CardEntity> = white_deck.drain(0..settings::STARTING_HAND_SIZE.min(white_deck.len())).collect();
+        let black_hand: Vec<CardEntity> = black_deck.drain(0..(settings::STARTING_HAND_SIZE + 1).min(black_deck.len())).collect();
 
         let (white_player_id, black_player_id) = if is_player1_white {
             (player1_id, player2_id)
@@ -82,10 +78,10 @@ impl Game {
                     battlefield: vec![],
                     hero: Hero {
                         attack: 0,
-                        defence: STARTING_HP,
+                        defence: settings::STARTING_HP,
                     },
-                    base_mana: STARTING_MANA,
-                    mana: STARTING_MANA,
+                    base_mana: settings::STARTING_MANA,
+                    mana: settings::STARTING_MANA,
                 },
                 black: Board {
                     deck: black_deck,
@@ -94,10 +90,10 @@ impl Game {
                     battlefield: vec![],
                     hero: Hero {
                         attack: 0,
-                        defence: STARTING_HP,
+                        defence: settings::STARTING_HP,
                     },
-                    base_mana: STARTING_MANA - 1,
-                    mana: STARTING_MANA - 1,
+                    base_mana: settings::STARTING_MANA - 1,
+                    mana: settings::STARTING_MANA - 1,
                 },
                 white_player_id,
                 black_player_id,
@@ -513,7 +509,7 @@ impl Game {
                 *card.just_drawn_mut() = true;
             }
             source_board.hand.extend(drawn);
-            source_board.base_mana = (source_board.base_mana + 1).min(MAX_MANA);
+            source_board.base_mana = (source_board.base_mana + 1).min(settings::MAX_MANA);
             source_board.mana = source_board.base_mana;
             for minion in source_board.battlefield.iter_mut() {
                 minion.exhausted = false;
