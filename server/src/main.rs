@@ -2,6 +2,7 @@ mod bot;
 mod cards;
 mod engine;
 mod types;
+mod settings;
 
 use axum::routing::get;
 use axum::Json;

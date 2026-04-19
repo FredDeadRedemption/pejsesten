@@ -6,9 +6,9 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 
 const STARTING_HP: i32 = 30;
-const STARTING_MANA: i32 = 7;
+const STARTING_MANA: i32 = 1;
 const MAX_MANA: i32 = 10;
-const STARTING_HAND_SIZE: usize = 7;
+const STARTING_HAND_SIZE: usize = 3;
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.

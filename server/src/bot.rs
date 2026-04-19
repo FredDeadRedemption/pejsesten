@@ -1,4 +1,5 @@
 use crate::engine::Game;
+use crate::settings;
 use crate::types::*;
 use socketioxide::SocketIo;
 
@@ -231,7 +232,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
         }
 
         broadcast(io, game).await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(settings::BOT_DELAY_MS)).await;
 
         // re-check lethal after each card
         let lethal_ids: Option<Vec<String>> = {
@@ -246,7 +247,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
             for id in ids {
                 game.attack(AttackData { origin_id: id, target_id: "heroEnemy".to_string() });
                 broadcast(io, game).await;
-                tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(settings::BOT_DELAY_MS)).await;
             }
             game.end_turn();
             return;
@@ -267,7 +268,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
         if let Some(target_id) = target_id {
             game.attack(AttackData { origin_id: attacker_id, target_id });
             broadcast(io, game).await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(settings::BOT_DELAY_MS)).await;
         }
     }
 
