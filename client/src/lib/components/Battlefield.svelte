@@ -2,7 +2,7 @@
 	import CardSmall from './CardSmall.svelte';
 	import { attack, gameState, playCard } from '$lib/socket.svelte';
 	import { endTargeting, targeting, beginTargeting } from '$lib/targeting.svelte';
-	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/lib';
+	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget, getActiveTargetSpec, matchesFilters } from '$lib/lib';
 	import { drag, resetDrag } from '$lib/drag.svelte';
 
 	let mouseX = $state(0);
@@ -123,6 +123,10 @@
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
 
+	let selfTargetSpec = $derived(
+		targeting.active && targeting.card ? getActiveTargetSpec(targeting.card, gameState) : null
+	);
+
 	let enemyHeroTargetable = $derived(
 		targeting.active ||
 			(attackOrigin != null &&
@@ -197,6 +201,7 @@
 			(attackOrigin != null &&
 				(!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')) ||
 					card.card.attributes.includes('Guard')))}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
 			class:glow-white={targetable}
 			class="card-container"
@@ -244,10 +249,13 @@
 	{#each gameState.self_board.battlefield as card, index (`${card.card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		{@const selfTargetable = !!selfTargetSpec && selfTargetSpec.side !== 'Enemy' && matchesFilters(card, selfTargetSpec.filters)}
 		<div
 			class="card-container"
 			style="--i: {index}; --total: {gameState.self_board.battlefield.length}"
 			class:glow-red={attackOrigin === card.entity_id}
+			class:glow-white={selfTargetable && targeting.hoveredTarget !== card.entity_id}
+			class:glow-green={selfTargetable && targeting.hoveredTarget === card.entity_id}
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entity_id;
 			}}

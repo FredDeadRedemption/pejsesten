@@ -48,12 +48,20 @@ pub enum EntityType {
     All,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
+pub enum TargetFilter {
+    IsRace { race: Race },
+    HasAttribute { attribute: MinionAttribute },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct TargetSpec {
     pub target_mode: TargetMode,
     pub side: TargetSide,
     pub entity_type: EntityType,
+    pub filters: Vec<TargetFilter>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]

@@ -60,14 +60,19 @@ fn can_go_lethal(minions: &[MinionEntity], enemy_board: &Board) -> bool {
     minions.iter().filter(|m| !m.exhausted).map(|m| m.attack).sum::<i32>() >= enemy_board.hero.defence
 }
 
-fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effect) -> Option<u32> {
-    let friendly = &bot_board.battlefield;
-    let enemies = &enemy_board.battlefield;
+fn filter_minions<'a>(minions: &'a [MinionEntity], filters: &[TargetFilter]) -> Vec<&'a MinionEntity> {
+    minions.iter().filter(|m| filters.iter().all(|f| match f {
+        TargetFilter::IsRace { race } => m.card.races.contains(race),
+        TargetFilter::HasAttribute { attribute } => m.card.attributes.contains(attribute),
+    })).collect()
+}
 
+fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effect) -> Option<u32> {
     match effect {
         Effect::Damage { target_spec, .. } => {
+            let enemies = filter_minions(&enemy_board.battlefield, &target_spec.filters);
             if matches!(target_spec.side, TargetSide::Enemy | TargetSide::All) && !enemies.is_empty() {
-                let killable: Vec<&MinionEntity> = enemies.iter().filter(|m| m.defence <= 4).collect();
+                let killable: Vec<&&MinionEntity> = enemies.iter().filter(|m| m.defence <= 4).collect();
                 if !killable.is_empty() {
                     return killable.into_iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id);
                 }
@@ -81,6 +86,8 @@ fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effec
             None
         }
         Effect::Destroy { target_spec } => {
+            let enemies = filter_minions(&enemy_board.battlefield, &target_spec.filters);
+            let friendly = filter_minions(&bot_board.battlefield, &target_spec.filters);
             if matches!(target_spec.side, TargetSide::Enemy | TargetSide::All) && !enemies.is_empty() {
                 return enemies.iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id);
             }
@@ -89,10 +96,12 @@ fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effec
             }
             None
         }
-        Effect::Buff { .. } => {
+        Effect::Buff { target_spec, .. } => {
+            let friendly = filter_minions(&bot_board.battlefield, &target_spec.filters);
             friendly.iter().max_by_key(|m| m.attack).map(|m| m.entity_id)
         }
-        Effect::ReturnToHand { .. } => {
+        Effect::ReturnToHand { target_spec, .. } => {
+            let friendly = filter_minions(&bot_board.battlefield, &target_spec.filters);
             friendly.iter().min_by_key(|m| threat_score(m)).map(|m| m.entity_id)
         }
         _ => None,

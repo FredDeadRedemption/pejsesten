@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import Card from './Card.svelte';
 	import { endTurn, gameState, playCard } from '$lib/socket.svelte';
-	import { checkRequirements, isTradeable } from '$lib/lib';
+	import { checkRequirements, isTradeable, getActiveTargetSpec, matchesFilters } from '$lib/lib';
 	import { getEntity, isSpellAndHasNoValidTarget, hasNoValidTarget, needsTarget } from '$lib/lib';
 	import { drag } from '$lib/drag.svelte';
 
@@ -137,12 +137,18 @@
 			card.cost <= gameState.self_board.mana && !isSpellAndHasNoValidTarget(card, gameState)}
 		{@const procced =
 			affordable &&
-			card.card.abilities?.some(
+			(card.card.abilities?.some(
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
 					checkRequirements(a.requirements, gameState, card)
-			)}
+			) || (() => {
+				const spec = getActiveTargetSpec(card, gameState);
+				if (!spec || spec.filters.length === 0) return false;
+				const self = spec.side !== 'Enemy' ? gameState.self_board.battlefield.filter(m => matchesFilters(m, spec.filters)) : [];
+				const enemy = spec.side !== 'Friendly' ? gameState.enemy_board.battlefield.filter(m => matchesFilters(m, spec.filters)) : [];
+				return self.length > 0 || enemy.length > 0;
+			})())}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="card-container"

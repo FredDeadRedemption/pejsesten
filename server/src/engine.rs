@@ -239,20 +239,29 @@ impl Game {
 
     // --- Target resolution ---
 
+    fn filters_match(filters: &[TargetFilter], m: &MinionEntity) -> bool {
+        filters.iter().all(|f| match f {
+            TargetFilter::IsRace { race } => m.card.races.contains(race),
+            TargetFilter::HasAttribute { attribute } => m.card.attributes.contains(attribute),
+        })
+    }
+
     fn resolve_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
         let mut refs = vec![];
 
         if matches!(spec.entity_type, EntityType::Minion | EntityType::All) {
             if matches!(spec.side, TargetSide::Friendly | TargetSide::All) {
                 for (i, m) in source.battlefield.iter().enumerate() {
-                    if self_id.map_or(true, |id| m.entity_id != id) {
+                    if self_id.map_or(true, |id| m.entity_id != id) && Self::filters_match(&spec.filters, m) {
                         refs.push(TargetRef::MinionSource(i));
                     }
                 }
             }
             if matches!(spec.side, TargetSide::Enemy | TargetSide::All) {
-                for (i, _) in enemy.battlefield.iter().enumerate() {
-                    refs.push(TargetRef::MinionEnemy(i));
+                for (i, m) in enemy.battlefield.iter().enumerate() {
+                    if Self::filters_match(&spec.filters, m) {
+                        refs.push(TargetRef::MinionEnemy(i));
+                    }
                 }
             }
         }
@@ -275,7 +284,14 @@ impl Game {
 
     fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<u32>, self_id: Option<u32>) -> Vec<TargetRef> {
         if let Some(id) = target_id {
-            return self.find_target_ref(id, owner).map(|t| vec![t]).unwrap_or_default();
+            let target_ref = self.find_target_ref(id, owner);
+            let (source, enemy) = self.boards_for(owner);
+            let valid = target_ref.as_ref().map_or(false, |tr| match tr {
+                TargetRef::MinionSource(i) => Self::filters_match(&spec.filters, &source.battlefield[*i]),
+                TargetRef::MinionEnemy(i) => Self::filters_match(&spec.filters, &enemy.battlefield[*i]),
+                TargetRef::HeroSource | TargetRef::HeroEnemy => spec.filters.is_empty(),
+            });
+            return if valid { target_ref.map(|t| vec![t]).unwrap_or_default() } else { vec![] };
         }
         let (source, enemy) = self.boards_for(owner);
         Self::resolve_target_refs(spec, source, enemy, self_id)

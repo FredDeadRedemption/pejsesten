@@ -8,6 +8,7 @@ import type { IncantationEntity } from './shared/bindings/IncantationEntity';
 import type { MinionCard } from './shared/bindings/MinionCard';
 import type { MinionEntity } from './shared/bindings/MinionEntity';
 import type { Requirement } from './shared/bindings/Requirement';
+import type { TargetFilter } from './shared/bindings/TargetFilter';
 import type { TargetSpec } from './shared/bindings/TargetSpec';
 
 export const enterFullscreen = (divID: string) => {
@@ -64,6 +65,25 @@ export const checkRequirements = (
 	});
 };
 
+export const matchesFilters = (minion: MinionEntity, filters: TargetFilter[]): boolean => {
+	return filters.every(f => {
+		if ('IsRace' in f) return minion.card.races.some(r => r === f.IsRace.race);
+		if ('HasAttribute' in f) return minion.card.attributes.some(a => a === f.HasAttribute.attribute);
+		return true;
+	});
+};
+
+export const getActiveTargetSpec = (card: MinionEntity | IncantationEntity, gameState: GameStateClient): TargetSpec | null => {
+	for (const ability of card.card.abilities) {
+		if (!abilityWillFire(ability, card, gameState)) continue;
+		for (const effect of ability.effects) {
+			const spec = getTargetSpec(effect as Effect);
+			if (spec?.target_mode === 'Targeted') return spec;
+		}
+	}
+	return null;
+};
+
 export const isTradeable = (card: MinionEntity | IncantationEntity | MinionCard | IncantationCard) => {
 		const attributes = 'card' in card ? card.card.attributes : card.attributes;
 		return attributes.some((a) => a === 'Tradeable');
@@ -89,39 +109,22 @@ export const hasNoValidTarget = (
 	const activeAbility = (a: { trigger: string; requirements: unknown[] }) =>
 		a.trigger === 'OnPlay' && abilityWillFire(a, card, gameState);
 
-	const needsFriendlyMinion = card.card.abilities.some(
-		(a) =>
-			activeAbility(a) &&
-			a.effects.some((e) => {
-				const spec = getTargetSpec(e as Effect);
-				return spec?.target_mode === 'Targeted' && spec.side === 'Friendly' && spec.entity_type === 'Minion';
-			})
-	);
-	const needsEnemyMinion = card.card.abilities.some(
-		(a) =>
-			activeAbility(a) &&
-			a.effects.some((e) => {
-				const spec = getTargetSpec(e as Effect);
-				return spec?.target_mode === 'Targeted' && spec.side === 'Enemy' && spec.entity_type === 'Minion';
-			})
-	);
-	const needsAnyMinion = card.card.abilities.some(
-		(a) =>
-			activeAbility(a) &&
-			a.effects.some((e) => {
-				const spec = getTargetSpec(e as Effect);
-				return spec?.target_mode === 'Targeted' && spec.side === 'All' && spec.entity_type === 'Minion';
-			})
-	);
+	for (const ability of card.card.abilities) {
+		if (!activeAbility(ability)) continue;
+		for (const effect of ability.effects) {
+			const spec = getTargetSpec(effect as Effect);
+			if (!spec || spec.target_mode !== 'Targeted') continue;
 
-	if (needsFriendlyMinion && gameState.self_board.battlefield.length === 0) return true;
-	if (needsEnemyMinion && gameState.enemy_board.battlefield.length === 0) return true;
-	if (
-		needsAnyMinion &&
-		gameState.self_board.battlefield.length === 0 &&
-		gameState.enemy_board.battlefield.length === 0
-	)
-		return true;
+			const self = gameState.self_board.battlefield.filter(m => matchesFilters(m, spec.filters));
+			const enemy = gameState.enemy_board.battlefield.filter(m => matchesFilters(m, spec.filters));
+
+			if (spec.entity_type === 'Minion') {
+				if (spec.side === 'Friendly' && self.length === 0) return true;
+				if (spec.side === 'Enemy' && enemy.length === 0) return true;
+				if (spec.side === 'All' && self.length === 0 && enemy.length === 0) return true;
+			}
+		}
+	}
 	return false;
 };
 

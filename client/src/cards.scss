@@ -8,6 +8,8 @@ $glow-green:rgb(20, 193, 32);
 $glow-green-peak: rgb(35, 229, 48);
 $glow-red:rgb(215, 20, 20);
 $glow-red-peak: rgb(204, 54, 54);
+$glow-orange: rgb(233, 117, 54);
+$glow-orange-peak: rgb(255, 140, 70);
 
 
 @mixin glow-pulse($name, $color, $color-peak, $duration: 5s) {
@@ -48,4 +50,8 @@ $glow-red-peak: rgb(204, 54, 54);
 
 .glow-red{
 	@include glow-pulse(glow-red, $glow-red, $glow-red-peak, 3s);
+}
+
+.glow-orange{
+	@include glow-pulse(glow-orange, $glow-orange, $glow-orange-peak, 3s);
 }
