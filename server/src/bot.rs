@@ -53,8 +53,11 @@ fn trade_score(attacker: &MinionEntity, defender: &MinionEntity) -> i32 {
     score
 }
 
-fn can_go_lethal(minions: &[MinionEntity], enemy_hero_hp: i32) -> bool {
-    minions.iter().filter(|m| !m.exhausted).map(|m| m.attack).sum::<i32>() >= enemy_hero_hp
+fn can_go_lethal(minions: &[MinionEntity], enemy_board: &Board) -> bool {
+    if enemy_board.battlefield.iter().any(|m| m.card.attributes.contains(&MinionAttribute::Guard)) {
+        return false;
+    }
+    minions.iter().filter(|m| !m.exhausted).map(|m| m.attack).sum::<i32>() >= enemy_board.hero.defence
 }
 
 fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effect) -> Option<u32> {
@@ -177,9 +180,14 @@ fn bot_boards(game: &Game, bot_is_white: bool) -> (&Board, &Board) {
 
 fn compute_attack_target(attacker_id: u32, bot_board: &Board, enemy_board: &Board) -> Option<u32> {
     let attacker = bot_board.battlefield.iter().find(|m| m.entity_id == attacker_id)?;
-    if !enemy_board.battlefield.is_empty() {
-        match enemy_board.battlefield.iter().max_by_key(|e| trade_score(attacker, e)) {
-            Some(t) if trade_score(attacker, t) > 0 => Some(t.entity_id),
+    let guards: Vec<&MinionEntity> = enemy_board.battlefield.iter()
+        .filter(|m| m.card.attributes.contains(&MinionAttribute::Guard))
+        .collect();
+    let candidates: &[&MinionEntity] = if !guards.is_empty() { &guards } else { &enemy_board.battlefield.iter().collect::<Vec<_>>() };
+
+    if !candidates.is_empty() {
+        match candidates.iter().max_by_key(|e| trade_score(attacker, e)) {
+            Some(t) if trade_score(attacker, t) > 0 || !guards.is_empty() => Some(t.entity_id),
             _ => Some(enemy_board.hero.entity_id),
         }
     } else {
@@ -200,7 +208,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
     // Phase 1: check for immediate lethal
     let lethal_result: Option<(Vec<u32>, u32)> = {
         let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
-        if can_go_lethal(&bot_board.battlefield, enemy_board.hero.defence) {
+        if can_go_lethal(&bot_board.battlefield, enemy_board) {
             let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect();
             Some((ids, enemy_board.hero.entity_id))
         } else {
@@ -240,7 +248,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
         // re-check lethal after each card
         let lethal_result: Option<(Vec<u32>, u32)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
-            if can_go_lethal(&bot_board.battlefield, enemy_board.hero.defence) {
+            if can_go_lethal(&bot_board.battlefield, enemy_board) {
                 let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect();
                 Some((ids, enemy_board.hero.entity_id))
             } else {
