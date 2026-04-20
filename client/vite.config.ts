@@ -7,7 +7,8 @@ export default defineConfig({
 		preprocessorOptions: {
 			scss: {
 				api: "modern-compiler",
-				additionalData: '@use "/src/vars.scss" as *;'
+				additionalData: '@use "/src/vars.scss" as *;',
+				logger: { warn: () => {} }
 			}
 		}
 	}

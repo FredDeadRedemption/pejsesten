@@ -81,6 +81,16 @@
 		resetDrag();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
+
+	const getFriendlyMinionByIndex = (index: number) => {
+		return gameState.self_board.battlefield[index];
+	}
+
+	let enemyHeroTargetable = $derived(
+		targeting.active ||
+			attackOrigin != null &&
+				!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')
+	));
 </script>
 
 <svelte:window onclick={cancelAttack} onmousemove={handleMouseMove} />
@@ -128,6 +138,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
+	class:glow-white={enemyHeroTargetable}
 		class="hero enemy"
 		onclick={(e) => {
 			e.stopPropagation();
@@ -140,11 +151,16 @@
 	>
 		<span class="hp">{gameState.enemy_board.hero.defence}</span>
 	</div>
-
+<h1>{attackOrigin}</h1>
 	{#each gameState.enemy_board.battlefield as card, index (`${card.card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		{@const targetable =
+			targeting.active || attackOrigin != null &&
+			(!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')) ||
+			card.card.attributes.includes('Guard'))}
 		<div
+			class:glow-white={targetable}
 			class="card-container"
 			style="--i: {index}; --total: {gameState.enemy_board.battlefield.length}"
 			onmouseenter={() => {
@@ -192,7 +208,7 @@
 		<div
 			class="card-container"
 			style="--i: {index}; --total: {gameState.self_board.battlefield.length}"
-			class:selected={attackOrigin === card.entity_id}
+			class:glow-red={attackOrigin === card.entity_id}
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entity_id;
 			}}
@@ -201,7 +217,7 @@
 			}}
 			onmousedown={(e) => {
 				e.stopPropagation();
-				if (!targeting.active) beginAttack(card.entity_id, e);
+				if (!targeting.active && !card.exhausted) beginAttack(card.entity_id, e);
 			}}
 			onmouseup={(e) => {
 				e.stopPropagation();
@@ -210,7 +226,7 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				if (targeting.active) handleTargetInteraction(e, card.entity_id);
-				else beginAttack(card.entity_id, e);
+				else if (!card.exhausted) beginAttack(card.entity_id, e);
 			}}
 		>
 			<CardSmall {card} />

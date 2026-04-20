@@ -648,6 +648,19 @@ impl Game {
             None => return false,
         };
 
+        let enemy_has_guard = self.enemy_board().battlefield.iter().any(|m| {
+            m.card.attributes.contains(&MinionAttribute::Guard)
+        });
+        if enemy_has_guard {
+            let target_is_guard = match &target_ref {
+                TargetRef::MinionEnemy(i) => self.enemy_board().battlefield[*i].card.attributes.contains(&MinionAttribute::Guard),
+                _ => false,
+            };
+            if !target_is_guard {
+                return false;
+            }
+        }
+
         let attacker_attack = self.source_board().battlefield[attacker_idx].attack;
 
         {
