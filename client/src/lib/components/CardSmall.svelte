@@ -38,6 +38,7 @@
 	id="card"
 	class={card.card.color}
 	class:exhausted={card.exhausted}
+	class:guard={card.card.attributes.includes('Guard')}
 	onmouseenter={onMouseEnter}
 	onmouseleave={onMouseLeave}
 >
@@ -67,6 +68,7 @@
 </div>
 
 <style lang="scss">
+	@use "../../vars" as *;
 	#card {
 		position: relative;
 		width: 100px;
@@ -95,6 +97,18 @@
 		&.exhausted {
 			outline: 2px solid $red;
 		}
+
+		&.guard {
+			//outline: 8px solid grey;
+			animation: guard-pulse 1.5s ease-in-out infinite;
+		}
+
+		@keyframes guard-pulse {                                                      
+					0%, 100% { box-shadow: 0 0 0 10px #888, 0 0 2px 1px rgba(160, 160, 160,
+			0.9); }
+					50%       { box-shadow: 0 0 0 8px #bbb, 0 0 3px 1px rgba(200, 200, 200,
+			0.8); }                                                                       
+			}
 	}
 
 	.preview {
