@@ -31,7 +31,7 @@
 - [ ] Secret (would love secrets)
 - [ ] Silence
 - [ ] Stealth
-- [ ] Taunt
+- [x] Taunt
 - [x] Tradeable
 
 ### Maybe
@@ -137,7 +137,7 @@
 - [ ] Put into battlefield
 - [ ] Put into hand
 - [ ] Replace
-- [ ] Summon
+- [x] Summon
 - [ ] Swap effects (maybe, not to be confused with 'Swap' that does something like swap attack and health — don't want that one)
 - [ ] Transform
 
