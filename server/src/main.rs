@@ -1,11 +1,11 @@
 mod bot;
 mod cards;
 mod engine;
-mod types;
 mod settings;
+mod types;
 
-use axum::routing::get;
 use axum::Json;
+use axum::routing::get;
 use engine::Game;
 use serde::Deserialize;
 use socketioxide::{
@@ -16,6 +16,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use types::*;
+
+use crate::engine::IdGenerator;
 
 #[derive(Clone, Default)]
 struct ServerState {
@@ -32,7 +34,7 @@ struct InnerState {
 #[serde(rename_all = "camelCase")]
 struct PlayCardData {
     index: usize,
-    target: Option<String>,
+    target: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -43,8 +45,8 @@ struct TradeCardData {
 
 #[derive(Deserialize)]
 struct AttackInput {
-    origin_id: String,
-    target_id: String,
+    origin_id: u32,
+    target_id: u32,
 }
 
 fn validate_turn(socket_id: &str, game: &Game) -> bool {
@@ -82,11 +84,12 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 let (id1, meta1) = inner.queue.pop().unwrap();
                 let (id2, meta2) = inner.queue.pop().unwrap();
 
-                let deck1 = cards::deck_to_cards(&meta1.choosen_deck);
-                let deck2 = cards::deck_to_cards(&meta2.choosen_deck);
+                let mut ids = IdGenerator::new();
+                let deck1 = cards::deck_to_cards(&meta1.choosen_deck, &mut ids);
+                let deck2 = cards::deck_to_cards(&meta2.choosen_deck, &mut ids);
 
                 let is_p1_white = rand::random::<bool>();
-                let game = Game::new(id1.clone(), id2.clone(), is_p1_white, deck1, deck2);
+                let game = Game::new(id1.clone(), id2.clone(), is_p1_white, deck1, deck2, ids);
                 broadcast(&io, &game).await;
 
                 let url = format!(
@@ -115,18 +118,13 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
 
             println!("starting bot game for {}", socket.id);
             let player_id = socket.id.to_string();
-            let player_deck = cards::deck_to_cards(&meta.choosen_deck);
-            let bot_deck = cards::deck_to_cards(&bot::default_deck());
+            let mut ids = IdGenerator::new();
+            let player_deck = cards::deck_to_cards(&meta.choosen_deck, &mut ids);
+            let bot_deck = cards::deck_to_cards(&bot::default_deck(), &mut ids);
 
             // randomize who goes first (white always moves first in Game)
             let is_player_white = rand::random::<bool>();
-            let game = Game::new(
-                player_id.clone(),
-                bot::BOT_ID.to_string(),
-                is_player_white,
-                player_deck,
-                bot_deck,
-            );
+            let game = Game::new(player_id.clone(), bot::BOT_ID.to_string(), is_player_white, player_deck, bot_deck, ids);
 
             let bot_starts = bot::is_bot_turn(&game);
             broadcast(&io, &game).await;
@@ -278,7 +276,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
 }
 
 async fn get_cards_handler() -> Json<Vec<Card>> {
-    Json(cards::get_cards())
+    Json(cards::get_all_cards())
 }
 
 #[tokio::main]

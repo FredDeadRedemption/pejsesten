@@ -8,7 +8,7 @@
 	let mouseX = $state(0);
 	let mouseY = $state(0);
 
-	let attackOrigin: string | null = $state(null);
+	let attackOrigin: number | null = $state(null);
 	let attackOriginRect = $state<DOMRect | null>(null);
 
 	const handleMouseMove = (e: MouseEvent) => {
@@ -16,7 +16,7 @@
 		mouseY = e.clientY;
 	};
 
-	const beginAttack = (entity_id: string, e: MouseEvent) => {
+	const beginAttack = (entity_id: number, e: MouseEvent) => {
 		e.preventDefault();
 		attackOrigin = entity_id;
 		const el = e.currentTarget as HTMLElement;
@@ -28,7 +28,7 @@
 		attackOriginRect = null;
 	};
 
-	const endAttack = (entity_id: string) => {
+	const endAttack = (entity_id: number) => {
 		if (attackOrigin === null) return;
 		attack({ origin_id: attackOrigin, target_id: entity_id });
 		attackOrigin = null;
@@ -68,7 +68,7 @@
 
 	let didFireTargeting = $state(false);
 
-	const handleTargetInteraction = (e: MouseEvent, entity_id: string) => {
+	const handleTargetInteraction = (e: MouseEvent, entity_id: number) => {
 		e.stopPropagation();
 		if (!targeting.active) return;
 		if (didFireTargeting) {
@@ -131,11 +131,11 @@
 		class="hero enemy"
 		onclick={(e) => {
 			e.stopPropagation();
-			endAttack('heroEnemy');
+			endAttack(gameState.enemy_board.hero.entity_id);
 		}}
 		onmouseup={(e) => {
-			if (targeting.active) handleTargetInteraction(e, 'heroEnemy');
-			else endAttack('heroEnemy');
+			if (targeting.active) handleTargetInteraction(e, gameState.enemy_board.hero.entity_id);
+			else endAttack(gameState.enemy_board.hero.entity_id);
 		}}
 	>
 		<span class="hp">{gameState.enemy_board.hero.defence}</span>
@@ -180,7 +180,7 @@
 	<div
 		class="hero self"
 		onmouseup={(e) => {
-			if (targeting.active) handleTargetInteraction(e, 'heroSelf');
+			if (targeting.active) handleTargetInteraction(e, gameState.self_board.hero.entity_id);
 		}}
 	>
 		<span class="hp">{gameState.self_board.hero.defence}</span>

@@ -16,7 +16,8 @@ export let gameState = $state<GameStateClient>({
 		hand: [],
 		hero: {
 			attack: 0,
-			defence: 0
+			defence: 0,
+			entity_id: 0
 		},
 		graveyard: [],
 		deck: [],
@@ -28,7 +29,8 @@ export let gameState = $state<GameStateClient>({
 		hand: [],
 		hero: {
 			attack: 0,
-			defence: 0
+			defence: 0,
+			entity_id: 0
 		},
 		graveyard: [],
 		deck: [],
@@ -89,7 +91,7 @@ export const queueUpBot = (data: PlayerMetaData) => fire(socket, 'queueUpBot', d
 
 export const leaveQueue = () => fire(socket, 'leaveQueue');
 
-export const playCard = (data: { index: number; target?: string }) => {
+export const playCard = (data: { index: number; target?: number }) => {
 	fire(socket, 'playCard', data);
 	console.log('PlayCard', data.index, data.target);
 };

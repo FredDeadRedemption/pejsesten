@@ -5,7 +5,7 @@ export const targeting = $state({
   active: false,
   card: null as (MinionEntity | IncantationEntity) | null,
   cardIndex: null as number | null,
-  hoveredTarget: null as string | null,
+  hoveredTarget: null as number | null,
 })
 
 export const beginTargeting = (card: MinionEntity | IncantationEntity, index: number) => {

@@ -57,47 +57,46 @@ fn can_go_lethal(minions: &[MinionEntity], enemy_hero_hp: i32) -> bool {
     minions.iter().filter(|m| !m.exhausted).map(|m| m.attack).sum::<i32>() >= enemy_hero_hp
 }
 
-fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effect) -> Option<String> {
+fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effect) -> Option<u32> {
     let friendly = &bot_board.battlefield;
     let enemies = &enemy_board.battlefield;
 
     match effect {
         Effect::Damage { target_spec, .. } => {
             if matches!(target_spec.side, TargetSide::Enemy | TargetSide::All) && !enemies.is_empty() {
-                // prefer a minion we can kill, otherwise highest threat
                 let killable: Vec<&MinionEntity> = enemies.iter().filter(|m| m.defence <= 4).collect();
                 if !killable.is_empty() {
-                    return killable.into_iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id.clone());
+                    return killable.into_iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id);
                 }
-                return enemies.iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id.clone());
+                return enemies.iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id);
             }
             if matches!(target_spec.side, TargetSide::Enemy | TargetSide::All)
                 && matches!(target_spec.entity_type, EntityType::Hero | EntityType::All)
             {
-                return Some("heroEnemy".to_string());
+                return Some(enemy_board.hero.entity_id);
             }
             None
         }
         Effect::Destroy { target_spec } => {
             if matches!(target_spec.side, TargetSide::Enemy | TargetSide::All) && !enemies.is_empty() {
-                return enemies.iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id.clone());
+                return enemies.iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id);
             }
             if matches!(target_spec.side, TargetSide::Friendly | TargetSide::All) && !friendly.is_empty() {
-                return friendly.iter().min_by_key(|m| threat_score(m)).map(|m| m.entity_id.clone());
+                return friendly.iter().min_by_key(|m| threat_score(m)).map(|m| m.entity_id);
             }
             None
         }
         Effect::Buff { .. } => {
-            friendly.iter().max_by_key(|m| m.attack).map(|m| m.entity_id.clone())
+            friendly.iter().max_by_key(|m| m.attack).map(|m| m.entity_id)
         }
         Effect::ReturnToHand { .. } => {
-            friendly.iter().min_by_key(|m| threat_score(m)).map(|m| m.entity_id.clone())
+            friendly.iter().min_by_key(|m| threat_score(m)).map(|m| m.entity_id)
         }
         _ => None,
     }
 }
 
-fn resolve_card_target(card: &CardEntity, bot_board: &Board, enemy_board: &Board) -> Option<String> {
+fn resolve_card_target(card: &CardEntity, bot_board: &Board, enemy_board: &Board) -> Option<u32> {
     for ability in card.abilities() {
         if ability.trigger != Trigger::OnPlay {
             continue;
@@ -131,13 +130,13 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
                 Effect::Damage { damage, .. } => {
                     score += damage * 2;
                     if enemy_board.battlefield.is_empty() {
-                        score += 5; // face damage bonus when board is clear
+                        score += 5;
                     }
                 }
                 Effect::Buff { attack, defence, .. } => {
                     score += (attack + defence) * 3 / 2;
                     if bot_board.battlefield.is_empty() {
-                        score -= 5; // no targets to buff
+                        score -= 5;
                     }
                 }
                 Effect::Draw { draw_amount, .. } => {
@@ -146,10 +145,13 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
                 Effect::ReturnToHand { .. } => {
                     score += 2;
                 }
+                Effect::Summon { summon_amount, .. } => {
+                    score += *summon_amount as i32 * 4;
+                }
                 Effect::Destroy { target_spec } => {
                     score += 15;
                     if bot_board.battlefield.is_empty() && matches!(target_spec.side, TargetSide::Friendly) {
-                        score -= 20; // can't self-destroy with empty board
+                        score -= 20;
                     }
                 }
             }
@@ -173,15 +175,15 @@ fn bot_boards(game: &Game, bot_is_white: bool) -> (&Board, &Board) {
     }
 }
 
-fn compute_attack_target(attacker_id: &str, bot_board: &Board, enemy_board: &Board) -> Option<String> {
+fn compute_attack_target(attacker_id: u32, bot_board: &Board, enemy_board: &Board) -> Option<u32> {
     let attacker = bot_board.battlefield.iter().find(|m| m.entity_id == attacker_id)?;
     if !enemy_board.battlefield.is_empty() {
         match enemy_board.battlefield.iter().max_by_key(|e| trade_score(attacker, e)) {
-            Some(t) if trade_score(attacker, t) > 0 => Some(t.entity_id.clone()),
-            _ => Some("heroEnemy".to_string()),
+            Some(t) if trade_score(attacker, t) > 0 => Some(t.entity_id),
+            _ => Some(enemy_board.hero.entity_id),
         }
     } else {
-        Some("heroEnemy".to_string())
+        Some(enemy_board.hero.entity_id)
     }
 }
 
@@ -196,17 +198,18 @@ pub fn bot_is_white(game: &Game) -> bool {
 
 pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
     // Phase 1: check for immediate lethal
-    let lethal_ids: Option<Vec<String>> = {
+    let lethal_result: Option<(Vec<u32>, u32)> = {
         let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
         if can_go_lethal(&bot_board.battlefield, enemy_board.hero.defence) {
-            Some(bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id.clone()).collect())
+            let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect();
+            Some((ids, enemy_board.hero.entity_id))
         } else {
             None
         }
     };
-    if let Some(ids) = lethal_ids {
+    if let Some((ids, hero_id)) = lethal_result {
         for id in ids {
-            game.attack(AttackData { origin_id: id, target_id: "heroEnemy".to_string() });
+            game.attack(AttackData { origin_id: id, target_id: hero_id });
         }
         game.end_turn();
         return;
@@ -214,7 +217,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
 
     // Phase 2: play cards in priority order, re-evaluate each iteration
     loop {
-        let play_action: Option<(usize, Option<String>)> = {
+        let play_action: Option<(usize, Option<u32>)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
             bot_board.hand.iter().enumerate()
                 .filter(|(_, c)| c.cost() <= bot_board.mana)
@@ -235,17 +238,18 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
         tokio::time::sleep(tokio::time::Duration::from_millis(settings::BOT_DELAY_MS)).await;
 
         // re-check lethal after each card
-        let lethal_ids: Option<Vec<String>> = {
+        let lethal_result: Option<(Vec<u32>, u32)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
             if can_go_lethal(&bot_board.battlefield, enemy_board.hero.defence) {
-                Some(bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id.clone()).collect())
+                let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect();
+                Some((ids, enemy_board.hero.entity_id))
             } else {
                 None
             }
         };
-        if let Some(ids) = lethal_ids {
+        if let Some((ids, hero_id)) = lethal_result {
             for id in ids {
-                game.attack(AttackData { origin_id: id, target_id: "heroEnemy".to_string() });
+                game.attack(AttackData { origin_id: id, target_id: hero_id });
                 broadcast(io, game).await;
                 tokio::time::sleep(tokio::time::Duration::from_millis(settings::BOT_DELAY_MS)).await;
             }
@@ -255,15 +259,15 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
     }
 
     // Phase 3: attack with minions — prefer good trades, go face otherwise
-    let attacker_ids: Vec<String> = {
+    let attacker_ids: Vec<u32> = {
         let (bot_board, _) = bot_boards(game, bot_is_white);
-        bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id.clone()).collect()
+        bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect()
     };
 
     for attacker_id in attacker_ids {
         let target_id = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
-            compute_attack_target(&attacker_id, bot_board, enemy_board)
+            compute_attack_target(attacker_id, bot_board, enemy_board)
         };
         if let Some(target_id) = target_id {
             game.attack(AttackData { origin_id: attacker_id, target_id });

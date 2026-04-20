@@ -1,8 +1,82 @@
 // cards.rs
 
+use crate::engine::IdGenerator;
 use crate::types::*;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
-pub fn get_cards() -> Vec<Card> {
+static CARDS: LazyLock<HashMap<u32, Card>> = LazyLock::new(|| {
+    build_cards()
+        .into_iter()
+        .map(|c| (card_id(&c), c))
+        .collect()
+});
+
+fn card_id(c: &Card) -> u32 {
+    match c {
+        Card::Minion(m) => m.id,
+        Card::Incantation(i) => i.id,
+    }
+}
+
+pub fn get_card_by_id(id: u32) -> Option<&'static Card> {
+    CARDS.get(&id)
+}
+
+pub fn get_all_cards() -> Vec<Card> {
+    CARDS.values().cloned().collect()
+}
+
+pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
+    match get_card_by_id(card_id)? {
+        Card::Minion(c) => Some(MinionEntity {
+            attack: c.base_attack,
+            defence: c.base_defence,
+            exhausted: false,
+            entity_id,
+            cost: c.base_cost,
+            turns_in_hand: 0,
+            just_drawn: false,
+            card: c.clone(),
+        }),
+        Card::Incantation(_) => None, // Can't summon an incantation
+    }
+}
+
+fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
+    MinionEntity {
+        attack: c.base_attack,
+        defence: c.base_defence,
+        exhausted: false,
+        entity_id,
+        cost: c.base_cost,
+        turns_in_hand: 0,
+        just_drawn: false,
+        card: c.clone(),
+    }
+}
+
+fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
+    IncantationEntity {
+        entity_id,
+        cost: c.base_cost,
+        turns_in_hand: 0,
+        just_drawn: false,
+        card: c.clone(),
+    }
+}
+
+pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
+    deck.iter()
+        .filter_map(|id| get_card_by_id(*id))
+        .map(|card| match card {
+            Card::Minion(c) => CardEntity::Minion(instantiate_minion(c, ids.next_id())),
+            Card::Incantation(c) => CardEntity::Incantation(instantiate_incantation(c, ids.next_id())),
+        })
+        .collect()
+}
+
+pub fn build_cards() -> Vec<Card> {
     vec![
         // ── WHITE MINIONS ────────────────────────────────────────
         Card::Minion(MinionCard {
@@ -528,44 +602,40 @@ pub fn get_cards() -> Vec<Card> {
                 }],
             }],
         }),
+        Card::Minion(MinionCard {
+            id: 22,
+            color: Color::White,
+            name: "Rat Cage".to_string(),
+            description: Some("<strong>Taunt</strong><br><strong>Deathwish:</strong> <strong>Summon</strong> three 1/1 rats ".to_string()),
+            flavor_text: Some("Despite all their rage they are still just rats in a cage.".to_string()),
+            base_cost: 3,
+            image_url: "".to_string(),
+            races: vec![],
+            base_attack: 0,
+            base_defence: 1,
+            attributes: vec![],
+            abilities: vec![Ability {
+                trigger: Trigger::OnDeath,
+                requirements: vec![],
+                effects: vec![Effect::Summon {
+                    summon_amount: 3,
+                    minion_card_id: 23, // the 1/1 rat card
+                }],
+            }],
+        }),
+        Card::Minion(MinionCard {
+            id: 23,
+            color: Color::White,
+            name: "Rat".to_string(),
+            description: None,
+            flavor_text: None,
+            base_cost: 1,
+            image_url: "".to_string(),
+            abilities: vec![],
+            attributes: vec![],
+            races: vec![Race::Beast],
+            base_attack: 1,
+            base_defence: 1,
+        }),
     ]
-}
-
-pub fn get_card_by_id(id: u32) -> Option<Card> {
-    get_cards().into_iter().find(|c| match c {
-        Card::Minion(m) => m.id == id,
-        Card::Incantation(i) => i.id == id,
-    })
-}
-
-pub fn deck_to_cards(deck: &[u32]) -> Vec<CardEntity> {
-    deck.iter()
-        .filter_map(|id| get_card_by_id(*id))
-        .map(|card| match card {
-            Card::Minion(c) => CardEntity::Minion(MinionEntity {
-                attack: c.base_attack,
-                defence: c.base_defence,
-                exhausted: false,
-                entity_id: uuid(),
-                cost: c.base_cost,
-                turns_in_hand: 0,
-                just_drawn: false,
-                card: c,
-            }),
-            Card::Incantation(c) => CardEntity::Incantation(IncantationEntity {
-                entity_id: uuid(),
-                cost: c.base_cost,
-                turns_in_hand: 0,
-                just_drawn: false,
-                card: c,
-            }),
-        })
-        .collect()
-}
-
-fn uuid() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    // simple uuid-like id without pulling in the uuid crate
-    let t = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-    format!("{:x}-{:x}", t, rand::random::<u64>())
 }

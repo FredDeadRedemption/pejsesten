@@ -104,6 +104,7 @@ pub enum Effect {
     Draw { draw_amount: usize, follow_up: Option<FollowUpAbility> },
     ReturnToHand { target_spec: TargetSpec, cost_reduction: Option<i32> },
     Destroy { target_spec: TargetSpec },
+    Summon { minion_card_id: u32, summon_amount: usize },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -169,7 +170,8 @@ pub enum Card {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct MinionEntity {
-    pub entity_id: String,
+    #[ts(type = "number")]
+    pub entity_id: u32,
     pub cost: i32,
     pub turns_in_hand: u32,
     pub just_drawn: bool,
@@ -182,7 +184,8 @@ pub struct MinionEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct IncantationEntity {
-    pub entity_id: String,
+    #[ts(type = "number")]
+    pub entity_id: u32,
     pub cost: i32,
     pub turns_in_hand: u32,
     pub just_drawn: bool,
@@ -199,6 +202,8 @@ pub enum CardEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Hero {
+    #[ts(type = "number")]
+    pub entity_id: u32,
     pub attack: i32,
     pub defence: i32,
 }
@@ -250,11 +255,17 @@ pub struct PlayerMetaData {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct AttackData {
-    pub origin_id: String,
-    pub target_id: String,
+    pub origin_id: u32,
+    pub target_id: u32,
 }
 
 impl CardEntity {
+    pub fn card_id(&self) -> u32 {
+        match self {
+            CardEntity::Minion(m) => m.card.id,
+            CardEntity::Incantation(i) => i.card.id,
+        }
+    }
     pub fn cost(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.cost,
@@ -273,10 +284,10 @@ impl CardEntity {
             CardEntity::Incantation(i) => i.card.base_cost,
         }
     }
-    pub fn entity_id(&self) -> &str {
+    pub fn entity_id(&self) -> u32 {
         match self {
-            CardEntity::Minion(m) => &m.entity_id,
-            CardEntity::Incantation(i) => &i.entity_id,
+            CardEntity::Minion(m) => m.entity_id,
+            CardEntity::Incantation(i) => i.entity_id,
         }
     }
     pub fn just_drawn(&self) -> bool {
