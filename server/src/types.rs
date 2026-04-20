@@ -120,6 +120,7 @@ pub struct Ability {
 pub enum MinionAttribute {
     Tradeable,
     Charge,
+    Guard,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
