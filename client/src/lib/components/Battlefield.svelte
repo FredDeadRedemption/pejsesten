@@ -10,6 +10,8 @@
 
 	let attackOrigin: number | null = $state(null);
 	let attackOriginRect = $state<DOMRect | null>(null);
+	let attackOriginEl = $state<HTMLElement | null>(null);
+	let animating = $state(false);
 
 	const handleMouseMove = (e: MouseEvent) => {
 		mouseX = e.clientX;
@@ -19,20 +21,55 @@
 	const beginAttack = (entity_id: number, e: MouseEvent) => {
 		e.preventDefault();
 		attackOrigin = entity_id;
-		const el = e.currentTarget as HTMLElement;
-		attackOriginRect = el.getBoundingClientRect();
+		attackOriginEl = e.currentTarget as HTMLElement;
+		attackOriginRect = attackOriginEl.getBoundingClientRect();
 	};
 
 	const cancelAttack = () => {
+		if (animating) return;
 		attackOrigin = null;
 		attackOriginRect = null;
+		attackOriginEl = null;
 	};
 
-	const endAttack = (entity_id: number) => {
-		if (attackOrigin === null) return;
-		attack({ origin_id: attackOrigin, target_id: entity_id });
+	const endAttack = async (entity_id: number) => {
+		if (attackOrigin === null || animating) return;
+
+		const anyGuard = gameState.enemy_board.battlefield.some(m => m.card.attributes.includes('Guard'));
+		if (anyGuard) {
+			const targetMinion = gameState.enemy_board.battlefield.find(m => m.entity_id === entity_id);
+			if (!targetMinion?.card.attributes.includes('Guard')) {
+				cancelAttack();
+				return;
+			}
+		}
+
+		const originId = attackOrigin;
+		const originEl = attackOriginEl;
+		animating = true;
+
+		if (originEl) {
+			const targetEl = document.querySelector(`[data-entity-id="${entity_id}"]`) as HTMLElement | null;
+			const fromRect = originEl.getBoundingClientRect();
+			const toRect = targetEl?.getBoundingClientRect();
+			if (toRect) {
+				const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
+				const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+				originEl.style.transition = 'translate 80ms ease-out';
+				originEl.style.translate = `${dx * 0.7}px ${dy * 0.7}px`;
+				await new Promise(r => setTimeout(r, 80));
+				originEl.style.transition = 'translate 150ms ease-in';
+				originEl.style.translate = '';
+				await new Promise(r => setTimeout(r, 150));
+				originEl.style.transition = '';
+			}
+		}
+
+		attack({ origin_id: originId, target_id: entity_id });
 		attackOrigin = null;
 		attackOriginRect = null;
+		attackOriginEl = null;
+		animating = false;
 	};
 
 	// when a dragged card enters the battlefield area, check if it needs targeting
@@ -81,10 +118,6 @@
 		resetDrag();
 		setTimeout(() => (didFireTargeting = false), 50);
 	};
-
-	const getFriendlyMinionByIndex = (index: number) => {
-		return gameState.self_board.battlefield[index];
-	}
 
 	let enemyHeroTargetable = $derived(
 		targeting.active ||
@@ -140,6 +173,7 @@
 	<div
 	class:glow-white={enemyHeroTargetable}
 		class="hero enemy"
+		data-entity-id={gameState.enemy_board.hero.entity_id}
 		onclick={(e) => {
 			e.stopPropagation();
 			endAttack(gameState.enemy_board.hero.entity_id);
@@ -162,6 +196,7 @@
 		<div
 			class:glow-white={targetable}
 			class="card-container"
+			data-entity-id={card.entity_id}
 			style="--i: {index}; --total: {gameState.enemy_board.battlefield.length}"
 			onmouseenter={() => {
 				if (targeting.active) targeting.hoveredTarget = card.entity_id;
