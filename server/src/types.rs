@@ -144,6 +144,7 @@ pub struct MinionCard {
     pub base_defence: i32,
     pub races: Vec<Race>,
     pub attributes: Vec<MinionAttribute>,
+    pub is_token: bool
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -158,6 +159,7 @@ pub struct IncantationCard {
     pub image_url: String,
     pub abilities: Vec<Ability>,
     pub attributes: Vec<IncantationAttribute>,
+    pub is_token: bool
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

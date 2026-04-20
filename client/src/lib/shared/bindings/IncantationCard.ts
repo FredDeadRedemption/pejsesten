@@ -3,4 +3,4 @@ import type { Ability } from "./Ability";
 import type { Color } from "./Color";
 import type { IncantationAttribute } from "./IncantationAttribute";
 
-export type IncantationCard = { id: number, name: string, description: string | null, flavor_text: string | null, color: Color, base_cost: number, image_url: string, abilities: Array<Ability>, attributes: Array<IncantationAttribute>, };
+export type IncantationCard = { id: number, name: string, description: string | null, flavor_text: string | null, color: Color, base_cost: number, image_url: string, abilities: Array<Ability>, attributes: Array<IncantationAttribute>, is_token: boolean, };

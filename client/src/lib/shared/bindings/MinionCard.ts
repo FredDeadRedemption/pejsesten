@@ -4,4 +4,4 @@ import type { Color } from "./Color";
 import type { MinionAttribute } from "./MinionAttribute";
 import type { Race } from "./Race";
 
-export type MinionCard = { id: number, name: string, description: string | null, flavor_text: string | null, color: Color, base_cost: number, image_url: string, abilities: Array<Ability>, base_attack: number, base_defence: number, races: Array<Race>, attributes: Array<MinionAttribute>, };
+export type MinionCard = { id: number, name: string, description: string | null, flavor_text: string | null, color: Color, base_cost: number, image_url: string, abilities: Array<Ability>, base_attack: number, base_defence: number, races: Array<Race>, attributes: Array<MinionAttribute>, is_token: boolean, };

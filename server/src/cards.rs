@@ -5,12 +5,7 @@ use crate::types::*;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-static CARDS: LazyLock<HashMap<u32, Card>> = LazyLock::new(|| {
-    build_cards()
-        .into_iter()
-        .map(|c| (card_id(&c), c))
-        .collect()
-});
+static CARDS: LazyLock<HashMap<u32, Card>> = LazyLock::new(|| build_cards().into_iter().map(|c| (card_id(&c), c)).collect());
 
 fn card_id(c: &Card) -> u32 {
     match c {
@@ -21,6 +16,16 @@ fn card_id(c: &Card) -> u32 {
 
 pub fn get_card_by_id(id: u32) -> Option<&'static Card> {
     CARDS.get(&id)
+}
+
+pub fn get_collectible_cards() -> Vec<Card> {
+    get_all_cards()
+        .into_iter()
+        .filter(|c| match c {
+            Card::Minion(m) => !m.is_token,
+            Card::Incantation(i) => !i.is_token,
+        })
+        .collect()
 }
 
 pub fn get_all_cards() -> Vec<Card> {
@@ -92,6 +97,7 @@ pub fn build_cards() -> Vec<Card> {
             base_defence: 2,
             attributes: vec![MinionAttribute::Charge, MinionAttribute::Tradeable],
             abilities: vec![],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 2,
@@ -113,6 +119,7 @@ pub fn build_cards() -> Vec<Card> {
                     follow_up: None,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 3,
@@ -134,6 +141,7 @@ pub fn build_cards() -> Vec<Card> {
                     follow_up: None,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 4,
@@ -159,6 +167,7 @@ pub fn build_cards() -> Vec<Card> {
                     damage: 2,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 5,
@@ -190,6 +199,7 @@ pub fn build_cards() -> Vec<Card> {
                     },
                 ],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 6,
@@ -215,6 +225,7 @@ pub fn build_cards() -> Vec<Card> {
                     cost_reduction: None,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 7,
@@ -241,6 +252,7 @@ pub fn build_cards() -> Vec<Card> {
                     defence: 1,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 8,
@@ -266,6 +278,7 @@ pub fn build_cards() -> Vec<Card> {
                     damage: 10,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 9,
@@ -291,6 +304,7 @@ pub fn build_cards() -> Vec<Card> {
                     cost_reduction: None,
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 10,
@@ -317,6 +331,7 @@ pub fn build_cards() -> Vec<Card> {
                     defence: 3,
                 }],
             }],
+            is_token: false,
         }),
         // ── WHITE INCANTATIONS ───────────────────────────────────
         Card::Incantation(IncantationCard {
@@ -341,6 +356,7 @@ pub fn build_cards() -> Vec<Card> {
                     defence: 4,
                 }],
             }],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 12,
@@ -363,6 +379,7 @@ pub fn build_cards() -> Vec<Card> {
                     damage: 4,
                 }],
             }],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 13,
@@ -391,6 +408,7 @@ pub fn build_cards() -> Vec<Card> {
                     }],
                 },
             ],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 14,
@@ -414,6 +432,7 @@ pub fn build_cards() -> Vec<Card> {
                     defence: 2,
                 }],
             }],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 15,
@@ -450,6 +469,7 @@ pub fn build_cards() -> Vec<Card> {
                     }],
                 },
             ],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 16,
@@ -472,6 +492,7 @@ pub fn build_cards() -> Vec<Card> {
                     cost_reduction: Some(2),
                 }],
             }],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 17,
@@ -493,6 +514,7 @@ pub fn build_cards() -> Vec<Card> {
                     },
                 }],
             }],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 18,
@@ -529,6 +551,7 @@ pub fn build_cards() -> Vec<Card> {
                     }],
                 },
             ],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 19,
@@ -555,6 +578,7 @@ pub fn build_cards() -> Vec<Card> {
                     }),
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 20,
@@ -580,6 +604,7 @@ pub fn build_cards() -> Vec<Card> {
                     damage: 5,
                 }],
             }],
+            is_token: false,
         }),
         Card::Incantation(IncantationCard {
             id: 21,
@@ -601,6 +626,7 @@ pub fn build_cards() -> Vec<Card> {
                     }),
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 22,
@@ -622,6 +648,7 @@ pub fn build_cards() -> Vec<Card> {
                     minion_card_id: 23, // the 1/1 rat card
                 }],
             }],
+            is_token: false,
         }),
         Card::Minion(MinionCard {
             id: 23,
@@ -636,6 +663,7 @@ pub fn build_cards() -> Vec<Card> {
             races: vec![Race::Beast],
             base_attack: 1,
             base_defence: 1,
+            is_token: true,
         }),
     ]
 }

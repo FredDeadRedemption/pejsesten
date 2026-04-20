@@ -276,7 +276,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
 }
 
 async fn get_cards_handler() -> Json<Vec<Card>> {
-    Json(cards::get_all_cards())
+    Json(cards::get_collectible_cards())
 }
 
 #[tokio::main]
