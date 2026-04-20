@@ -55,12 +55,12 @@
 			if (toRect) {
 				const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
 				const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
-				originEl.style.transition = 'translate 80ms ease-out';
+				originEl.style.transition = 'translate 70ms cubic-bezier(0.1, 0, 0.2, 1)';
 				originEl.style.translate = `${dx * 0.7}px ${dy * 0.7}px`;
-				await new Promise(r => setTimeout(r, 80));
-				originEl.style.transition = 'translate 150ms ease-in';
+				await new Promise(r => setTimeout(r, 70));
+				originEl.style.transition = 'translate 120ms cubic-bezier(0.5, 0, 0.8, 0.5)';
 				originEl.style.translate = '';
-				await new Promise(r => setTimeout(r, 150));
+				await new Promise(r => setTimeout(r, 120));
 				originEl.style.transition = '';
 			}
 		}
@@ -185,7 +185,6 @@
 	>
 		<span class="hp">{gameState.enemy_board.hero.defence}</span>
 	</div>
-<h1>{attackOrigin}</h1>
 	{#each gameState.enemy_board.battlefield as card, index (`${card.card.id}-${index}`)}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
