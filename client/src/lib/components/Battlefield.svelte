@@ -35,9 +35,11 @@
 	const endAttack = async (entity_id: number) => {
 		if (attackOrigin === null || animating) return;
 
-		const anyGuard = gameState.enemy_board.battlefield.some(m => m.card.attributes.includes('Guard'));
+		const anyGuard = gameState.enemy_board.battlefield.some((m) =>
+			m.card.attributes.includes('Guard')
+		);
 		if (anyGuard) {
-			const targetMinion = gameState.enemy_board.battlefield.find(m => m.entity_id === entity_id);
+			const targetMinion = gameState.enemy_board.battlefield.find((m) => m.entity_id === entity_id);
 			if (!targetMinion?.card.attributes.includes('Guard')) {
 				cancelAttack();
 				return;
@@ -49,18 +51,20 @@
 		animating = true;
 
 		if (originEl) {
-			const targetEl = document.querySelector(`[data-entity-id="${entity_id}"]`) as HTMLElement | null;
+			const targetEl = document.querySelector(
+				`[data-entity-id="${entity_id}"]`
+			) as HTMLElement | null;
 			const fromRect = originEl.getBoundingClientRect();
 			const toRect = targetEl?.getBoundingClientRect();
 			if (toRect) {
-				const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
-				const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+				const dx = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2);
+				const dy = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
 				originEl.style.transition = 'translate 70ms cubic-bezier(0.1, 0, 0.2, 1)';
 				originEl.style.translate = `${dx * 0.7}px ${dy * 0.7}px`;
-				await new Promise(r => setTimeout(r, 70));
+				await new Promise((r) => setTimeout(r, 70));
 				originEl.style.transition = 'translate 120ms cubic-bezier(0.5, 0, 0.8, 0.5)';
 				originEl.style.translate = '';
-				await new Promise(r => setTimeout(r, 120));
+				await new Promise((r) => setTimeout(r, 120));
 				originEl.style.transition = '';
 			}
 		}
@@ -121,9 +125,9 @@
 
 	let enemyHeroTargetable = $derived(
 		targeting.active ||
-			attackOrigin != null &&
-				!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')
-	));
+			(attackOrigin != null &&
+				!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')))
+	);
 </script>
 
 <svelte:window onclick={cancelAttack} onmousemove={handleMouseMove} />
@@ -171,7 +175,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-	class:glow-white={enemyHeroTargetable}
+		class:glow-white={enemyHeroTargetable}
 		class="hero enemy"
 		data-entity-id={gameState.enemy_board.hero.entity_id}
 		onclick={(e) => {
@@ -189,9 +193,10 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		{@const targetable =
-			targeting.active || attackOrigin != null &&
-			(!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')) ||
-			card.card.attributes.includes('Guard'))}
+			targeting.active ||
+			(attackOrigin != null &&
+				(!gameState.enemy_board.battlefield.some((m) => m.card.attributes.includes('Guard')) ||
+					card.card.attributes.includes('Guard')))}
 		<div
 			class:glow-white={targetable}
 			class="card-container"
@@ -269,6 +274,7 @@
 </div>
 
 <style lang="scss">
+	@use '../../vars' as *;
 	.hp {
 		user-select: none;
 		color: white;
@@ -288,10 +294,6 @@
 		width: 100px;
 		left: 50%;
 		transform: translateX(calc(-50% + (var(--i) - (var(--total) - 1) / 2) * 110px));
-		&.selected {
-			outline: 2px solid $secondary !important;
-			border-radius: 4px;
-		}
 	}
 
 	.hero {

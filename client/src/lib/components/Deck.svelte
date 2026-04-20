@@ -7,12 +7,12 @@
 
 	const getCardFromBoard = (i: number) => {
 		const raw = gameState.self_board.hand[i];
-    if (!raw) return;
-    return getEntity(raw);
-	}
+		if (!raw) return;
+		return getEntity(raw);
+	};
 
 	const onDrop = () => {
-		if (targeting.active) return
+		if (targeting.active) return;
 		if (drag.index === null) return;
 		const card = getCardFromBoard(drag.index);
 		if (!isTradeable(card!)) return;
@@ -26,7 +26,10 @@
 <div id="wrapper">
 	<div
 		id="deck"
-		class:glow-white={drag.index && isTradeable(getCardFromBoard(drag.index)!) && !targeting.active && gameState.self_board.mana !== 0}
+		class:glow-white={drag.index &&
+			isTradeable(getCardFromBoard(drag.index)!) &&
+			!targeting.active &&
+			gameState.self_board.mana !== 0}
 		onmouseup={onDrop}
 	>
 		DECK | {gameState.self_board.deck.length}
@@ -34,6 +37,7 @@
 </div>
 
 <style lang="scss">
+	@use '../../vars' as *;
 	#wrapper {
 		height: 100%;
 		width: 100%;

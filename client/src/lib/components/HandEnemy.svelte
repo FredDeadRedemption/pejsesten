@@ -85,6 +85,7 @@
 </div>
 
 <style lang="scss">
+	@use "../../vars" as *;
 	.mana {
 		display: flex;
 		justify-content: center;
@@ -97,9 +98,6 @@
 		margin: 5px;
 		border-radius: 100px;
 		background-color: rgb(88, 120, 161);
-		&.self_board {
-			align-self: flex-start;
-		}
 	}
 
 	.dragger {

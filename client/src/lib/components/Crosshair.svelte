@@ -26,6 +26,7 @@
 {/if}
 
 <style lang="scss">
+	@use '../../vars' as *;
 	.crosshair {
 		position: fixed;
 		transform: translate(-50%, -50%);

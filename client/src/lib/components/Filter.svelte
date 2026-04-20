@@ -6,7 +6,8 @@
 	let {
 		cards = $bindable(),
 		filteredCards = $bindable()
-	}: { cards: (MinionCard | IncantationCard)[]; filteredCards: (MinionCard | IncantationCard)[] } = $props();
+	}: { cards: (MinionCard | IncantationCard)[]; filteredCards: (MinionCard | IncantationCard)[] } =
+		$props();
 
 	let searchTerm: string = $state('');
 
@@ -29,13 +30,13 @@
 	const filter = () => {
 		filteredCards = cards?.filter((card) => {
 			const a = card.name.toLowerCase().includes(searchTerm.toLowerCase());
-			const b = showGreen ? card.color === "Black" : true;
-			const c = showOrange ? card.color === "Black" : true;
-			const d = showRed ? card.color === "Black" : true;
-			const e = showPurple ? card.color === "Black" : true;
-			const f = showWhite ? card.color === "White" : true;
-			const g = showBlack ? card.color === "Black" : true;
-			const h = showMinions ? "base_attack" in card : true;
+			const b = showGreen ? card.color === 'Black' : true;
+			const c = showOrange ? card.color === 'Black' : true;
+			const d = showRed ? card.color === 'Black' : true;
+			const e = showPurple ? card.color === 'Black' : true;
+			const f = showWhite ? card.color === 'White' : true;
+			const g = showBlack ? card.color === 'Black' : true;
+			const h = showMinions ? 'base_attack' in card : true;
 			const i = showIncantations ? !('base_attack' in card) : true;
 
 			return a && b && c && d && e && f && g && h && i;
@@ -63,7 +64,7 @@
 				filter();
 			}}>Minions</button
 		>
-		<button 
+		<button
 			class="button incantation-trigger"
 			class:active={showIncantations}
 			onclick={() => {
@@ -73,7 +74,7 @@
 			}}>Incantation</button
 		>
 	</div>
-  <!-- Might use these later if we add more colors
+	<!-- Might use these later if we add more colors
 	<button
 		class="button mana green"
 		class:active={showGreen}
@@ -126,6 +127,7 @@
 </div>
 
 <style lang="scss">
+	@use '../../vars' as *;
 	.type-switch {
 		display: flex;
 	}

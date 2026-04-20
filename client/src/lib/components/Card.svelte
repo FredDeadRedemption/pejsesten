@@ -17,13 +17,13 @@
 	const isEntity = $derived('cost' in card);
 	const cost = $derived(isEntity ? (card as MinionEntity).cost : (card as MinionCard).base_cost);
 	const name = $derived(isEntity ? (card as MinionEntity).card.name : (card as MinionCard).name);
-	const description = $derived(isEntity
-		? (card as MinionEntity).card.description
-		: (card as MinionCard).description);
+	const description = $derived(
+		isEntity ? (card as MinionEntity).card.description : (card as MinionCard).description
+	);
 	const color = $derived(isEntity ? (card as MinionEntity).card.color : (card as MinionCard).color);
-	const imageUrl = $derived(isEntity
-		? (card as MinionEntity).card.image_url
-		: (card as MinionCard).image_url);
+	const imageUrl = $derived(
+		isEntity ? (card as MinionEntity).card.image_url : (card as MinionCard).image_url
+	);
 	const minion = $derived(isEntity ? 'attack' in card : 'base_attack' in card);
 </script>
 
@@ -77,6 +77,7 @@
 </div>
 
 <style lang="scss">
+	@use '../../vars' as *;
 	#card {
 		width: 170px;
 		height: 250px;

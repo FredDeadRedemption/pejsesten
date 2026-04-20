@@ -9,6 +9,7 @@
 </article>
 
 <style lang="scss">
+	@use "../../../vars" as *;
 	.post {
 		max-width: 680px;
 		margin: 0 auto;

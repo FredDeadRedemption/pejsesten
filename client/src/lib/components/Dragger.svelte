@@ -19,6 +19,7 @@
 </section>
 
 <style lang="scss">
+	@use "../../vars" as *;
 	.draggable {
 		user-select: none;
 		cursor: move;

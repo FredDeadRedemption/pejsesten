@@ -141,11 +141,7 @@
 				(a) =>
 					a.requirements &&
 					a.requirements.length > 0 &&
-					checkRequirements(
-						a.requirements,
-						gameState,
-						card
-					)
+					checkRequirements(a.requirements, gameState, card)
 			)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -177,6 +173,7 @@
 </div>
 
 <style lang="scss">
+	@use '../../vars' as *;
 	.mana {
 		display: flex;
 		justify-content: center;

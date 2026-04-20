@@ -147,6 +147,7 @@
 </main>
 
 <style lang="scss">
+	@use "../vars" as *;
 	select {
 		padding: 10px;
 		background-color: $grey-light;

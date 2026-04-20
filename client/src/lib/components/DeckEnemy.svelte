@@ -11,6 +11,7 @@
 </div>
 
 <style lang="scss">
+	@use '../../vars' as *;
 	#wrapper {
 		height: 100%;
 		width: 100%;
