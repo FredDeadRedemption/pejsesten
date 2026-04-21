@@ -287,9 +287,20 @@ impl Game {
             let target_ref = self.find_target_ref(id, owner);
             let (source, enemy) = self.boards_for(owner);
             let valid = target_ref.as_ref().map_or(false, |tr| match tr {
-                TargetRef::MinionSource(i) => Self::filters_match(&spec.filters, &source.battlefield[*i]),
-                TargetRef::MinionEnemy(i) => Self::filters_match(&spec.filters, &enemy.battlefield[*i]),
-                TargetRef::HeroSource | TargetRef::HeroEnemy => spec.filters.is_empty(),
+                TargetRef::MinionSource(i) => {
+                    matches!(spec.side, TargetSide::Friendly | TargetSide::All)
+                        && Self::filters_match(&spec.filters, &source.battlefield[*i])
+                }
+                TargetRef::MinionEnemy(i) => {
+                    matches!(spec.side, TargetSide::Enemy | TargetSide::All)
+                        && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
+                }
+                TargetRef::HeroSource => {
+                    matches!(spec.side, TargetSide::Friendly | TargetSide::All) && spec.filters.is_empty()
+                }
+                TargetRef::HeroEnemy => {
+                    matches!(spec.side, TargetSide::Enemy | TargetSide::All) && spec.filters.is_empty()
+                }
             });
             return if valid { target_ref.map(|t| vec![t]).unwrap_or_default() } else { vec![] };
         }
