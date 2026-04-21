@@ -153,7 +153,7 @@ pub struct MinionCard {
     pub base_defence: i32,
     pub races: Vec<Race>,
     pub attributes: Vec<MinionAttribute>,
-    pub is_token: bool
+    pub is_token: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -168,7 +168,7 @@ pub struct IncantationCard {
     pub image_url: String,
     pub abilities: Vec<Ability>,
     pub attributes: Vec<IncantationAttribute>,
-    pub is_token: bool
+    pub is_token: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -181,10 +181,10 @@ pub enum Card {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct MinionEntity {
-    #[ts(type = "number")]
     pub entity_id: u32,
     pub cost: i32,
     pub turns_in_hand: u32,
+    pub turns_on_board: u32,
     pub just_drawn: bool,
     pub card: MinionCard,
     pub attack: i32,
@@ -195,7 +195,6 @@ pub struct MinionEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct IncantationEntity {
-    #[ts(type = "number")]
     pub entity_id: u32,
     pub cost: i32,
     pub turns_in_hand: u32,
@@ -213,7 +212,6 @@ pub enum CardEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Hero {
-    #[ts(type = "number")]
     pub entity_id: u32,
     pub attack: i32,
     pub defence: i32,

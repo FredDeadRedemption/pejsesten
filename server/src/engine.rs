@@ -9,7 +9,7 @@ use rand::seq::SliceRandom;
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum TargetRef {
     HeroSource,
     HeroEnemy,
@@ -288,19 +288,13 @@ impl Game {
             let (source, enemy) = self.boards_for(owner);
             let valid = target_ref.as_ref().map_or(false, |tr| match tr {
                 TargetRef::MinionSource(i) => {
-                    matches!(spec.side, TargetSide::Friendly | TargetSide::All)
-                        && Self::filters_match(&spec.filters, &source.battlefield[*i])
+                    matches!(spec.side, TargetSide::Friendly | TargetSide::All) && Self::filters_match(&spec.filters, &source.battlefield[*i])
                 }
                 TargetRef::MinionEnemy(i) => {
-                    matches!(spec.side, TargetSide::Enemy | TargetSide::All)
-                        && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
+                    matches!(spec.side, TargetSide::Enemy | TargetSide::All) && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
                 }
-                TargetRef::HeroSource => {
-                    matches!(spec.side, TargetSide::Friendly | TargetSide::All) && spec.filters.is_empty()
-                }
-                TargetRef::HeroEnemy => {
-                    matches!(spec.side, TargetSide::Enemy | TargetSide::All) && spec.filters.is_empty()
-                }
+                TargetRef::HeroSource => matches!(spec.side, TargetSide::Friendly | TargetSide::All) && spec.filters.is_empty(),
+                TargetRef::HeroEnemy => matches!(spec.side, TargetSide::Enemy | TargetSide::All) && spec.filters.is_empty(),
             });
             return if valid { target_ref.map(|t| vec![t]).unwrap_or_default() } else { vec![] };
         }
@@ -515,6 +509,8 @@ impl Game {
                         }
 
                         minion.exhausted = false;
+                        minion.turns_on_board = 0;
+                        minion.turns_in_hand = 0;
                         minion.attack = minion.card.base_attack;
                         minion.defence = minion.card.base_defence;
 
@@ -584,6 +580,7 @@ impl Game {
             source_board.mana = source_board.base_mana;
             for minion in source_board.battlefield.iter_mut() {
                 minion.exhausted = false;
+                minion.turns_on_board += 1;
             }
         }
 
@@ -675,9 +672,15 @@ impl Game {
             None => return false,
         };
 
-        let enemy_has_guard = self.enemy_board().battlefield.iter().any(|m| {
-            m.card.attributes.contains(&MinionAttribute::Guard)
-        });
+        if (target_ref == TargetRef::HeroEnemy) && self.source_board().battlefield[attacker_idx].turns_on_board == 0 {
+            return false; // can't attack hero on the turn a minion is summoned (rush)
+        }
+
+        let enemy_has_guard = self
+            .enemy_board()
+            .battlefield
+            .iter()
+            .any(|m| m.card.attributes.contains(&MinionAttribute::Guard));
         if enemy_has_guard {
             let target_is_guard = match &target_ref {
                 TargetRef::MinionEnemy(i) => self.enemy_board().battlefield[*i].card.attributes.contains(&MinionAttribute::Guard),

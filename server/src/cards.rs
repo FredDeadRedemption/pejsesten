@@ -41,6 +41,7 @@ pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEn
             entity_id,
             cost: c.base_cost,
             turns_in_hand: 0,
+            turns_on_board: 0,
             just_drawn: false,
             card: c.clone(),
         }),
@@ -56,6 +57,7 @@ fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
         entity_id,
         cost: c.base_cost,
         turns_in_hand: 0,
+        turns_on_board: 0,
         just_drawn: false,
         card: c.clone(),
     }
