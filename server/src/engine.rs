@@ -437,8 +437,9 @@ impl Game {
                 }
             }
 
-            Effect::Damage { target_spec, damage } => {
+            Effect::Damage { target_spec, damage, lifesteal } => {
                 let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
+                let hit_count = refs.len() as i32;
                 for tr in refs {
                     let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
@@ -447,6 +448,10 @@ impl Game {
                         TargetRef::MinionSource(i) => source.battlefield[i].defence -= damage,
                         TargetRef::MinionEnemy(i) => enemy.battlefield[i].defence -= damage,
                     }
+                }
+                if lifesteal {
+                    let (source, _) = self.boards_for_mut(owner);
+                    source.hero.defence += damage * hit_count;
                 }
             }
 
@@ -711,6 +716,10 @@ impl Game {
                     source.battlefield[*i].defence -= attacker_attack;
                     source.battlefield[attacker_idx].defence -= target_attack;
                 }
+            }
+
+            if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
+                source.hero.defence += attacker_attack;
             }
         }
 

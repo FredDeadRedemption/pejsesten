@@ -108,7 +108,7 @@ pub struct FollowUpAbility {
 #[ts(export)]
 pub enum Effect {
     Buff { target_spec: TargetSpec, attack: i32, defence: i32 },
-    Damage { target_spec: TargetSpec, damage: i32 },
+    Damage { target_spec: TargetSpec, damage: i32, lifesteal: bool },
     Draw { draw_amount: usize, follow_up: Option<FollowUpAbility> },
     ReturnToHand { target_spec: TargetSpec, cost_reduction: Option<i32> },
     Destroy { target_spec: TargetSpec },
@@ -129,13 +129,13 @@ pub enum MinionAttribute {
     Tradeable,
     Charge,
     Guard,
+    Lifesteal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 #[ts(export)]
 pub enum IncantationAttribute {
     Tradeable,
-    Twinspell,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -266,6 +266,12 @@ pub struct PlayerMetaData {
 pub struct AttackData {
     pub origin_id: u32,
     pub target_id: u32,
+}
+
+impl MinionEntity {
+    pub fn card_id(&self) -> u32 {
+        self.card.id
+    }
 }
 
 impl CardEntity {
