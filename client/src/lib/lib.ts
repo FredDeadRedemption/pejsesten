@@ -48,6 +48,7 @@ const getTargetSpec = (effect: Effect): TargetSpec | null => {
 	if ('ReturnToHand' in effect) return effect.ReturnToHand.target_spec;
 	if ('Destroy' in effect) return effect.Destroy.target_spec;
 	if ('Draw' in effect) return null;
+	if ('Summon' in effect) return null;
 
 	const _exhaustive: never = effect;
 	return _exhaustive;
