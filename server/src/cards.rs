@@ -707,10 +707,35 @@ pub fn build_cards() -> Vec<Card> {
                 }],
             }],
             attributes: vec![],
-            races : vec![Race::Human],
+            races: vec![Race::Human],
             base_attack: 2,
             base_defence: 2,
             is_token: false,
-        })
+        }),
+        Card::Incantation(IncantationCard {
+            id: 25,
+            color: Color::White,
+            name: "Zoo".to_string(),
+            description: Some("Give all friendly beasts +1 +1".to_string()),
+            flavor_text: None,
+            base_cost: 1,
+            image_url: "Zoo.webp".to_string(),
+            attributes: vec![IncantationAttribute::Tradeable],
+            abilities: vec![Ability {
+                trigger: Trigger::OnPlay,
+                requirements: vec![],
+                effects: vec![Effect::Buff {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                        filters: vec![TargetFilter::IsRace { race: Race::Beast }],
+                    },
+                    attack: 1,
+                    defence: 1,
+                }],
+            }],
+            is_token: false,
+        }),
     ]
 }

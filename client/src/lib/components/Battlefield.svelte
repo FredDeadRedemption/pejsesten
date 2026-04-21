@@ -152,12 +152,14 @@
 				if (spec.entity_type !== 'Minion') ids.push(gameState.enemy_board.hero.entity_id);
 			}
 		} else if (!targeting.active && attackOrigin !== null) {
+			const attacker = gameState.self_board.battlefield.find((m) => m.entity_id === attackOrigin);
+			const canAttackHero = attacker && attacker.turns_on_board >= 1;
 			if (anyGuard) {
 				for (const m of gameState.enemy_board.battlefield)
 					if (m.card.attributes.includes('Guard')) ids.push(m.entity_id);
 			} else {
 				for (const m of gameState.enemy_board.battlefield) ids.push(m.entity_id);
-				ids.push(gameState.enemy_board.hero.entity_id);
+				if (canAttackHero) ids.push(gameState.enemy_board.hero.entity_id);
 			}
 		}
 
