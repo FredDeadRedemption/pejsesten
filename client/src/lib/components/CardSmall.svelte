@@ -8,8 +8,8 @@
 
 	const attackBuffed = $derived(card.attack > card.card.base_attack);
 	const attackDebuffed = $derived(card.attack < card.card.base_attack);
-	const defenceBuffed = $derived(card.defence > card.card.base_defence);
-	const defenceDebuffed = $derived(card.defence < card.card.base_defence);
+	const isBuffed = $derived(card.max_defence > card.card.base_defence);
+	const isDamaged = $derived(card.defence < card.max_defence);
 
 	let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 	let showPreview = $state(false);
@@ -61,7 +61,7 @@
 		<div class="stat atk" class:buffed={attackBuffed} class:debuffed={attackDebuffed}>
 			{card.attack}
 		</div>
-		<div class="stat def" class:buffed={defenceBuffed} class:debuffed={defenceDebuffed}>
+		<div class="stat def" class:buffed={isBuffed && !isDamaged} class:damaged={isDamaged}>
 			{card.defence}
 		</div>
 	</div>
@@ -184,7 +184,7 @@
 		&.buffed {
 			color: $green;
 		}
-		&.debuffed {
+		&.damaged {
 			background-color: #d59393;
 			color: $red;
 		}

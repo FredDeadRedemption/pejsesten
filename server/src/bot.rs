@@ -166,6 +166,9 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
                         score -= 20;
                     }
                 }
+                Effect::Heal { heal, .. } => {
+                    score += heal;
+                }
             }
         }
     }

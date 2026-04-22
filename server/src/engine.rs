@@ -58,6 +58,7 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
     match effect {
         Effect::Buff { target_spec, .. } => Some(target_spec),
         Effect::Damage { target_spec, .. } => Some(target_spec),
+        Effect::Heal { target_spec, .. } => Some(target_spec),
         Effect::ReturnToHand { target_spec, .. } => Some(target_spec),
         Effect::Destroy { target_spec } => Some(target_spec),
         Effect::Draw { .. } => None,
@@ -428,10 +429,31 @@ impl Game {
                         TargetRef::MinionSource(i) => {
                             source.battlefield[i].attack += attack;
                             source.battlefield[i].defence += defence;
+                            source.battlefield[i].max_defence += defence;
                         }
                         TargetRef::MinionEnemy(i) => {
                             enemy.battlefield[i].attack += attack;
                             enemy.battlefield[i].defence += defence;
+                            enemy.battlefield[i].max_defence += defence;
+                        }
+                    }
+                }
+            }
+
+            Effect::Heal { target_spec, heal } => {
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
+                for tr in refs {
+                    let (source, enemy) = self.boards_for_mut(owner);
+                    match tr {
+                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(settings::STARTING_HP),
+                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(settings::STARTING_HP),
+                        TargetRef::MinionSource(i) => {
+                            let m = &mut source.battlefield[i];
+                            m.defence = (m.defence + heal).min(m.max_defence);
+                        }
+                        TargetRef::MinionEnemy(i) => {
+                            let m = &mut enemy.battlefield[i];
+                            m.defence = (m.defence + heal).min(m.max_defence);
                         }
                     }
                 }
@@ -451,7 +473,7 @@ impl Game {
                 }
                 if lifesteal {
                     let (source, _) = self.boards_for_mut(owner);
-                    source.hero.defence += damage * hit_count;
+                    source.hero.defence = (source.hero.defence + damage * hit_count).min(settings::STARTING_HP);
                 }
             }
 
@@ -518,6 +540,7 @@ impl Game {
                         minion.turns_in_hand = 0;
                         minion.attack = minion.card.base_attack;
                         minion.defence = minion.card.base_defence;
+                        minion.max_defence = minion.card.base_defence;
 
                         match tr {
                             TargetRef::MinionSource(_) => {
@@ -719,7 +742,7 @@ impl Game {
             }
 
             if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
-                source.hero.defence += attacker_attack;
+                source.hero.defence = (source.hero.defence + attacker_attack).min(settings::STARTING_HP);
             }
         }
 

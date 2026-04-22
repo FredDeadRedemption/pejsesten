@@ -109,6 +109,7 @@ pub struct FollowUpAbility {
 pub enum Effect {
     Buff { target_spec: TargetSpec, attack: i32, defence: i32 },
     Damage { target_spec: TargetSpec, damage: i32, lifesteal: bool },
+    Heal { target_spec: TargetSpec, heal: i32 },
     Draw { draw_amount: usize, follow_up: Option<FollowUpAbility> },
     ReturnToHand { target_spec: TargetSpec, cost_reduction: Option<i32> },
     Destroy { target_spec: TargetSpec },
@@ -189,6 +190,7 @@ pub struct MinionEntity {
     pub card: MinionCard,
     pub attack: i32,
     pub defence: i32,
+    pub max_defence: i32,
     pub exhausted: bool,
 }
 

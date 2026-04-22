@@ -2,4 +2,4 @@
 import type { FollowUpAbility } from "./FollowUpAbility";
 import type { TargetSpec } from "./TargetSpec";
 
-export type Effect = { "Buff": { target_spec: TargetSpec, attack: number, defence: number, } } | { "Damage": { target_spec: TargetSpec, damage: number, } } | { "Draw": { draw_amount: number, follow_up: FollowUpAbility | null, } } | { "ReturnToHand": { target_spec: TargetSpec, cost_reduction: number | null, } } | { "Destroy": { target_spec: TargetSpec, } } | { "Summon": { minion_card_id: number, summon_amount: number, } };
+export type Effect = { "Buff": { target_spec: TargetSpec, attack: number, defence: number, } } | { "Damage": { target_spec: TargetSpec, damage: number, lifesteal: boolean, } } | { "Heal": { target_spec: TargetSpec, heal: number, } } | { "Draw": { draw_amount: number, follow_up: FollowUpAbility | null, } } | { "ReturnToHand": { target_spec: TargetSpec, cost_reduction: number | null, } } | { "Destroy": { target_spec: TargetSpec, } } | { "Summon": { minion_card_id: number, summon_amount: number, } };
