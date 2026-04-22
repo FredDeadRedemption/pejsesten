@@ -45,6 +45,7 @@ export const isMinion = (
 const getTargetSpec = (effect: Effect): TargetSpec | null => {
 	if ('Buff' in effect) return effect.Buff.target_spec;
 	if ('Damage' in effect) return effect.Damage.target_spec;
+	if ('Heal' in effect) return effect.Heal.target_spec;
 	if ('ReturnToHand' in effect) return effect.ReturnToHand.target_spec;
 	if ('Destroy' in effect) return effect.Destroy.target_spec;
 	if ('Draw' in effect) return null;
@@ -117,7 +118,7 @@ export const hasNoValidTarget = (
 			if (!spec || spec.target_mode !== 'Targeted') continue;
 
 			const self = gameState.self_board.battlefield.filter(m => matchesFilters(m, spec.filters));
-			const enemy = gameState.enemy_board.battlefield.filter(m => matchesFilters(m, spec.filters));
+			const enemy = gameState.enemy_board.battlefield.filter(m => !m.stealth_active && matchesFilters(m, spec.filters));
 
 			if (spec.entity_type === 'Minion') {
 				if (spec.side === 'Friendly' && self.length === 0) return true;

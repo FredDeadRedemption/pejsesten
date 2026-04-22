@@ -260,7 +260,8 @@ impl Game {
             }
             if matches!(spec.side, TargetSide::Enemy | TargetSide::All) {
                 for (i, m) in enemy.battlefield.iter().enumerate() {
-                    if Self::filters_match(&spec.filters, m) {
+                    let hidden = m.stealth_active && spec.target_mode == TargetMode::Targeted;
+                    if !hidden && Self::filters_match(&spec.filters, m) {
                         refs.push(TargetRef::MinionEnemy(i));
                     }
                 }
@@ -292,7 +293,7 @@ impl Game {
                     matches!(spec.side, TargetSide::Friendly | TargetSide::All) && Self::filters_match(&spec.filters, &source.battlefield[*i])
                 }
                 TargetRef::MinionEnemy(i) => {
-                    matches!(spec.side, TargetSide::Enemy | TargetSide::All) && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
+                    matches!(spec.side, TargetSide::Enemy | TargetSide::All) && !enemy.battlefield[*i].stealth_active && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
                 }
                 TargetRef::HeroSource => matches!(spec.side, TargetSide::Friendly | TargetSide::All) && spec.filters.is_empty(),
                 TargetRef::HeroEnemy => matches!(spec.side, TargetSide::Enemy | TargetSide::All) && spec.filters.is_empty(),
@@ -548,6 +549,7 @@ impl Game {
                         minion.defence = minion.card.base_defence;
                         minion.max_defence = minion.card.base_defence;
                         minion.ward_active = minion.card.attributes.contains(&MinionAttribute::Ward);
+                        minion.stealth_active = minion.card.attributes.contains(&MinionAttribute::Stealth);
 
                         match tr {
                             TargetRef::MinionSource(_) => {
@@ -715,12 +717,19 @@ impl Game {
             return false; // can't attack hero on the turn a minion is summoned (rush)
         }
 
+        if let TargetRef::MinionEnemy(i) = &target_ref {
+            if self.enemy_board().battlefield[*i].stealth_active {
+                return false;
+            }
+        }
+
+        let attacker_has_stealth = self.source_board().battlefield[attacker_idx].stealth_active;
         let enemy_has_guard = self
             .enemy_board()
             .battlefield
             .iter()
-            .any(|m| m.card.attributes.contains(&MinionAttribute::Guard));
-        if enemy_has_guard {
+            .any(|m| !m.stealth_active && m.card.attributes.contains(&MinionAttribute::Guard));
+        if !attacker_has_stealth && enemy_has_guard {
             let target_is_guard = match &target_ref {
                 TargetRef::MinionEnemy(i) => self.enemy_board().battlefield[*i].card.attributes.contains(&MinionAttribute::Guard),
                 _ => false,
@@ -735,6 +744,7 @@ impl Game {
         {
             let (source, enemy) = self.boards_mut();
             source.battlefield[attacker_idx].exhausted = true;
+            source.battlefield[attacker_idx].stealth_active = false;
 
             match &target_ref {
                 TargetRef::HeroEnemy => enemy.hero.defence -= attacker_attack,

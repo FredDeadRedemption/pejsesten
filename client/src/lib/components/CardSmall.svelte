@@ -45,6 +45,9 @@
 	{#if card.ward_active}
 		<div class="ward-overlay"></div>
 	{/if}
+	{#if card.stealth_active}
+		<div class="stealth-overlay"></div>
+	{/if}
 	{#if showPreview}
 		<div {@attach portal} transition:fly={{ duration: 150, y: 15 }} class="preview"
 		style="left: {previewX}px; top: {previewY}px;">
@@ -122,7 +125,7 @@
 		background: linear-gradient(135deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 255, 180, 0.08) 100%);
 		box-shadow: inset 0 0 8px 2px rgba(255, 215, 0, 0.45);
 		z-index: 2;
-		animation: ward-pulse 1.8s ease-in-out infinite;
+		animation: ward-pulse 3s ease-in-out infinite;
 
 		&::after {
 			content: '';
@@ -131,7 +134,7 @@
 			border-radius: 3px;
 			background: linear-gradient(115deg, transparent 40%, rgba(255, 240, 120, 0.35) 50%, transparent 60%);
 			background-size: 200% 200%;
-			animation: ward-shimmer 2.4s linear infinite;
+			animation: ward-shimmer 7s linear infinite;
 		}
 	}
 
@@ -141,6 +144,53 @@
 	}
 
 	@keyframes ward-shimmer {
+		0%   { background-position: 200% 0%; }
+		100% { background-position: -200% 0%; }
+	}
+
+	.stealth-overlay {
+		position: absolute;
+		inset: 0;
+		border-radius: 3px;
+		pointer-events: none;
+		background: linear-gradient(160deg, rgba(20, 20, 35, 0.75) 0%, rgba(80, 80, 110, 0.25) 50%, rgba(10, 10, 20, 0.8) 100%);
+		box-shadow: inset 0 0 14px 5px rgba(20, 20, 50, 0.85);
+		z-index: 2;
+		animation: stealth-drift 4s ease-in-out infinite;
+
+		&::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 3px;
+			background:
+				radial-gradient(ellipse 60% 30% at 30% 60%, rgba(160, 160, 200, 0.35) 0%, transparent 70%),
+				radial-gradient(ellipse 40% 25% at 70% 30%, rgba(130, 130, 170, 0.3) 0%, transparent 70%);
+			animation: stealth-smoke 5.5s ease-in-out infinite alternate;
+		}
+
+		&::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 3px;
+			background: linear-gradient(115deg, transparent 35%, rgba(150, 150, 170, 0.12) 50%, transparent 65%);
+			background-size: 200% 200%;
+			animation: stealth-shimmer 7s linear infinite;
+		}
+	}
+
+	@keyframes stealth-drift {
+		0%, 100% { box-shadow: inset 0 0 14px 5px rgba(20, 20, 50, 0.85); opacity: 0.8; }
+		50%       { box-shadow: inset 0 0 22px 8px rgba(20, 20, 50, 1); opacity: 1; }
+	}
+
+	@keyframes stealth-smoke {
+		0%   { background-position: 0% 0%, 100% 100%; opacity: 0.6; }
+		100% { background-position: 100% 50%, 0% 50%; opacity: 1; }
+	}
+
+	@keyframes stealth-shimmer {
 		0%   { background-position: 200% 0%; }
 		100% { background-position: -200% 0%; }
 	}
