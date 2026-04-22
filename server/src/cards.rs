@@ -796,5 +796,20 @@ pub fn build_cards() -> Vec<Card> {
             }],
             is_token: false,
         }),
+        Card::Minion(MinionCard {
+            id: 28,
+            color: Color::White,
+            name: "Plague Rat".to_string(),
+            description: Some("<strong>Engage</strong> <strong>Poisonous</strong>".to_string()),
+            flavor_text: None,
+            base_cost: 1,
+            image_url: "Rat.jpg".to_string(),
+            races: vec![Race::Beast],
+            base_attack: 1,
+            base_defence: 1,
+            attributes: vec![MinionAttribute::Charge, MinionAttribute::Poisonous],
+            abilities: vec![],
+            is_token: false,
+        }),
     ]
 }

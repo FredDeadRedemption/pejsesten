@@ -744,6 +744,15 @@ impl Game {
             if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
                 source.hero.defence = (source.hero.defence + attacker_attack).min(settings::STARTING_HP);
             }
+
+            let attacker_is_poisonous = source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Poisonous);
+            if attacker_is_poisonous {
+                match &target_ref {
+                    TargetRef::MinionEnemy(i) => enemy.battlefield[*i].defence = 0,
+                    TargetRef::MinionSource(i) => source.battlefield[*i].defence = 0,
+                    _ => {}
+                }
+            }
         }
 
         self.check_for_deaths();

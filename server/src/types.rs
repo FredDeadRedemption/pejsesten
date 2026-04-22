@@ -131,6 +131,7 @@ pub enum MinionAttribute {
     Charge,
     Guard,
     Lifesteal,
+    Poisonous,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
