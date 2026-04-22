@@ -293,7 +293,7 @@
 			}}
 			onmousedown={(e) => {
 				e.stopPropagation();
-				if (!targeting.active && !card.exhausted) beginAttack(card.entity_id, e);
+				if (!targeting.active && !card.exhausted && card.attack > 0) beginAttack(card.entity_id, e);
 			}}
 			onmouseup={(e) => {
 				e.stopPropagation();
@@ -302,7 +302,7 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				if (targeting.active) handleTargetInteraction(e, card.entity_id);
-				else if (!card.exhausted) beginAttack(card.entity_id, e);
+				else if (!card.exhausted && card.attack > 0) beginAttack(card.entity_id, e);
 			}}
 		>
 			<CardSmall {card} />

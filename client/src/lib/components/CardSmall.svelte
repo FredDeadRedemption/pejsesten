@@ -42,6 +42,9 @@
 	onmouseenter={onMouseEnter}
 	onmouseleave={onMouseLeave}
 >
+	{#if card.ward_active}
+		<div class="ward-overlay"></div>
+	{/if}
 	{#if showPreview}
 		<div {@attach portal} transition:fly={{ duration: 150, y: 15 }} class="preview"
 		style="left: {previewX}px; top: {previewY}px;">
@@ -103,12 +106,43 @@
 			animation: guard-pulse 1.5s ease-in-out infinite;
 		}
 
-		@keyframes guard-pulse {                                                      
+		@keyframes guard-pulse {
 					0%, 100% { box-shadow: 0 0 0 10px #888, 0 0 2px 1px rgba(160, 160, 160,
 			0.9); }
 					50%       { box-shadow: 0 0 0 8px #bbb, 0 0 3px 1px rgba(200, 200, 200,
-			0.8); }                                                                       
+			0.8); }
 			}
+	}
+
+	.ward-overlay {
+		position: absolute;
+		inset: 0;
+		border-radius: 3px;
+		pointer-events: none;
+		background: linear-gradient(135deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 255, 180, 0.08) 100%);
+		box-shadow: inset 0 0 8px 2px rgba(255, 215, 0, 0.45);
+		z-index: 2;
+		animation: ward-pulse 1.8s ease-in-out infinite;
+
+		&::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 3px;
+			background: linear-gradient(115deg, transparent 40%, rgba(255, 240, 120, 0.35) 50%, transparent 60%);
+			background-size: 200% 200%;
+			animation: ward-shimmer 2.4s linear infinite;
+		}
+	}
+
+	@keyframes ward-pulse {
+		0%, 100% { box-shadow: inset 0 0 8px 2px rgba(255, 215, 0, 0.45); }
+		50%       { box-shadow: inset 0 0 14px 4px rgba(255, 215, 0, 0.75); }
+	}
+
+	@keyframes ward-shimmer {
+		0%   { background-position: 200% 0%; }
+		100% { background-position: -200% 0%; }
 	}
 
 	.preview {

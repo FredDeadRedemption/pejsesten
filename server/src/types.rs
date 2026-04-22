@@ -132,6 +132,7 @@ pub enum MinionAttribute {
     Guard,
     Lifesteal,
     Poisonous,
+    Ward,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
@@ -192,6 +193,7 @@ pub struct MinionEntity {
     pub attack: i32,
     pub defence: i32,
     pub max_defence: i32,
+    pub ward_active: bool,
     pub exhausted: bool,
 }
 

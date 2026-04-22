@@ -467,8 +467,14 @@ impl Game {
                     match tr {
                         TargetRef::HeroSource => source.hero.defence -= damage,
                         TargetRef::HeroEnemy => enemy.hero.defence -= damage,
-                        TargetRef::MinionSource(i) => source.battlefield[i].defence -= damage,
-                        TargetRef::MinionEnemy(i) => enemy.battlefield[i].defence -= damage,
+                        TargetRef::MinionSource(i) => {
+                            let m = &mut source.battlefield[i];
+                            if m.ward_active { m.ward_active = false; } else { m.defence -= damage; }
+                        }
+                        TargetRef::MinionEnemy(i) => {
+                            let m = &mut enemy.battlefield[i];
+                            if m.ward_active { m.ward_active = false; } else { m.defence -= damage; }
+                        }
                     }
                 }
                 if lifesteal {
@@ -541,6 +547,7 @@ impl Game {
                         minion.attack = minion.card.base_attack;
                         minion.defence = minion.card.base_defence;
                         minion.max_defence = minion.card.base_defence;
+                        minion.ward_active = minion.card.attributes.contains(&MinionAttribute::Ward);
 
                         match tr {
                             TargetRef::MinionSource(_) => {
@@ -695,6 +702,10 @@ impl Game {
             return false;
         }
 
+        if self.source_board().battlefield[attacker_idx].attack <= 0 {
+            return false;
+        }
+
         let target_ref = match self.find_target_ref(data.target_id, owner) {
             Some(t) => t,
             None => return false,
@@ -730,14 +741,23 @@ impl Game {
                 TargetRef::HeroSource => source.hero.defence -= attacker_attack,
                 TargetRef::MinionEnemy(i) => {
                     let target_attack = enemy.battlefield[*i].attack;
-                    enemy.battlefield[*i].defence -= attacker_attack;
-                    source.battlefield[attacker_idx].defence -= target_attack;
+                    let target = &mut enemy.battlefield[*i];
+                    if target.ward_active { target.ward_active = false; } else { target.defence -= attacker_attack; }
+                    let attacker = &mut source.battlefield[attacker_idx];
+                    if attacker.ward_active { attacker.ward_active = false; } else { attacker.defence -= target_attack; }
                 }
                 TargetRef::MinionSource(i) => {
-                    // need to handle case where i == attacker_idx
                     let target_attack = source.battlefield[*i].attack;
-                    source.battlefield[*i].defence -= attacker_attack;
-                    source.battlefield[attacker_idx].defence -= target_attack;
+                    let attacker_attack_for_target = attacker_attack;
+                    if *i == attacker_idx {
+                        let m = &mut source.battlefield[*i];
+                        if m.ward_active { m.ward_active = false; } else { m.defence -= attacker_attack_for_target; }
+                    } else {
+                        let target = &mut source.battlefield[*i];
+                        if target.ward_active { target.ward_active = false; } else { target.defence -= attacker_attack_for_target; }
+                        let attacker = &mut source.battlefield[attacker_idx];
+                        if attacker.ward_active { attacker.ward_active = false; } else { attacker.defence -= target_attack; }
+                    }
                 }
             }
 
