@@ -60,10 +60,10 @@ fn can_go_lethal(minions: &[MinionEntity], enemy_board: &Board) -> bool {
     minions.iter().filter(|m| !m.exhausted).map(|m| m.attack).sum::<i32>() >= enemy_board.hero.defence
 }
 
-fn filter_minions<'a>(minions: &'a [MinionEntity], filters: &[TargetFilter]) -> Vec<&'a MinionEntity> {
+fn filter_minions<'a>(minions: &'a [MinionEntity], filters: &[Condition]) -> Vec<&'a MinionEntity> {
     minions.iter().filter(|m| filters.iter().all(|f| match f {
-        TargetFilter::IsRace { race } => m.card.races.contains(race),
-        TargetFilter::HasAttribute { attribute } => m.card.attributes.contains(attribute),
+        Condition::IsRace { race } => m.card.races.contains(race),
+        Condition::HasAttribute { attribute } => m.card.attributes.contains(attribute),
     })).collect()
 }
 

@@ -600,7 +600,7 @@ pub fn build_cards() -> Vec<Card> {
                 effects: vec![Effect::Draw {
                     draw_amount: 1,
                     follow_up: Some(FollowUpAbility {
-                        follow_up_requirements: vec![FollowUpRequirement::IsRace { race: Race::Elf }],
+                        card_must_match: vec![Condition::IsRace { race: Race::Elf }],
                         follow_up_effects: vec![FollowUpEffect::Discount {
                             scaled_amount: ScaledAmount {
                                 scalar: 1,
@@ -655,7 +655,7 @@ pub fn build_cards() -> Vec<Card> {
                 effects: vec![Effect::Draw {
                     draw_amount: 1,
                     follow_up: Some(FollowUpAbility {
-                        follow_up_requirements: vec![],
+                        card_must_match: vec![],
                         follow_up_effects: vec![FollowUpEffect::Copy { copy_amount: 1 }],
                     }),
                 }],
@@ -715,7 +715,7 @@ pub fn build_cards() -> Vec<Card> {
                         target_mode: TargetMode::Targeted,
                         side: TargetSide::Friendly,
                         entity_type: EntityType::Minion,
-                        filters: vec![TargetFilter::IsRace { race: Race::Beast }],
+                        filters: vec![Condition::IsRace { race: Race::Beast }],
                     },
                     attack: 2,
                     defence: 2,
@@ -744,7 +744,7 @@ pub fn build_cards() -> Vec<Card> {
                         target_mode: TargetMode::Auto,
                         side: TargetSide::Friendly,
                         entity_type: EntityType::Minion,
-                        filters: vec![TargetFilter::IsRace { race: Race::Beast }],
+                        filters: vec![Condition::IsRace { race: Race::Beast }],
                     },
                     attack: 1,
                     defence: 1,

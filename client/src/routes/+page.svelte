@@ -32,7 +32,7 @@
 
 	let playerMetaData: PlayerMetaData = $derived({
 		username: 'Out-of-Towner',
-		choosen_deck: choosenDeckJson,
+		chosen_deck: choosenDeckJson,
 		avatar: 'uaogidsogijsogij'
 	});
 

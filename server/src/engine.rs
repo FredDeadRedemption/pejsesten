@@ -243,10 +243,10 @@ impl Game {
 
     // --- Target resolution ---
 
-    fn filters_match(filters: &[TargetFilter], m: &MinionEntity) -> bool {
+    fn filters_match(filters: &[Condition], m: &MinionEntity) -> bool {
         filters.iter().all(|f| match f {
-            TargetFilter::IsRace { race } => m.card.races.contains(race),
-            TargetFilter::HasAttribute { attribute } => m.card.attributes.contains(attribute),
+            Condition::IsRace { race } => m.card.races.contains(race),
+            Condition::HasAttribute { attribute } => m.card.attributes.contains(attribute),
         })
     }
 
@@ -313,13 +313,24 @@ impl Game {
         requirements.iter().all(|r| match r {
             Requirement::Combo => self.state.cards_played_this_turn > 0,
             Requirement::Quickdraw => card.just_drawn(),
+            Requirement::IsHolding { filters } => {
+                let source_board = self.source_board();
+                source_board.hand.iter().any(|c| match c {
+                    CardEntity::Minion(m) => Self::filters_match(filters, m),
+                    CardEntity::Incantation(_) => false,
+                })
+            }
         })
     }
 
-    fn check_follow_up_requirements(requirements: &[FollowUpRequirement], card: &CardEntity) -> bool {
+    fn check_card_must_match(requirements: &[Condition], card: &CardEntity) -> bool {
         requirements.iter().all(|r| match r {
-            FollowUpRequirement::IsRace { race } => match card {
+            Condition::IsRace { race } => match card {
                 CardEntity::Minion(m) => m.card.races.contains(race),
+                CardEntity::Incantation(_) => false,
+            },
+            Condition::HasAttribute { attribute } => match card {
+                CardEntity::Minion(m) => m.card.attributes.contains(attribute),
                 CardEntity::Incantation(_) => false,
             },
         })
@@ -500,7 +511,7 @@ impl Game {
                     let mut extra: Vec<CardEntity> = vec![];
 
                     for card in drawn.iter_mut() {
-                        if !Self::check_follow_up_requirements(&fu.follow_up_requirements, card) {
+                        if !Self::check_card_must_match(&fu.card_must_match, card) {
                             continue;
                         }
                         for fu_effect in &fu.follow_up_effects {

@@ -57,7 +57,7 @@ pub enum EntityType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 #[ts(export)]
-pub enum TargetFilter {
+pub enum Condition {
     IsRace { race: Race },
     HasAttribute { attribute: MinionAttribute },
 }
@@ -68,7 +68,7 @@ pub struct TargetSpec {
     pub target_mode: TargetMode,
     pub side: TargetSide,
     pub entity_type: EntityType,
-    pub filters: Vec<TargetFilter>,
+    pub filters: Vec<Condition>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
@@ -76,12 +76,7 @@ pub struct TargetSpec {
 pub enum Requirement {
     Combo,
     Quickdraw,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
-pub enum FollowUpRequirement {
-    IsRace { race: Race },
+    IsHolding { filters: Vec<Condition> },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
@@ -107,7 +102,7 @@ pub enum FollowUpEffect {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct FollowUpAbility {
-    pub follow_up_requirements: Vec<FollowUpRequirement>,
+    pub card_must_match: Vec<Condition>,
     pub follow_up_effects: Vec<FollowUpEffect>,
 }
 
@@ -276,7 +271,7 @@ pub struct GameStateClient {
 #[ts(export)]
 pub struct PlayerMetaData {
     pub username: String,
-    pub choosen_deck: Vec<u32>,
+    pub chosen_deck: Vec<u32>,
     pub avatar: String,
 }
 
