@@ -11,6 +11,7 @@
 	import GraveyardEnemy from '$lib/components/GraveyardEnemy.svelte';
 	import DeckEnemy from '$lib/components/DeckEnemy.svelte';
 	import { gameState } from '$lib/socket.svelte';
+	import Mulligan from '$lib/components/Mulligan.svelte';
 
 	$inspect(gameState);
 </script>
@@ -21,6 +22,10 @@
 		if (targeting.active) endTargeting();
 	}}
 />
+
+{#if gameState.phase === 'Mulligan'}
+	<Mulligan />
+{/if}
 
 <div id="game-frame">
 	<Crosshair />

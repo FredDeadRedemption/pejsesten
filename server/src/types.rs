@@ -5,6 +5,13 @@ use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 #[ts(export)]
+pub enum GamePhase {
+    Mulligan,
+    Playing,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub enum Color {
     White,
     Black,
@@ -246,6 +253,9 @@ pub struct GameStateServer {
     pub white_turn: bool,
     pub turn_count: u32,
     pub cards_played_this_turn: u32,
+    pub phase: GamePhase,
+    pub mulligan_white_done: bool,
+    pub mulligan_black_done: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -258,6 +268,8 @@ pub struct GameStateClient {
     pub your_turn: bool,
     pub turn_count: u32,
     pub cards_played_this_turn: u32,
+    pub phase: GamePhase,
+    pub mulligan_submitted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, TS)]

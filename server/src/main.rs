@@ -31,14 +31,12 @@ struct InnerState {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct PlayCardData {
     index: usize,
     target: Option<u32>,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct TradeCardData {
     index: usize,
 }
@@ -49,7 +47,15 @@ struct AttackInput {
     target_id: u32,
 }
 
+#[derive(Deserialize)]
+struct MulliganData {
+    indices: Vec<usize>,
+}
+
 fn validate_turn(socket_id: &str, game: &Game) -> bool {
+    if game.state.phase != GamePhase::Playing {
+        return false;
+    }
     let s = &game.state;
     (socket_id == s.white_player_id && s.white_turn) || (socket_id == s.black_player_id && !s.white_turn)
 }
@@ -124,9 +130,10 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
 
             // randomize who goes first (white always moves first in Game)
             let is_player_white = rand::random::<bool>();
-            let game = Game::new(player_id.clone(), bot::BOT_ID.to_string(), is_player_white, player_deck, bot_deck, ids);
+            let mut game = Game::new(player_id.clone(), bot::BOT_ID.to_string(), is_player_white, player_deck, bot_deck, ids);
 
-            let bot_starts = bot::is_bot_turn(&game);
+            // Bot instantly keeps its full hand
+            game.submit_mulligan(bot::BOT_ID, vec![]);
             broadcast(&io, &game).await;
 
             let url = format!(
@@ -137,23 +144,6 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             io.to(player_id).emit("redirect", &url).await.ok();
 
             inner.game = Some(game);
-            drop(inner);
-
-            if bot_starts {
-                let state = state.clone();
-                let io = io.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                    let mut inner = state.inner.lock().await;
-                    if let Some(game) = inner.game.as_mut() {
-                        if bot::is_bot_turn(game) {
-                            let bot_white = bot::bot_is_white(game);
-                            bot::make_bot_move(game, bot_white, &io).await;
-                            broadcast(&io, game).await;
-                        }
-                    }
-                });
-            }
         }
     });
 
@@ -243,6 +233,36 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             }
             game.trade_card(data.index);
             broadcast(&io, game).await;
+        }
+    });
+
+    socket.on("submitMulligan", {
+        let io = io.clone();
+        let state = state.clone();
+        move |socket: SocketRef, Data::<MulliganData>(data)| async move {
+            let is_bot_ready = {
+                let mut inner = state.inner.lock().await;
+                let game = match inner.game.as_mut() {
+                    Some(g) => g,
+                    None => return,
+                };
+                let was_mulligan = game.state.phase == GamePhase::Mulligan;
+                game.submit_mulligan(&socket.id.to_string(), data.indices);
+                broadcast(&io, game).await;
+                was_mulligan && game.state.phase == GamePhase::Playing && bot::is_bot_turn(game)
+            };
+
+            if is_bot_ready {
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                let mut inner = state.inner.lock().await;
+                if let Some(game) = inner.game.as_mut() {
+                    if bot::is_bot_turn(game) {
+                        let bot_white = bot::bot_is_white(game);
+                        bot::make_bot_move(game, bot_white, &io).await;
+                        broadcast(&io, game).await;
+                    }
+                }
+            }
         }
     });
 

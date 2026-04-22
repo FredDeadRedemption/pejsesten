@@ -3,6 +3,7 @@ import type { AttackData } from '$lib/shared/bindings/AttackData';
 import type { GameStateClient } from '$lib/shared/bindings/GameStateClient';
 import type { PlayerMetaData } from '$lib/shared/bindings/PlayerMetaData';
 import { io, type Socket } from 'socket.io-client';
+import type { GamePhase } from './shared/bindings/GamePhase';
 
 let socket: Socket | null = null;
 
@@ -39,7 +40,9 @@ export let gameState = $state<GameStateClient>({
 	},
 	turn_count: 0,
 	cards_played_this_turn: 0,
-	your_turn: false
+	your_turn: false,
+	phase: 'Mulligan' as GamePhase,
+	mulligan_submitted: false
 });
 
 // Function to connect to the socket server
@@ -101,3 +104,5 @@ export const tradeCard = (data: { index: number }) => fire(socket, 'tradeCard', 
 export const attack = (data: AttackData) => fire(socket, 'attack', data);
 
 export const endTurn = () => fire(socket, 'endTurn');
+
+export const submitMulligan = (indices: number[]) => fire(socket, 'submitMulligan', { indices });

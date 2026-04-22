@@ -128,6 +128,9 @@ impl Game {
                 white_turn: true,
                 turn_count: 0,
                 cards_played_this_turn: 0,
+                phase: if settings::MULLIGAN { GamePhase::Mulligan } else { GamePhase::Playing },
+                mulligan_white_done: !settings::MULLIGAN,
+                mulligan_black_done: !settings::MULLIGAN,
             },
             effect_queue: vec![],
             ids: ids,
@@ -639,12 +642,40 @@ impl Game {
             }
             card.clone()
         };
-        let needs_target = card_clone.abilities().iter().any(|a| {
-            self.check_requirements(&a.requirements, &card_clone)
-                && a.effects.iter().filter_map(effect_target_spec).any(|ts| ts.target_mode == TargetMode::Targeted)
-        });
-        if needs_target && target_id.is_none() {
-            return false;
+        let is_minion = matches!(card_clone, CardEntity::Minion(_));
+        let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
+
+        let targeted_specs: Vec<TargetSpec> = card_clone.abilities().iter()
+            .filter(|a| self.check_requirements(&a.requirements, &card_clone))
+            .flat_map(|a| a.effects.iter())
+            .filter_map(|e| effect_target_spec(e).cloned())
+            .filter(|ts| ts.target_mode == TargetMode::Targeted)
+            .collect();
+
+        if !targeted_specs.is_empty() {
+            match target_id {
+                Some(tid) => {
+                    // Reject if the provided target doesn't match any spec (e.g. non-beast for Houndmaster)
+                    let valid = targeted_specs.iter().any(|spec| {
+                        !self.get_target_refs(spec, owner, Some(tid), None).is_empty()
+                    });
+                    if !valid {
+                        return false;
+                    }
+                }
+                None => {
+                    if !is_minion {
+                        return false;
+                    }
+                    // Minion with no target provided: only allow if there are no valid targets to pick from
+                    let has_valid_targets = targeted_specs.iter().any(|spec| {
+                        !self.get_target_refs(spec, owner, None, None).is_empty()
+                    });
+                    if has_valid_targets {
+                        return false;
+                    }
+                }
+            }
         }
 
         // Consume from hand
@@ -819,6 +850,54 @@ impl Game {
             your_turn: for_white == self.state.white_turn,
             turn_count: self.state.turn_count,
             cards_played_this_turn: self.state.cards_played_this_turn,
+            phase: self.state.phase.clone(),
+            mulligan_submitted: if for_white { self.state.mulligan_white_done } else { self.state.mulligan_black_done },
         }
+    }
+
+    pub fn submit_mulligan(&mut self, player_id: &str, mut indices: Vec<usize>) -> bool {
+        if self.state.phase != GamePhase::Mulligan {
+            return false;
+        }
+
+        let is_white = player_id == self.state.white_player_id;
+        let is_black = player_id == self.state.black_player_id;
+
+        if !is_white && !is_black {
+            return false;
+        }
+
+        if is_white && self.state.mulligan_white_done { return false; }
+        if is_black && self.state.mulligan_black_done { return false; }
+
+        let board = if is_white { &mut self.state.white } else { &mut self.state.black };
+
+        // Sort descending so removals don't shift remaining indices
+        indices.sort_unstable_by(|a, b| b.cmp(a));
+        indices.dedup();
+        indices.retain(|&i| i < board.hand.len());
+
+        let cards_to_return: Vec<CardEntity> = indices.iter()
+            .map(|&i| board.hand.remove(i))
+            .collect();
+
+        // Draw replacements first so they can't contain the returned cards
+        let draw_count = cards_to_return.len();
+        let new_cards: Vec<CardEntity> = board.deck.drain(0..draw_count.min(board.deck.len())).collect();
+        board.hand.extend(new_cards);
+
+        // Shuffle returned cards back into the deck
+        let mut rng = rand::rng();
+        board.deck.extend(cards_to_return);
+        board.deck.shuffle(&mut rng);
+
+        if is_white { self.state.mulligan_white_done = true; }
+        else { self.state.mulligan_black_done = true; }
+
+        if self.state.mulligan_white_done && self.state.mulligan_black_done {
+            self.state.phase = GamePhase::Playing;
+        }
+
+        true
     }
 }
