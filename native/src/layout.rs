@@ -76,6 +76,10 @@ pub fn lobby_reset_rect(w: f32, h: f32) -> Rect {
     Rect::new(w / 2.0 - 115.0, h / 2.0 + 130.0, 230.0, 36.0)
 }
 
+pub fn lobby_deck_builder_rect(w: f32, h: f32) -> Rect {
+    Rect::new(w / 2.0 - 115.0, h / 2.0 + 180.0, 230.0, 46.0)
+}
+
 fn centered_rects(count: usize, rw: f32, rh: f32, gap: f32, cx: f32, y: f32) -> Vec<Rect> {
     if count == 0 {
         return vec![];

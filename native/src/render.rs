@@ -1,10 +1,11 @@
 use macroquad::prelude::*;
 
+use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState, Panel};
 use crate::layout::{
-    self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W, MINION_GAP, MINION_H, MINION_W,
+    self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W, MINION_H, MINION_W,
 };
 use crate::textures::{draw_texture_cover, TextureCache};
-use crate::types::{Board, CardEntity, Color as CardColor, GameStateClient, MinionEntity};
+use crate::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity};
 
 const ART_FRAC: f32 = 0.38;
 const TOP_BAR: f32 = 28.0;
@@ -125,6 +126,7 @@ pub fn draw_lobby(username: &str) {
     draw_button("Play vs Human  [H]", w / 2.0 - 115.0, h / 2.0, 230.0, 46.0);
     draw_button("Play vs Bot    [B]", w / 2.0 - 115.0, h / 2.0 + 62.0, 230.0, 46.0);
     draw_button_danger("Reset Server  [R]", w / 2.0 - 115.0, h / 2.0 + 130.0, 230.0, 36.0);
+    draw_button("Deck Builder  [D]", w / 2.0 - 115.0, h / 2.0 + 180.0, 230.0, 46.0);
 }
 
 pub fn draw_connecting() {
@@ -182,7 +184,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
     let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
-        let battlefield_y = mid + 18.0;
+        let _battlefield_y = mid + 18.0;
         let hero_y = mid + 18.0;
         let mana_y = h - 22.0;
 
@@ -412,6 +414,294 @@ pub fn draw_button_danger(label: &str, x: f32, y: f32, w: f32, h: f32) {
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.70, 0.20, 0.20, 1.0));
     let d = measure_text(label, None, 15, 1.0);
     draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 15.0, Color::new(0.9, 0.6, 0.6, 1.0));
+}
+
+// ── Deck Builder ──────────────────────────────────────────────────────────────
+
+pub const DB_CATALOG_W: f32 = 760.0;
+pub const DB_CARD_W: f32 = 95.0;
+pub const DB_CARD_H: f32 = 138.0;
+pub const DB_CARD_GAP: f32 = 6.0;
+pub const DB_COLS: usize = 6;
+pub const DB_FILTER_H: f32 = 38.0;
+pub const DB_ROW_H: f32 = 38.0;
+
+pub fn draw_deck_builder(state: &DeckBuilderState, cache: &TextureCache) {
+    let w = screen_width();
+    let h = screen_height();
+
+    // Background panels
+    draw_rectangle(0.0, 0.0, DB_CATALOG_W, h, Color::new(0.10, 0.10, 0.16, 1.0));
+    draw_rectangle(DB_CATALOG_W, 0.0, w - DB_CATALOG_W, h, Color::new(0.13, 0.13, 0.20, 1.0));
+
+    draw_filter_bar(state, h);
+    draw_catalog(state, cache);
+    draw_right_panel(state, cache, w, h);
+
+    if let Some((msg, _)) = &state.clipboard_msg {
+        let d = measure_text(msg, None, 16, 1.0);
+        let bx = w / 2.0 - d.width / 2.0 - 10.0;
+        let by = h - 50.0;
+        draw_rectangle(bx, by, d.width + 20.0, 30.0, Color::new(0.1, 0.55, 0.18, 0.9));
+        draw_text(msg, bx + 10.0, by + 21.0, 16.0, WHITE);
+    }
+}
+
+fn draw_filter_bar(state: &DeckBuilderState, h: f32) {
+    let bar_y = h - DB_FILTER_H - 4.0;
+    draw_rectangle(0.0, bar_y, DB_CATALOG_W, DB_FILTER_H + 4.0, Color::new(0.08, 0.08, 0.14, 1.0));
+
+    // Search label
+    draw_text("Search:", 8.0, bar_y + 25.0, 14.0, LIGHTGRAY);
+
+    // Search box (drawn but editing is handled externally; show current text)
+    let sx = 68.0;
+    draw_rectangle(sx, bar_y + 5.0, 160.0, 28.0, Color::new(0.18, 0.18, 0.28, 1.0));
+    draw_rectangle_lines(sx, bar_y + 5.0, 160.0, 28.0, 1.0, Color::new(0.4, 0.4, 0.6, 1.0));
+    let search_disp = if state.search.is_empty() { "type to search" } else { &state.search };
+    let sc = if state.search.is_empty() { DARKGRAY } else { WHITE };
+    draw_text(search_disp, sx + 6.0, bar_y + 23.0, 13.0, sc);
+
+    // Type toggle
+    let tx = 240.0;
+    draw_toggle_btn("All", tx, bar_y + 5.0, 46.0, 28.0, state.filter_type == crate::deckbuilder::FilterType::All);
+    draw_toggle_btn("Minions", tx + 50.0, bar_y + 5.0, 68.0, 28.0, state.filter_type == crate::deckbuilder::FilterType::Minions);
+    draw_toggle_btn("Spells", tx + 122.0, bar_y + 5.0, 60.0, 28.0, state.filter_type == crate::deckbuilder::FilterType::Incantations);
+
+    // Color toggle
+    let cx2 = 410.0;
+    draw_toggle_btn("All", cx2, bar_y + 5.0, 36.0, 28.0, state.filter_color == crate::deckbuilder::ColorFilter::All);
+    draw_toggle_btn_colored("W", cx2 + 40.0, bar_y + 5.0, 28.0, 28.0,
+        state.filter_color == crate::deckbuilder::ColorFilter::White,
+        Color::new(0.80, 0.75, 0.55, 1.0));
+    draw_toggle_btn_colored("B", cx2 + 72.0, bar_y + 5.0, 28.0, 28.0,
+        state.filter_color == crate::deckbuilder::ColorFilter::Black,
+        Color::new(0.30, 0.15, 0.40, 1.0));
+
+    // Back button
+    draw_button("[Esc] Back", DB_CATALOG_W - 124.0, bar_y + 5.0, 120.0, 28.0);
+}
+
+fn draw_toggle_btn(label: &str, x: f32, y: f32, w: f32, h: f32, active: bool) {
+    let bg = if active { Color::new(0.25, 0.45, 0.72, 1.0) } else { Color::new(0.18, 0.18, 0.28, 1.0) };
+    draw_rectangle(x, y, w, h, bg);
+    draw_rectangle_lines(x, y, w, h, 1.0, Color::new(0.4, 0.5, 0.7, 1.0));
+    let d = measure_text(label, None, 13, 1.0);
+    draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 13.0, WHITE);
+}
+
+fn draw_toggle_btn_colored(label: &str, x: f32, y: f32, w: f32, h: f32, active: bool, accent: Color) {
+    let bg = if active { accent } else { Color::new(0.18, 0.18, 0.28, 1.0) };
+    draw_rectangle(x, y, w, h, bg);
+    draw_rectangle_lines(x, y, w, h, 1.0, accent);
+    let d = measure_text(label, None, 13, 1.0);
+    draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 13.0, WHITE);
+}
+
+fn draw_catalog(state: &DeckBuilderState, cache: &TextureCache) {
+    let h = screen_height();
+    let area_h = h - DB_FILTER_H - 8.0;
+    let cols = DB_COLS;
+    let row_h = DB_CARD_H + DB_CARD_GAP;
+    let start_x = (DB_CATALOG_W - cols as f32 * (DB_CARD_W + DB_CARD_GAP) + DB_CARD_GAP) / 2.0;
+
+    let scroll_offset = state.catalog_scroll;
+
+    push_camera_state();
+    let cam = Camera2D {
+        zoom: Vec2::new(2.0 / screen_width(), 2.0 / screen_height()),
+        offset: Vec2::new(-1.0, -1.0),
+        ..Default::default()
+    };
+    set_camera(&cam);
+
+    for (grid_i, &card_idx) in state.filtered.iter().enumerate() {
+        let col = grid_i % cols;
+        let row = grid_i / cols;
+        let cx = start_x + col as f32 * (DB_CARD_W + DB_CARD_GAP);
+        let cy = row as f32 * row_h + 4.0 - scroll_offset;
+
+        if cy + DB_CARD_H < 0.0 || cy > area_h {
+            continue;
+        }
+
+        let card = &state.all_cards[card_idx];
+        draw_catalog_card(card, cx, cy, cache);
+    }
+
+    pop_camera_state();
+}
+
+fn draw_catalog_card(card: &Card, x: f32, y: f32, cache: &TextureCache) {
+    let (name, color, is_minion) = card_meta(card);
+    let image_url = card_image_url(card);
+    let cost = card_cost(card);
+
+    // background
+    if let Some(bg) = cache.bg(color) {
+        draw_texture_cover(bg, x, y, DB_CARD_W, DB_CARD_H, WHITE);
+    } else {
+        let bg_col = match color {
+            CardColor::White => Color::new(0.75, 0.70, 0.55, 1.0),
+            CardColor::Black => Color::new(0.18, 0.14, 0.22, 1.0),
+        };
+        draw_rectangle(x, y, DB_CARD_W, DB_CARD_H, bg_col);
+    }
+
+    // art
+    let art_y = y + 18.0;
+    let art_h = DB_CARD_H * 0.40;
+    if let Some(art) = cache.art(image_url) {
+        draw_texture_cover(art, x + 1.0, art_y, DB_CARD_W - 2.0, art_h, WHITE);
+    } else {
+        draw_rectangle(x + 1.0, art_y, DB_CARD_W - 2.0, art_h, COL_CARD_BG);
+    }
+
+    // cost gem
+    draw_rectangle(x + 2.0, y + 2.0, 16.0, 14.0, COL_MANA);
+    draw_text_centered(&cost.to_string(), x + 10.0, y + 13.0, 11.0, WHITE);
+
+    // name
+    let name_fit = fit_text(name, DB_CARD_W - 22.0, 9.0);
+    draw_text(&name_fit, x + 20.0, y + 13.0, 9.0, BLACK);
+
+    // bottom bar
+    let bot_y = y + DB_CARD_H - 16.0;
+    draw_rectangle(x + 1.0, bot_y, DB_CARD_W - 2.0, 15.0, COL_DESC_BG);
+    if is_minion {
+        if let Card::Minion(m) = card {
+            draw_text_centered(&m.base_attack.to_string(), x + 10.0, bot_y + 11.0, 10.0, Color::new(0.8, 0.6, 0.1, 1.0));
+            draw_text_centered(&m.base_defence.to_string(), x + DB_CARD_W - 10.0, bot_y + 11.0, 10.0, Color::new(0.8, 0.25, 0.25, 1.0));
+        }
+    } else {
+        let sl = "spell";
+        let sd = measure_text(sl, None, 8, 1.0);
+        draw_text(sl, x + DB_CARD_W / 2.0 - sd.width / 2.0, bot_y + 11.0, 8.0, DARKGRAY);
+    }
+
+    draw_rectangle_lines(x, y, DB_CARD_W, DB_CARD_H, 1.0, Color::new(0.5, 0.5, 0.5, 0.5));
+}
+
+fn draw_right_panel(state: &DeckBuilderState, cache: &TextureCache, w: f32, h: f32) {
+    let px = DB_CATALOG_W + 6.0;
+    let pw = w - px - 6.0;
+
+    match &state.panel {
+        Panel::DeckList => draw_deck_list(state, cache, px, pw, h),
+        Panel::Editor { name, .. } => draw_deck_editor(state, cache, px, pw, h, name),
+    }
+}
+
+fn draw_deck_list(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw: f32, h: f32) {
+    let title = "Your Decks";
+    let td = measure_text(title, None, 18, 1.0);
+    draw_text(title, px + pw / 2.0 - td.width / 2.0, 28.0, 18.0, WHITE);
+
+    let scroll = state.deck_scroll;
+    let list_y_start = 40.0;
+    let list_h = h - 40.0 - 4.0 * (DB_ROW_H + 4.0) - 8.0;
+
+    // clip indicator line
+    draw_line(px, list_y_start + list_h, px + pw, list_y_start + list_h, 1.0, DARKGRAY);
+
+    for (i, deck) in state.decks.iter().enumerate() {
+        let ry = list_y_start + i as f32 * (DB_ROW_H + 3.0) - scroll;
+        if ry + DB_ROW_H < list_y_start || ry > list_y_start + list_h {
+            continue;
+        }
+
+        // art background from first card
+        let art_painted = if let Some(first_id) = deck.cards.first() {
+            if let Some(card) = state.card_by_id(*first_id) {
+                let url = card_image_url(card);
+                if let Some(tex) = cache.art(url) {
+                    draw_texture_cover(tex, px, ry, pw, DB_ROW_H, Color::new(0.6, 0.6, 0.6, 1.0));
+                    true
+                } else { false }
+            } else { false }
+        } else { false };
+
+        if !art_painted {
+            draw_rectangle(px, ry, pw, DB_ROW_H, Color::new(0.18, 0.18, 0.28, 1.0));
+        }
+        // dark gradient overlay
+        draw_rectangle(px, ry, pw * 0.6, DB_ROW_H, Color::new(0.0, 0.0, 0.0, 0.65));
+        let name_fit = fit_text(&deck.name, pw - 20.0, 14.0);
+        draw_text(&name_fit, px + 8.0, ry + DB_ROW_H / 2.0 + 6.0, 14.0, WHITE);
+        let count_s = format!("{}", deck.cards.len());
+        let cd = measure_text(&count_s, None, 13, 1.0);
+        draw_text(&count_s, px + pw - cd.width - 8.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, LIGHTGRAY);
+        draw_rectangle_lines(px, ry, pw, DB_ROW_H, 1.0, Color::new(0.3, 0.3, 0.4, 0.7));
+    }
+
+    // Bottom buttons
+    let btn_y_base = h - 4.0 * (DB_ROW_H + 4.0) - 4.0;
+    draw_button("New Deck  [N]", px, btn_y_base, pw, DB_ROW_H);
+    draw_button("Import Decks  [I]", px, btn_y_base + DB_ROW_H + 4.0, pw, DB_ROW_H);
+    draw_button("Export All  [X]", px, btn_y_base + (DB_ROW_H + 4.0) * 2.0, pw, DB_ROW_H);
+    draw_button("[Esc] Play", px, btn_y_base + (DB_ROW_H + 4.0) * 3.0, pw, DB_ROW_H);
+}
+
+fn draw_deck_editor(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw: f32, h: f32, name: &str) {
+    // Name + count header
+    draw_rectangle(px, 0.0, pw, 42.0, Color::new(0.18, 0.18, 0.30, 1.0));
+    draw_rectangle_lines(px, 0.0, pw, 42.0, 1.0, Color::new(0.35, 0.35, 0.55, 1.0));
+
+    let disp_name = if name.is_empty() { "Unnamed Deck" } else { name };
+    let nd = measure_text(disp_name, None, 14, 1.0);
+    draw_text(disp_name, px + pw / 2.0 - nd.width / 2.0, 26.0, 14.0, WHITE);
+
+    let count_label = format!("{} / 50", state.editing_cards.len());
+    let cd = measure_text(&count_label, None, 12, 1.0);
+    draw_text(&count_label, px + pw - cd.width - 6.0, 16.0, 12.0, LIGHTGRAY);
+
+    // Hint
+    draw_text("Click card to add · Click row to remove", px + 4.0, 38.0, 9.0, DARKGRAY);
+
+    let scroll = state.deck_scroll;
+    let list_y_start = 44.0;
+    let list_h = h - 44.0 - 3.0 * (DB_ROW_H + 4.0) - 8.0;
+
+    draw_line(px, list_y_start + list_h, px + pw, list_y_start + list_h, 1.0, DARKGRAY);
+
+    let uniques = state.unique_editing();
+    for (i, &card_id_val) in uniques.iter().enumerate() {
+        let ry = list_y_start + i as f32 * (DB_ROW_H + 2.0) - scroll;
+        if ry + DB_ROW_H < list_y_start || ry > list_y_start + list_h {
+            continue;
+        }
+
+        let art_painted = if let Some(card) = state.card_by_id(card_id_val) {
+            let url = card_image_url(card);
+            if let Some(tex) = cache.art(url) {
+                draw_texture_cover(tex, px, ry, pw, DB_ROW_H, Color::new(0.55, 0.55, 0.55, 1.0));
+                true
+            } else { false }
+        } else { false };
+
+        if !art_painted {
+            draw_rectangle(px, ry, pw, DB_ROW_H, Color::new(0.15, 0.15, 0.25, 1.0));
+        }
+        draw_rectangle(px, ry, pw * 0.65, DB_ROW_H, Color::new(0.0, 0.0, 0.0, 0.6));
+
+        if let Some(card) = state.card_by_id(card_id_val) {
+            let (name_s, _, _) = card_meta(card);
+            let nf = fit_text(name_s, pw - 50.0, 13.0);
+            draw_text(&nf, px + 6.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, WHITE);
+        }
+
+        let cnt = state.count_of(card_id_val);
+        let cnt_s = format!("x{}", cnt);
+        let csd = measure_text(&cnt_s, None, 13, 1.0);
+        draw_text(&cnt_s, px + pw - csd.width - 6.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, LIGHTGRAY);
+
+        draw_rectangle_lines(px, ry, pw, DB_ROW_H, 1.0, Color::new(0.3, 0.3, 0.4, 0.6));
+    }
+
+    let btn_y_base = h - 3.0 * (DB_ROW_H + 4.0) - 4.0;
+    draw_button("Export Deck  [X]", px, btn_y_base, pw, DB_ROW_H);
+    draw_button("Done  [Enter]", px, btn_y_base + DB_ROW_H + 4.0, pw, DB_ROW_H);
+    draw_button_danger("Delete Deck  [Del]", px, btn_y_base + (DB_ROW_H + 4.0) * 2.0, pw, DB_ROW_H);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

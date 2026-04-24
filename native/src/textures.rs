@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::HashMap;
 
-use crate::types::{Board, CardEntity, Color as CardColor, GameStateClient};
+use crate::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient};
 
 #[cfg(target_arch = "wasm32")]
 const DEFAULT_MEDIA_ROOT: &str = "/media/";
@@ -71,6 +71,19 @@ impl TextureCache {
                 self.map.insert(key.to_string(), tex);
             }
             Err(e) => eprintln!("[textures] failed to load {}: {}", path, e),
+        }
+    }
+
+    pub async fn preload_cards(&mut self, cards: &[Card]) {
+        self.load("cards/card-bg-white.png").await;
+        self.load("cards/card-bg-black.png").await;
+        self.load("cards/missing-texture.png").await;
+        for card in cards {
+            let url = match card {
+                Card::Minion(m) => m.image_url.as_str(),
+                Card::Incantation(i) => i.image_url.as_str(),
+            };
+            self.load_art(url).await;
         }
     }
 
