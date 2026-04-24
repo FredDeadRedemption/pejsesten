@@ -92,12 +92,12 @@
 		box-shadow: $box-shadow-primary;
 		background-size: cover;
 		background-repeat: no-repeat;
-		background-image: url('/media/cards/card-bg-white.webp');
+		background-image: url('/media/cards/card-bg-white.png');
 		outline: 1px solid $mana-white;
 		padding: 3px 1px;
 
 		&.black {
-			background-image: url('/media/cards/card-bg-black.webp');
+			background-image: url('/media/cards/card-bg-black.png');
 			outline: 1px solid $mana-black;
 		}
 
