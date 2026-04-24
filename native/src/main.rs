@@ -131,27 +131,46 @@ fn handle_input(
 ) {
     match screen {
         Screen::Lobby => {
-            if is_key_pressed(KeyCode::H) {
+            let clicked = is_mouse_button_released(MouseButton::Left);
+            let mouse = Vec2::new(mx, my);
+
+            if is_key_pressed(KeyCode::H) || (clicked && layout::lobby_queue_human_rect(w, h).contains(mouse)) {
                 net.queue_up(&PlayerMetaData {
                     username: USERNAME.to_string(),
                     chosen_deck: default_deck(),
                     avatar: String::new(),
                 });
             }
-            if is_key_pressed(KeyCode::B) {
+            if is_key_pressed(KeyCode::B) || (clicked && layout::lobby_queue_bot_rect(w, h).contains(mouse)) {
                 net.queue_up_bot(&PlayerMetaData {
                     username: USERNAME.to_string(),
                     chosen_deck: default_deck(),
                     avatar: String::new(),
                 });
             }
-            if is_key_pressed(KeyCode::R) {
+            if is_key_pressed(KeyCode::R) || (clicked && layout::lobby_reset_rect(w, h).contains(mouse)) {
                 net.reset_server();
             }
         }
 
         Screen::Mulligan { state, selected } => {
             let hand_len = state.self_board.hand.len();
+            let mouse = Vec2::new(mx, my);
+            let clicked = is_mouse_button_released(MouseButton::Left);
+
+            // Click a card to toggle selection
+            if clicked {
+                let rects = layout::mulligan_card_rects(hand_len, w, h);
+                if let Some(idx) = rects.iter().position(|r| r.contains(mouse)) {
+                    if let Some(pos) = selected.iter().position(|&s| s == idx) {
+                        selected.remove(pos);
+                    } else {
+                        selected.push(idx);
+                    }
+                }
+            }
+
+            // Keyboard shortcuts still work
             for (key, idx) in [
                 (KeyCode::Key1, 0), (KeyCode::Key2, 1), (KeyCode::Key3, 2),
                 (KeyCode::Key4, 3), (KeyCode::Key5, 4), (KeyCode::Key6, 5),
@@ -165,7 +184,10 @@ fn handle_input(
                     }
                 }
             }
-            if is_key_pressed(KeyCode::Enter) && !state.mulligan_submitted {
+
+            let confirm = is_key_pressed(KeyCode::Enter)
+                || (clicked && layout::mulligan_confirm_rect(w, h).contains(mouse));
+            if confirm && !state.mulligan_submitted {
                 let indices: Vec<usize> = selected.drain(..).collect();
                 net.submit_mulligan(&indices);
             }
@@ -176,7 +198,8 @@ fn handle_input(
                 return;
             }
 
-            if is_key_pressed(KeyCode::E) {
+            let clicked = is_mouse_button_released(MouseButton::Left) && drag.is_none();
+            if is_key_pressed(KeyCode::E) || (clicked && layout::end_turn_rect(w, h).contains(Vec2::new(mx, my))) {
                 net.end_turn();
                 return;
             }
@@ -206,8 +229,11 @@ fn handle_input(
                 if let Some(d) = drag.take() {
                     match d {
                         DragState::Card { index } => {
-                            let target = find_target(mouse, state, w, h);
-                            net.play_card(index, target);
+                            // Only play if dropped clearly outside the hand zone
+                            if !layout::hand_zone_rect(w, h).contains(mouse) {
+                                let target = find_target(mouse, state, w, h);
+                                net.play_card(index, target);
+                            }
                         }
                         DragState::Minion { entity_id } => {
                             if let Some(target_id) = find_enemy_target(mouse, state, w, h) {

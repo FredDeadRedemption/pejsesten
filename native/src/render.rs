@@ -42,6 +42,10 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_board_half(&state.enemy_board, w, h, false, cache);
     draw_board_half(&state.self_board, w, h, true, cache);
 
+    // Debug: hand zone boundary
+    let hz = layout::hand_zone_rect(w, h);
+    draw_rectangle_lines(hz.x, hz.y, hz.w, hz.h, 1.0, Color::new(1.0, 1.0, 0.0, 0.4));
+
     if state.your_turn {
         draw_end_turn_button(w, mid);
         draw_drop_targets(state, drag, w, h);
