@@ -26,7 +26,16 @@ enum Screen {
     Playing(GameStateClient),
 }
 
-#[macroquad::main("pejsesten")]
+fn window_conf() -> macroquad::prelude::Conf {
+    macroquad::prelude::Conf {
+        window_title: "pejsesten".to_string(),
+        window_width: 1280,
+        window_height: 720,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let mut net = NetworkClient::new(SERVER_URL);
     let mut cache = TextureCache::new();

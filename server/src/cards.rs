@@ -99,7 +99,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Tradeable</strong> <strong>Lifesteal</strong><br><strong>Engage</strong>".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Machine-Elf.webp".to_string(),
+            image_url: "Machine-Elf.png".to_string(),
             races: vec![Race::Elf],
             base_attack: 1,
             base_defence: 2,
@@ -114,7 +114,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Guard</strong> <strong>Ward</strong><br><strong>Fanfare:</strong> Draw a card".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Dawn Guard.webp".to_string(),
+            image_url: "Dawn Guard.png".to_string(),
             races: vec![Race::Human],
             base_attack: 0,
             base_defence: 8,
@@ -220,7 +220,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Tradeable</strong><br><strong>Combo:</strong> Return a friendly minion from the battlefield to your hand".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Black Cat.webp".to_string(),
+            image_url: "Black Cat.png".to_string(),
             races: vec![Race::Beast],
             base_attack: 2,
             base_defence: 1,
@@ -359,7 +359,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Give a friendly minion +4 +4".to_string()),
             flavor_text: None,
             base_cost: 4,
-            image_url: "Divine Power.webp".to_string(),
+            image_url: "Divine Power.png".to_string(),
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -384,7 +384,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Deal 4 damage".to_string()),
             flavor_text: None,
             base_cost: 3,
-            image_url: "Good Friday.webp".to_string(),
+            image_url: "Good Friday.png".to_string(),
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -409,7 +409,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Draw 1 card <strong>Combo:</strong> Draw 2 cards instead".to_string()),
             flavor_text: None,
             base_cost: 3,
-            image_url: "Pot of Greed.webp".to_string(),
+            image_url: "Pot of Greed.png".to_string(),
             attributes: vec![],
             abilities: vec![
                 Ability {
@@ -463,7 +463,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Deal 2 damage <strong>Combo:</strong> Deal 4 damage instead.".to_string()),
             flavor_text: None,
             base_cost: 2,
-            image_url: "Smite.webp".to_string(),
+            image_url: "Smite.png".to_string(),
             attributes: vec![],
             abilities: vec![
                 Ability {
@@ -504,7 +504,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Return a friendly minion to your hand, it costs (2) less.".to_string()),
             flavor_text: None,
             base_cost: 0,
-            image_url: "Pull.webp".to_string(),
+            image_url: "Pull.png".to_string(),
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -647,7 +647,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Draw a card, add a copy to your hand".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Black Cat.webp".to_string(),
+            image_url: "Black Cat.png".to_string(),
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -706,7 +706,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Fanfare:</strong> Give a friendly beast +2 +2".to_string()),
             flavor_text: None,
             base_cost: 2,
-            image_url: "Hound Master.webp".to_string(),
+            image_url: "Hound Master.png".to_string(),
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
                 requirements: vec![],
@@ -734,7 +734,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Give all friendly beasts +1 +1".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Zoo.webp".to_string(),
+            image_url: "Zoo.png".to_string(),
             attributes: vec![IncantationAttribute::Tradeable],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -759,7 +759,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Restore 5 health to your hero".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Flash Heal.webp".to_string(),
+            image_url: "Flash Heal.png".to_string(),
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -783,7 +783,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("Restore 2 health to all your minions".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Mending Aura.webp".to_string(),
+            image_url: "Mending Aura.png".to_string(),
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -807,7 +807,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Engage</strong> <strong>Poisonous</strong>".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Rat.jpg".to_string(),
+            image_url: "Rat.png".to_string(),
             races: vec![Race::Beast],
             base_attack: 1,
             base_defence: 1,
@@ -822,7 +822,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Engage</strong> <strong>Ward</strong>".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Shieldmaiden.jpeg".to_string(),
+            image_url: "Shieldmaiden.png".to_string(),
             races: vec![Race::Human],
             base_attack: 1,
             base_defence: 1,
@@ -837,7 +837,7 @@ pub fn build_cards() -> Vec<Card> {
             description: Some("<strong>Engage</strong> <strong>Stealth</strong><br><strong>Poisonous</strong>".to_string()),
             flavor_text: None,
             base_cost: 1,
-            image_url: "Assassin.webp".to_string(),
+            image_url: "Assassin.png".to_string(),
             races: vec![Race::Human],
             base_attack: 1,
             base_defence: 1,

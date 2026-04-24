@@ -43,8 +43,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache) {
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, mid, false, cache);
-    draw_board_half(&state.self_board, w, mid, true, cache);
+    draw_board_half(&state.enemy_board, w, h, mid, false, cache);
+    draw_board_half(&state.self_board, w, h, mid, true, cache);
 
     if state.your_turn {
         draw_end_turn_button(w, mid);
@@ -120,28 +120,30 @@ pub fn draw_connecting() {
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, mid: f32, is_self: bool, cache: &TextureCache) {
-    let (battlefield_y, hand_y, hero_y, mana_y) = if is_self {
-        (
-            mid + 18.0,
-            mid + MINION_H + 30.0,
-            mid + MINION_H / 2.0 - HERO_H / 2.0 + 18.0,
-            mid + MINION_H + CARD_H + 48.0,
-        )
-    } else {
-        (
-            mid - MINION_H - 18.0,
-            mid - MINION_H - CARD_H - 30.0,
-            mid - MINION_H / 2.0 - HERO_H / 2.0 - 18.0,
-            mid - MINION_H - CARD_H - 52.0,
-        )
-    };
+fn draw_board_half(board: &Board, w: f32, h: f32, mid: f32, is_self: bool, cache: &TextureCache) {
+    if is_self {
+        let hand_y = h - CARD_H - 10.0;
+        let battlefield_y = mid + 18.0;
+        let hero_y = mid + 18.0;
+        let mana_y = h - 22.0;
 
-    draw_hero(&board.hero, w - 100.0, hero_y, is_self);
-    draw_battlefield(&board.battlefield, w, battlefield_y, cache);
-    draw_hand(&board.hand, w, hand_y, is_self, cache);
-    draw_mana(board.mana, board.base_mana, 20.0, mana_y);
-    draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
+        draw_hero(&board.hero, w - 100.0, hero_y, true);
+        draw_battlefield(&board.battlefield, w, battlefield_y, cache);
+        draw_hand(&board.hand, w, hand_y, true, cache);
+        draw_mana(board.mana, board.base_mana, 20.0, mana_y);
+        draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
+    } else {
+        let hand_y = 10.0;
+        let battlefield_y = mid - MINION_H - 18.0;
+        let hero_y = mid - HERO_H - 18.0;
+        let mana_y = 18.0;
+
+        draw_hero(&board.hero, w - 100.0, hero_y, false);
+        draw_battlefield(&board.battlefield, w, battlefield_y, cache);
+        draw_hand(&board.hand, w, hand_y, false, cache);
+        draw_mana(board.mana, board.base_mana, 20.0, mana_y);
+        draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
+    }
 }
 
 // ── Card rendering ─────────────────────────────────────────────────────────────

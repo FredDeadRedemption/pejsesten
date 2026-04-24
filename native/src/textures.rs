@@ -6,7 +6,7 @@ use crate::types::{Board, CardEntity, Color as CardColor, GameStateClient};
 #[cfg(target_arch = "wasm32")]
 const DEFAULT_MEDIA_ROOT: &str = "/media/";
 #[cfg(not(target_arch = "wasm32"))]
-const DEFAULT_MEDIA_ROOT: &str = "client/static/media/";
+const DEFAULT_MEDIA_ROOT: &str = "../client/static/media/";
 
 const MEDIA_ROOT: &str = match option_env!("MEDIA_ROOT") {
     Some(r) => r,
@@ -24,9 +24,9 @@ impl TextureCache {
 
     pub async fn preload_for_state(&mut self, state: &GameStateClient) {
         // Card backgrounds
-        self.load("cards/card-bg-white.webp").await;
-        self.load("cards/card-bg-black.webp").await;
-        self.load("cards/missing-texture.jpg").await;
+        self.load("cards/card-bg-white.png").await;
+        self.load("cards/card-bg-black.png").await;
+        self.load("cards/missing-texture.png").await;
 
         // Art from all visible cards
         for board in [&state.self_board, &state.enemy_board] {
@@ -53,7 +53,7 @@ impl TextureCache {
 
     async fn load_art(&mut self, image_url: &str) {
         let key = if image_url.is_empty() {
-            "cards/missing-texture.jpg".to_string()
+            "cards/missing-texture.png".to_string()
         } else {
             image_url.to_string()
         };
@@ -76,15 +76,15 @@ impl TextureCache {
 
     pub fn bg(&self, color: &CardColor) -> Option<&Texture2D> {
         let key = match color {
-            CardColor::White => "cards/card-bg-white.webp",
-            CardColor::Black => "cards/card-bg-black.webp",
+            CardColor::White => "cards/card-bg-white.png",
+            CardColor::Black => "cards/card-bg-black.png",
         };
         self.map.get(key)
     }
 
     pub fn art(&self, image_url: &str) -> Option<&Texture2D> {
         let key = if image_url.is_empty() {
-            "cards/missing-texture.jpg"
+            "cards/missing-texture.png"
         } else {
             image_url
         };
