@@ -45,7 +45,7 @@
 
 		<div class="art-frame" class:minion>
 			<img
-				src={imageUrl === '' ? '/media/cards/missing-texture.jpg' : `/media/${imageUrl}`}
+				src={imageUrl === '' ? '/media/cards/missing-texture.png' : `/media/${imageUrl}`}
 				alt=""
 				draggable="false"
 			/>

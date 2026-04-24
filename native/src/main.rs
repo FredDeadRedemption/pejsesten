@@ -19,6 +19,11 @@ const USERNAME: &str = match option_env!("USERNAME") {
     None => "player",
 };
 
+fn default_deck() -> Vec<u32> {
+    // 2x of each collectible card (IDs 1–30)
+    (1u32..=30).flat_map(|id| [id, id]).collect()
+}
+
 enum Screen {
     Connecting,
     Lobby,
@@ -93,14 +98,14 @@ fn handle_input(screen: &mut Screen, net: &mut NetworkClient) {
             if is_key_pressed(KeyCode::H) {
                 net.queue_up(&PlayerMetaData {
                     username: USERNAME.to_string(),
-                    chosen_deck: vec![],
+                    chosen_deck: default_deck(),
                     avatar: String::new(),
                 });
             }
             if is_key_pressed(KeyCode::B) {
                 net.queue_up_bot(&PlayerMetaData {
                     username: USERNAME.to_string(),
-                    chosen_deck: vec![],
+                    chosen_deck: default_deck(),
                     avatar: String::new(),
                 });
             }

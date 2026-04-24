@@ -49,6 +49,16 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache) {
     if state.your_turn {
         draw_end_turn_button(w, mid);
     }
+
+    // Debug overlay — remove once hand is confirmed visible
+    let hand_y = h - CARD_H - 10.0;
+    let debug = format!(
+        "screen: {:.0}x{:.0}  hand_y: {:.0}  hand cards: {}",
+        w, h,
+        hand_y,
+        state.self_board.hand.len()
+    );
+    draw_text(&debug, 8.0, h - 4.0, 14.0, YELLOW);
 }
 
 pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &TextureCache) {
