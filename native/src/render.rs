@@ -1,41 +1,37 @@
 use macroquad::prelude::*;
 
+use crate::layout::{
+    self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W, MINION_GAP, MINION_H, MINION_W,
+};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::types::{Board, CardEntity, Color as CardColor, GameStateClient, MinionEntity};
 
-// ── Layout constants ───────────────────────────────────────────────────────────
-
-const CARD_W: f32 = 110.0;
-const CARD_H: f32 = 160.0;
-const CARD_GAP: f32 = 8.0;
-
-const MINION_W: f32 = 100.0;
-const MINION_H: f32 = 145.0;
-const MINION_GAP: f32 = 8.0;
-
-const HERO_W: f32 = 64.0;
-const HERO_H: f32 = 64.0;
-
-// Fraction of card height that the art frame occupies
 const ART_FRAC: f32 = 0.38;
-// Pixel heights of top/bottom bars
 const TOP_BAR: f32 = 28.0;
 const BOTTOM_BAR: f32 = 26.0;
 
-const COL_ENEMY: Color = Color::new(0.7, 0.2, 0.2, 1.0);
 const COL_SELF: Color = Color::new(0.2, 0.5, 0.8, 1.0);
+const COL_ENEMY: Color = Color::new(0.7, 0.2, 0.2, 1.0);
 const COL_CARD_BG: Color = Color::new(0.15, 0.15, 0.25, 1.0);
-const COL_EXHAUSTED: Color = Color::new(0.25, 0.25, 0.28, 1.0);
 const COL_MANA: Color = Color::new(0.34, 0.60, 0.80, 1.0);
 const COL_MANA_EMPTY: Color = Color::new(0.12, 0.12, 0.22, 1.0);
 const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
 const COL_DESC_BG: Color = Color::new(0.82, 0.76, 0.67, 0.9);
+const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
+const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
 
 // ── Public entry points ────────────────────────────────────────────────────────
 
-pub fn draw_game(state: &GameStateClient, cache: &TextureCache) {
+pub struct DragRender<'a> {
+    pub card: Option<&'a CardEntity>,   // hand card being dragged
+    pub minion_id: Option<u32>,         // battlefield minion being dragged for attack
+    pub mx: f32,
+    pub my: f32,
+}
+
+pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
     let w = screen_width();
     let h = screen_height();
     let mid = h / 2.0;
@@ -43,22 +39,29 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache) {
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, mid, false, cache);
-    draw_board_half(&state.self_board, w, h, mid, true, cache);
+    draw_board_half(&state.enemy_board, w, h, false, cache);
+    draw_board_half(&state.self_board, w, h, true, cache);
 
     if state.your_turn {
         draw_end_turn_button(w, mid);
+        draw_drop_targets(state, drag, w, h);
     }
 
-    // Debug overlay — remove once hand is confirmed visible
-    let hand_y = h - CARD_H - 10.0;
-    let debug = format!(
-        "screen: {:.0}x{:.0}  hand_y: {:.0}  hand cards: {}",
-        w, h,
-        hand_y,
-        state.self_board.hand.len()
-    );
-    draw_text(&debug, 8.0, h - 4.0, 14.0, YELLOW);
+    // Dragged card/minion floats above everything else
+    if let Some(card) = drag.card {
+        let cx = drag.mx - CARD_W / 2.0;
+        let cy = drag.my - CARD_H * 0.6;
+        draw_rectangle(cx + 4.0, cy + 6.0, CARD_W, CARD_H, COL_DRAG_SHADOW);
+        draw_card(card, cx, cy, CARD_W, CARD_H, cache);
+    }
+    if let Some(mid_id) = drag.minion_id {
+        if let Some(m) = state.self_board.battlefield.iter().find(|m| m.entity_id == mid_id) {
+            let cx = drag.mx - MINION_W / 2.0;
+            let cy = drag.my - MINION_H * 0.6;
+            draw_rectangle(cx + 4.0, cy + 6.0, MINION_W, MINION_H, COL_DRAG_SHADOW);
+            draw_minion_card(m, cx, cy, MINION_W, MINION_H, cache);
+        }
+    }
 }
 
 pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &TextureCache) {
@@ -128,9 +131,51 @@ pub fn draw_connecting() {
     draw_text(text, w / 2.0 - dims.width / 2.0, h / 2.0, 28.0, GRAY);
 }
 
+// ── Drop target highlights ─────────────────────────────────────────────────────
+
+fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32) {
+    let is_card_drag = drag.card.is_some();
+    let is_minion_drag = drag.minion_id.is_some();
+
+    if !is_card_drag && !is_minion_drag {
+        return;
+    }
+
+    if is_card_drag {
+        // Highlight enemy minions, enemy hero, friendly minions, friendly hero as potential targets
+        for r in layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h) {
+            draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
+            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, GREEN);
+        }
+        let er = layout::enemy_hero_rect(w, h);
+        draw_rectangle(er.x, er.y, er.w, er.h, COL_TARGET);
+        draw_rectangle_lines(er.x, er.y, er.w, er.h, 2.0, GREEN);
+
+        for r in layout::self_minion_rects(state.self_board.battlefield.len(), w, h) {
+            draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
+            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, GREEN);
+        }
+        let sr = layout::self_hero_rect(w, h);
+        draw_rectangle(sr.x, sr.y, sr.w, sr.h, COL_TARGET);
+        draw_rectangle_lines(sr.x, sr.y, sr.w, sr.h, 2.0, GREEN);
+    }
+
+    if is_minion_drag {
+        // Attacks can only target enemies
+        for r in layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h) {
+            draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
+            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, GREEN);
+        }
+        let er = layout::enemy_hero_rect(w, h);
+        draw_rectangle(er.x, er.y, er.w, er.h, COL_TARGET);
+        draw_rectangle_lines(er.x, er.y, er.w, er.h, 2.0, GREEN);
+    }
+}
+
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, mid: f32, is_self: bool, cache: &TextureCache) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache) {
+    let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
         let battlefield_y = mid + 18.0;
@@ -138,18 +183,17 @@ fn draw_board_half(board: &Board, w: f32, h: f32, mid: f32, is_self: bool, cache
         let mana_y = h - 22.0;
 
         draw_hero(&board.hero, w - 100.0, hero_y, true);
-        draw_battlefield(&board.battlefield, w, battlefield_y, cache);
+        draw_battlefield(&board.battlefield, w, h, true, cache);
         draw_hand(&board.hand, w, hand_y, true, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
     } else {
         let hand_y = 10.0;
-        let battlefield_y = mid - MINION_H - 18.0;
         let hero_y = mid - HERO_H - 18.0;
         let mana_y = 18.0;
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
-        draw_battlefield(&board.battlefield, w, battlefield_y, cache);
+        draw_battlefield(&board.battlefield, w, h, false, cache);
         draw_hand(&board.hand, w, hand_y, false, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
@@ -158,7 +202,6 @@ fn draw_board_half(board: &Board, w: f32, h: f32, mid: f32, is_self: bool, cache
 
 // ── Card rendering ─────────────────────────────────────────────────────────────
 
-/// Full card with background texture, art, name, cost, stats.
 fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
     let (color, image_url, name, cost, description) = match card {
         CardEntity::Minion(m) => (
@@ -177,9 +220,8 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         ),
     };
 
-    draw_card_layers(x, y, w, h, color, image_url, name, cost, description, cache);
+    draw_card_layers(x, y, w, h, color, image_url, name, cost, description, cache, WHITE);
 
-    // Attack/defense for minions
     if let CardEntity::Minion(m) = card {
         draw_stat_badge(m.attack, x + 6.0, y + h - 14.0, COL_ATK);
         draw_stat_badge(m.defence, x + w - 18.0, y + h - 14.0, COL_DEF);
@@ -190,15 +232,10 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
     }
 }
 
-/// Renders a battlefield minion as a card (may be smaller).
 fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
-    let tint = if minion.exhausted {
-        Color::new(0.5, 0.5, 0.55, 1.0)
-    } else {
-        WHITE
-    };
+    let tint = if minion.exhausted { Color::new(0.5, 0.5, 0.55, 1.0) } else { WHITE };
 
-    draw_card_layers_tinted(
+    draw_card_layers(
         x, y, w, h,
         &minion.card.color,
         &minion.card.image_url,
@@ -209,7 +246,6 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
         tint,
     );
 
-    // Keyword border highlights
     let border = if minion.ward_active {
         GOLD
     } else if minion.stealth_active {
@@ -228,18 +264,8 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
 fn draw_card_layers(
     x: f32, y: f32, w: f32, h: f32,
     color: &CardColor, image_url: &str, name: &str, cost: i32, description: &str,
-    cache: &TextureCache,
+    cache: &TextureCache, tint: Color,
 ) {
-    draw_card_layers_tinted(x, y, w, h, color, image_url, name, cost, description, cache, WHITE);
-}
-
-fn draw_card_layers_tinted(
-    x: f32, y: f32, w: f32, h: f32,
-    color: &CardColor, image_url: &str, name: &str, cost: i32, description: &str,
-    cache: &TextureCache,
-    tint: Color,
-) {
-    // 1. Background
     if let Some(bg) = cache.bg(color) {
         draw_texture_cover(bg, x, y, w, h, tint);
     } else {
@@ -250,48 +276,40 @@ fn draw_card_layers_tinted(
         draw_rectangle(x, y, w, h, bg_col);
     }
 
-    // 2. Top bar: cost gem | name
     let gem_size = TOP_BAR - 4.0;
     draw_rectangle(x + 2.0, y + 2.0, gem_size, gem_size, COL_MANA);
     draw_text_centered(&cost.to_string(), x + 2.0 + gem_size / 2.0, y + 2.0 + gem_size * 0.72, 14.0, WHITE);
 
-    let name_x = x + gem_size + 6.0;
-    let name_max_w = w - gem_size - 8.0;
-    let name_str = fit_text(name, name_max_w, 11.0);
-    draw_text(&name_str, name_x, y + 2.0 + gem_size * 0.72, 11.0, BLACK);
+    let name_str = fit_text(name, w - gem_size - 8.0, 11.0);
+    draw_text(&name_str, x + gem_size + 6.0, y + 2.0 + gem_size * 0.72, 11.0, BLACK);
 
-    // 3. Art frame
     let art_y = y + TOP_BAR;
     let art_h = h * ART_FRAC;
-    let art_pad = 2.0;
     if let Some(art) = cache.art(image_url) {
-        draw_texture_cover(art, x + art_pad, art_y, w - art_pad * 2.0, art_h, tint);
+        draw_texture_cover(art, x + 2.0, art_y, w - 4.0, art_h, tint);
     } else {
-        draw_rectangle(x + art_pad, art_y, w - art_pad * 2.0, art_h, COL_CARD_BG);
+        draw_rectangle(x + 2.0, art_y, w - 4.0, art_h, COL_CARD_BG);
     }
 
-    // 4. Description box
     let desc_y = art_y + art_h;
     let desc_h = h - TOP_BAR - art_h - BOTTOM_BAR;
     draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
-    let clean = strip_html(description);
-    let desc_str = fit_text(&clean, w - 10.0, 9.0);
+    let desc_str = fit_text(&strip_html(description), w - 10.0, 9.0);
     draw_text(&desc_str, x + 5.0, desc_y + 12.0, 9.0, BLACK);
 
-    // 5. Bottom bar background
     draw_rectangle(x + 2.0, y + h - BOTTOM_BAR, w - 4.0, BOTTOM_BAR, COL_DESC_BG);
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-fn draw_battlefield(minions: &[MinionEntity], w: f32, y: f32, cache: &TextureCache) {
-    let count = minions.len() as f32;
-    let total = count * (MINION_W + MINION_GAP) - MINION_GAP;
-    let start_x = w / 2.0 - total / 2.0;
-
-    for (i, minion) in minions.iter().enumerate() {
-        let x = start_x + i as f32 * (MINION_W + MINION_GAP);
-        draw_minion_card(minion, x, y, MINION_W, MINION_H, cache);
+fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache) {
+    let rects = if is_self {
+        layout::self_minion_rects(minions.len(), w, h)
+    } else {
+        layout::enemy_minion_rects(minions.len(), w, h)
+    };
+    for (minion, rect) in minions.iter().zip(rects.iter()) {
+        draw_minion_card(minion, rect.x, rect.y, rect.w, rect.h, cache);
     }
 }
 
@@ -313,7 +331,6 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, is_self: bool, cache: &Texture
 fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
     draw_rectangle(x, y, w, h, Color::new(0.08, 0.08, 0.14, 1.0));
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.35, 0.18, 0.45, 1.0));
-    // Simple cross-hatch pattern
     let steps = 6;
     for i in 0..=steps {
         let t = i as f32 / steps as f32;
@@ -325,11 +342,9 @@ fn draw_hero(hero: &crate::types::Hero, x: f32, y: f32, is_self: bool) {
     let color = if is_self { COL_SELF } else { COL_ENEMY };
     draw_rectangle(x, y, HERO_W, HERO_H, color);
     draw_rectangle_lines(x, y, HERO_W, HERO_H, 2.0, WHITE);
-
     let hp = hero.defence.to_string();
     let dims = measure_text(&hp, None, 24, 1.0);
     draw_text(&hp, x + HERO_W / 2.0 - dims.width / 2.0, y + HERO_H / 2.0 + 8.0, 24.0, WHITE);
-
     draw_text("HP", x + 4.0, y + HERO_H - 5.0, 11.0, LIGHTGRAY);
 }
 
@@ -342,8 +357,7 @@ fn draw_mana(current: i32, max: i32, x: f32, y: f32) {
         draw_circle(cx, y + r, r, color);
         draw_circle_lines(cx, y + r, r, 1.0, Color::new(1.0, 1.0, 1.0, 0.5));
     }
-    let label = format!("{}/{}", current, max);
-    draw_text(&label, x, y + r * 2.0 + 14.0, 13.0, LIGHTGRAY);
+    draw_text(&format!("{}/{}", current, max), x, y + r * 2.0 + 14.0, 13.0, LIGHTGRAY);
 }
 
 fn draw_deck_count(count: usize, x: f32, y: f32) {
@@ -365,7 +379,6 @@ fn draw_turn_indicator(state: &GameStateClient, w: f32, mid: f32) {
     let color = if state.your_turn { GREEN } else { GRAY };
     let dims = measure_text(label, None, 18, 1.0);
     draw_text(label, w / 2.0 - dims.width / 2.0, mid - 4.0, 18.0, color);
-
     let turn = format!("Turn {}", state.turn_count);
     let td = measure_text(&turn, None, 13, 1.0);
     draw_text(&turn, w / 2.0 - td.width / 2.0, mid + 12.0, 13.0, GRAY);
@@ -404,7 +417,6 @@ fn draw_text_centered(text: &str, cx: f32, cy: f32, size: f32, color: Color) {
     draw_text(text, cx - d.width / 2.0, cy, size, color);
 }
 
-/// Strip HTML tags from description strings.
 fn strip_html(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut in_tag = false;
@@ -419,17 +431,14 @@ fn strip_html(s: &str) -> String {
     out.replace("&nbsp;", " ")
 }
 
-/// Truncate text to fit within `max_w` pixels at the given font size.
 fn fit_text(s: &str, max_w: f32, size: f32) -> String {
-    let d = measure_text(s, None, size as u16, 1.0);
-    if d.width <= max_w {
+    if measure_text(s, None, size as u16, 1.0).width <= max_w {
         return s.to_string();
     }
     let mut result = String::new();
     for ch in s.chars() {
         let candidate = format!("{}{}…", result, ch);
-        let cd = measure_text(&candidate, None, size as u16, 1.0);
-        if cd.width > max_w {
+        if measure_text(&candidate, None, size as u16, 1.0).width > max_w {
             return format!("{}…", result);
         }
         result.push(ch);
