@@ -42,6 +42,14 @@ pub fn enemy_hero_rect(w: f32, h: f32) -> Rect {
     Rect::new(w - 100.0, h / 2.0 - HERO_H - 18.0, HERO_W, HERO_H)
 }
 
+pub fn self_deck_rect(w: f32, h: f32) -> Rect {
+    Rect::new(w - CARD_W - 8.0, h / 2.0 + 18.0 + HERO_H + 8.0, CARD_W, CARD_H)
+}
+
+pub fn enemy_deck_rect(w: f32, h: f32) -> Rect {
+    Rect::new(w - CARD_W - 8.0, h / 2.0 - HERO_H - 18.0 - CARD_H - 8.0, CARD_W, CARD_H)
+}
+
 pub const MULLIGAN_CARD_W: f32 = 130.0;
 pub const MULLIGAN_CARD_H: f32 = 190.0;
 pub const MULLIGAN_SPACING: f32 = 18.0;

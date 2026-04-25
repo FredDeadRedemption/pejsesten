@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use std::collections::HashSet;
 
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState, Panel};
 use crate::layout::{
@@ -30,6 +31,8 @@ pub struct DragRender<'a> {
     pub minion_id: Option<u32>,         // battlefield minion being dragged for attack
     pub mx: f32,
     pub my: f32,
+    pub targetable_ids: HashSet<u32>,
+    pub trade_drop_active: bool,        // dragging a tradeable card with enough mana
 }
 
 pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
@@ -40,8 +43,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, false, cache);
-    draw_board_half(&state.self_board, w, h, true, cache);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active);
 
     // Debug: hand zone boundary
     let hz = layout::hand_zone_rect(w, h);
@@ -140,69 +143,62 @@ pub fn draw_connecting() {
 // ── Drop target highlights ─────────────────────────────────────────────────────
 
 fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32) {
-    let is_card_drag = drag.card.is_some();
-    let is_minion_drag = drag.minion_id.is_some();
+    let ids = &drag.targetable_ids;
+    if ids.is_empty() { return; }
 
-    if !is_card_drag && !is_minion_drag {
-        return;
-    }
-
-    if is_card_drag {
-        // Highlight enemy minions, enemy hero, friendly minions, friendly hero as potential targets
-        for r in layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h) {
+    let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
+    for (m, r) in state.enemy_board.battlefield.iter().zip(enemy_rects.iter()) {
+        if ids.contains(&m.entity_id) {
             draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
             draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, GREEN);
         }
+    }
+    if ids.contains(&state.enemy_board.hero.entity_id) {
         let er = layout::enemy_hero_rect(w, h);
         draw_rectangle(er.x, er.y, er.w, er.h, COL_TARGET);
         draw_rectangle_lines(er.x, er.y, er.w, er.h, 2.0, GREEN);
+    }
 
-        for r in layout::self_minion_rects(state.self_board.battlefield.len(), w, h) {
+    let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+    for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
+        if ids.contains(&m.entity_id) {
             draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
             draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, GREEN);
         }
+    }
+    if ids.contains(&state.self_board.hero.entity_id) {
         let sr = layout::self_hero_rect(w, h);
         draw_rectangle(sr.x, sr.y, sr.w, sr.h, COL_TARGET);
         draw_rectangle_lines(sr.x, sr.y, sr.w, sr.h, 2.0, GREEN);
-    }
-
-    if is_minion_drag {
-        // Attacks can only target enemies
-        for r in layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h) {
-            draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
-            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, GREEN);
-        }
-        let er = layout::enemy_hero_rect(w, h);
-        draw_rectangle(er.x, er.y, er.w, er.h, COL_TARGET);
-        draw_rectangle_lines(er.x, er.y, er.w, er.h, 2.0, GREEN);
     }
 }
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool) {
     let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
-        let _battlefield_y = mid + 18.0;
         let hero_y = mid + 18.0;
         let mana_y = h - 22.0;
+        let deck_r = layout::self_deck_rect(w, h);
 
         draw_hero(&board.hero, w - 100.0, hero_y, true);
         draw_battlefield(&board.battlefield, w, h, true, cache);
         draw_hand(&board.hand, w, hand_y, true, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
-        draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
+        draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
     } else {
         let hand_y = 10.0;
         let hero_y = mid - HERO_H - 18.0;
         let mana_y = 18.0;
+        let deck_r = layout::enemy_deck_rect(w, h);
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
         draw_battlefield(&board.battlefield, w, h, false, cache);
         draw_hand(&board.hand, w, hand_y, false, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
-        draw_deck_count(board.deck.len(), w - 110.0, hero_y + HERO_H + 8.0);
+        draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
     }
 }
 
@@ -366,10 +362,22 @@ fn draw_mana(current: i32, max: i32, x: f32, y: f32) {
     draw_text(&format!("{}/{}", current, max), x, y + r * 2.0 + 14.0, 13.0, LIGHTGRAY);
 }
 
-fn draw_deck_count(count: usize, x: f32, y: f32) {
-    draw_rectangle(x, y, 38.0, 38.0, Color::new(0.18, 0.18, 0.28, 1.0));
-    draw_rectangle_lines(x, y, 38.0, 38.0, 1.5, GRAY);
-    draw_text_centered(&count.to_string(), x + 19.0, y + 25.0, 18.0, WHITE);
+fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
+    let w = CARD_W;
+    let h = CARD_H;
+    // card back
+    draw_rectangle(x, y, w, h, Color::new(0.08, 0.08, 0.14, 1.0));
+    let border = if glow { Color::new(0.9, 0.85, 0.3, 1.0) } else { Color::new(0.35, 0.18, 0.45, 1.0) };
+    draw_rectangle_lines(x, y, w, h, if glow { 3.0 } else { 1.5 }, border);
+    // diagonal pattern
+    let steps = 8;
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+        draw_line(x, y + h * t, x + w, y + h * (1.0 - t), 0.5, Color::new(0.3, 0.15, 0.4, 0.4));
+    }
+    // count badge
+    draw_rectangle(x + w / 2.0 - 16.0, y + h / 2.0 - 14.0, 32.0, 28.0, Color::new(0.0, 0.0, 0.0, 0.65));
+    draw_text_centered(&count.to_string(), x + w / 2.0, y + h / 2.0 + 6.0, 20.0, WHITE);
 }
 
 fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color) {
@@ -507,14 +515,6 @@ fn draw_catalog(state: &DeckBuilderState, cache: &TextureCache) {
 
     let scroll_offset = state.catalog_scroll;
 
-    push_camera_state();
-    let cam = Camera2D {
-        zoom: Vec2::new(2.0 / screen_width(), 2.0 / screen_height()),
-        offset: Vec2::new(-1.0, -1.0),
-        ..Default::default()
-    };
-    set_camera(&cam);
-
     for (grid_i, &card_idx) in state.filtered.iter().enumerate() {
         let col = grid_i % cols;
         let row = grid_i / cols;
@@ -528,8 +528,6 @@ fn draw_catalog(state: &DeckBuilderState, cache: &TextureCache) {
         let card = &state.all_cards[card_idx];
         draw_catalog_card(card, cx, cy, cache);
     }
-
-    pop_camera_state();
 }
 
 fn draw_catalog_card(card: &Card, x: f32, y: f32, cache: &TextureCache) {

@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use std::collections::HashSet;
 
 mod deckbuilder;
 mod decks;
@@ -12,7 +13,11 @@ use deckbuilder::{card_id, DeckBuilderState, Panel};
 use network::{NetworkClient, ServerEvent};
 use render::DragRender;
 use textures::TextureCache;
-use types::{AttackData, GamePhase, GameStateClient, PlayerMetaData};
+use types::{
+    AttackData, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
+    IncantationAttribute, MinionAttribute, MinionEntity, PlayerMetaData, Requirement, TargetMode,
+    TargetSide, TargetSpec,
+};
 
 const SERVER_URL: &str = match option_env!("SERVER_URL") {
     Some(url) => url,
@@ -118,21 +123,146 @@ async fn main() {
     }
 }
 
+fn target_spec_from_effect(effect: &Effect) -> Option<&TargetSpec> {
+    match effect {
+        Effect::Buff { target_spec, .. } => Some(target_spec),
+        Effect::Damage { target_spec, .. } => Some(target_spec),
+        Effect::Heal { target_spec, .. } => Some(target_spec),
+        Effect::ReturnToHand { target_spec, .. } => Some(target_spec),
+        Effect::Destroy { target_spec, .. } => Some(target_spec),
+        Effect::Draw { .. } | Effect::Summon { .. } => None,
+    }
+}
+
+fn ability_fires(
+    ability: &types::Ability,
+    card: &CardEntity,
+    state: &GameStateClient,
+) -> bool {
+    ability.requirements.iter().all(|r| match r {
+        Requirement::Combo => state.cards_played_this_turn > 0,
+        Requirement::Quickdraw => match card {
+            CardEntity::Minion(m) => m.just_drawn,
+            CardEntity::Incantation(i) => i.just_drawn,
+        },
+        Requirement::IsHolding { .. } => true,
+    })
+}
+
+fn active_target_spec<'a>(card: &'a CardEntity, state: &GameStateClient) -> Option<&'a TargetSpec> {
+    let abilities = match card {
+        CardEntity::Minion(m) => &m.card.abilities,
+        CardEntity::Incantation(i) => &i.card.abilities,
+    };
+    for ability in abilities {
+        if !ability_fires(ability, card, state) { continue; }
+        for effect in &ability.effects {
+            if let Some(spec) = target_spec_from_effect(effect) {
+                if spec.target_mode == TargetMode::Targeted {
+                    return Some(spec);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn is_tradeable(card: &CardEntity) -> bool {
+    match card {
+        CardEntity::Minion(m) => m.card.attributes.contains(&MinionAttribute::Tradeable),
+        CardEntity::Incantation(i) => i.card.attributes.contains(&IncantationAttribute::Tradeable),
+    }
+}
+
+fn matches_conditions(minion: &MinionEntity, filters: &[Condition]) -> bool {
+    filters.iter().all(|f| match f {
+        Condition::IsRace { race } => minion.card.races.contains(race),
+        Condition::HasAttribute { attribute } => minion.card.attributes.contains(attribute),
+    })
+}
+
+fn compute_targetable_ids(drag: &Option<DragState>, state: &GameStateClient) -> HashSet<u32> {
+    let mut ids = HashSet::new();
+    let Some(drag) = drag else { return ids; };
+
+    match drag {
+        DragState::Minion { entity_id } => {
+            let attacker = state.self_board.battlefield.iter().find(|m| m.entity_id == *entity_id);
+            if attacker.map(|a| a.attack <= 0).unwrap_or(true) { return ids; }
+            let attacker_stealthed = attacker.map(|a| a.stealth_active).unwrap_or(false);
+            let can_hit_hero = attacker.map(|a| a.turns_on_board >= 1).unwrap_or(false);
+            let any_guard = !attacker_stealthed && state.enemy_board.battlefield.iter().any(|m| {
+                !m.stealth_active && m.card.attributes.contains(&MinionAttribute::Guard)
+            });
+
+            if any_guard {
+                for m in &state.enemy_board.battlefield {
+                    if !m.stealth_active && m.card.attributes.contains(&MinionAttribute::Guard) {
+                        ids.insert(m.entity_id);
+                    }
+                }
+            } else {
+                for m in &state.enemy_board.battlefield {
+                    if !m.stealth_active { ids.insert(m.entity_id); }
+                }
+                if can_hit_hero { ids.insert(state.enemy_board.hero.entity_id); }
+            }
+        }
+        DragState::Card { index } => {
+            if let Some(card) = state.self_board.hand.get(*index) {
+                if let Some(spec) = active_target_spec(card, state) {
+                    if matches!(spec.side, TargetSide::Friendly | TargetSide::All) {
+                        for m in &state.self_board.battlefield {
+                            if matches_conditions(m, &spec.filters) { ids.insert(m.entity_id); }
+                        }
+                        if spec.entity_type != EntityType::Minion {
+                            ids.insert(state.self_board.hero.entity_id);
+                        }
+                    }
+                    if matches!(spec.side, TargetSide::Enemy | TargetSide::All) {
+                        for m in &state.enemy_board.battlefield {
+                            if !m.stealth_active && matches_conditions(m, &spec.filters) {
+                                ids.insert(m.entity_id);
+                            }
+                        }
+                        if spec.entity_type != EntityType::Minion {
+                            ids.insert(state.enemy_board.hero.entity_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ids
+}
+
 fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32) -> DragRender<'a> {
+    let targetable_ids = compute_targetable_ids(drag, state);
+    let trade_drop_active = match drag {
+        Some(DragState::Card { index }) => state.self_board.hand.get(*index)
+            .map(|c| is_tradeable(c) && state.self_board.mana >= 1)
+            .unwrap_or(false),
+        _ => false,
+    };
     match drag {
         Some(DragState::Card { index }) => DragRender {
             card: state.self_board.hand.get(*index),
             minion_id: None,
             mx,
             my,
+            targetable_ids,
+            trade_drop_active,
         },
         Some(DragState::Minion { entity_id }) => DragRender {
             card: None,
             minion_id: Some(*entity_id),
             mx,
             my,
+            targetable_ids,
+            trade_drop_active,
         },
-        None => DragRender { card: None, minion_id: None, mx, my },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active },
     }
 }
 
@@ -243,18 +373,28 @@ fn handle_input(
 
             // Release drag → resolve action
             if is_mouse_button_released(MouseButton::Left) {
-                if let Some(d) = drag.take() {
-                    match d {
-                        DragState::Card { index } => {
-                            // Only play if dropped clearly outside the hand zone
-                            if !layout::hand_zone_rect(w, h).contains(mouse) {
-                                let target = find_target(mouse, state, w, h);
-                                net.play_card(index, target);
+                if drag.is_some() {
+                    let targets = compute_targetable_ids(drag, state);
+                    if let Some(d) = drag.take() {
+                        match d {
+                            DragState::Card { index } => {
+                                let deck_r = layout::self_deck_rect(w, h);
+                                if deck_r.contains(mouse) {
+                                    // trade: only if card is tradeable and have mana
+                                    if let Some(card) = state.self_board.hand.get(index) {
+                                        if is_tradeable(card) && state.self_board.mana >= 1 {
+                                            net.trade_card(index);
+                                        }
+                                    }
+                                } else if !layout::hand_zone_rect(w, h).contains(mouse) {
+                                    let target = find_target(mouse, state, w, h, &targets);
+                                    net.play_card(index, target);
+                                }
                             }
-                        }
-                        DragState::Minion { entity_id } => {
-                            if let Some(target_id) = find_enemy_target(mouse, state, w, h) {
-                                net.attack(&AttackData { origin_id: entity_id, target_id });
+                            DragState::Minion { entity_id } => {
+                                if let Some(target_id) = find_target(mouse, state, w, h, &targets) {
+                                    net.attack(&AttackData { origin_id: entity_id, target_id });
+                                }
                             }
                         }
                     }
@@ -500,33 +640,25 @@ fn handle_import(db: &mut DeckBuilderState) {
     }
 }
 
-/// Returns the entity_id of whatever is under the mouse (enemy or friendly).
-fn find_target(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> Option<u32> {
+/// Returns the entity_id under the mouse if it's in the targetable set.
+/// If the set is empty (card needs no target), returns None regardless of position.
+fn find_target(mouse: Vec2, state: &GameStateClient, w: f32, h: f32, ids: &HashSet<u32>) -> Option<u32> {
+    if ids.is_empty() { return None; }
+
     let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
-    if let Some(i) = enemy_rects.iter().position(|r| r.contains(mouse)) {
-        return Some(state.enemy_board.battlefield[i].entity_id);
+    for (m, r) in state.enemy_board.battlefield.iter().zip(enemy_rects.iter()) {
+        if r.contains(mouse) && ids.contains(&m.entity_id) { return Some(m.entity_id); }
     }
-    if layout::enemy_hero_rect(w, h).contains(mouse) {
-        return Some(state.enemy_board.hero.entity_id);
-    }
+    let eh = state.enemy_board.hero.entity_id;
+    if layout::enemy_hero_rect(w, h).contains(mouse) && ids.contains(&eh) { return Some(eh); }
+
     let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
-    if let Some(i) = self_rects.iter().position(|r| r.contains(mouse)) {
-        return Some(state.self_board.battlefield[i].entity_id);
+    for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
+        if r.contains(mouse) && ids.contains(&m.entity_id) { return Some(m.entity_id); }
     }
-    if layout::self_hero_rect(w, h).contains(mouse) {
-        return Some(state.self_board.hero.entity_id);
-    }
+    let sh = state.self_board.hero.entity_id;
+    if layout::self_hero_rect(w, h).contains(mouse) && ids.contains(&sh) { return Some(sh); }
+
     None
 }
 
-/// Returns an enemy entity_id only (for attacks).
-fn find_enemy_target(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> Option<u32> {
-    let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
-    if let Some(i) = enemy_rects.iter().position(|r| r.contains(mouse)) {
-        return Some(state.enemy_board.battlefield[i].entity_id);
-    }
-    if layout::enemy_hero_rect(w, h).contains(mouse) {
-        return Some(state.enemy_board.hero.entity_id);
-    }
-    None
-}
