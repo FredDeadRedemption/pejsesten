@@ -17,6 +17,7 @@ ln -sfn ../client/index.html                                 dist/index.html
 ln -sfn ../client/mq_js_bundle.js                            dist/mq_js_bundle.js
 ln -sfn ../client/app_ws.js                                  dist/app_ws.js
 ln -sfn ../client/app_storage.js                             dist/app_storage.js
+ln -sfn ../client/app_location.js                            dist/app_location.js
 ln -sfn ../client/static/favicon.png                         dist/favicon.png
 ln -sfn ../client/static/media                               dist/media
 

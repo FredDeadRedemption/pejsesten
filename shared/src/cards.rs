@@ -1,6 +1,5 @@
 // cards.rs
 
-use crate::ids::IdGenerator;
 use crate::types::*;
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -50,43 +49,6 @@ pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEn
         }),
         Card::Incantation(_) => None, // Can't summon an incantation
     }
-}
-
-fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
-    MinionEntity {
-        attack: c.base_attack,
-        defence: c.base_defence,
-        max_defence: c.base_defence,
-        ward_active: c.attributes.contains(&MinionAttribute::Ward),
-        stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
-        exhausted: false,
-        entity_id,
-        cost: c.base_cost,
-        turns_in_hand: 0,
-        turns_on_board: 0,
-        just_drawn: false,
-        card: c.clone(),
-    }
-}
-
-fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
-    IncantationEntity {
-        entity_id,
-        cost: c.base_cost,
-        turns_in_hand: 0,
-        just_drawn: false,
-        card: c.clone(),
-    }
-}
-
-pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
-    deck.iter()
-        .filter_map(|id| get_card_by_id(*id))
-        .map(|card| match card {
-            Card::Minion(c) => CardEntity::Minion(instantiate_minion(c, ids.next_id())),
-            Card::Incantation(c) => CardEntity::Incantation(instantiate_incantation(c, ids.next_id())),
-        })
-        .collect()
 }
 
 pub fn build_cards() -> Vec<Card> {

@@ -19,11 +19,28 @@ use shared::types::{
 };
 use textures::TextureCache;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn server_url() -> String {
     match option_env!("SERVER_URL") {
         Some(url) => url.to_string(),
         None => "ws://localhost:3000".to_string(),
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn server_url() -> String {
+    unsafe extern "C" {
+        fn app_location_ws_origin_len() -> u32;
+        fn app_location_ws_origin_take(buf: *mut u8) -> u32;
+    }
+    let len = unsafe { app_location_ws_origin_len() };
+    if len == 0 {
+        return "ws://localhost:3000".to_string();
+    }
+    let mut buf = vec![0u8; len as usize];
+    let actual = unsafe { app_location_ws_origin_take(buf.as_mut_ptr()) };
+    buf.truncate(actual as usize);
+    String::from_utf8(buf).unwrap_or_else(|_| "ws://localhost:3000".to_string())
 }
 
 const USERNAME: &str = match option_env!("USERNAME") {

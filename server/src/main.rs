@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
-use shared::ids::IdGenerator;
+use crate::engine::IdGenerator;
 use shared::types::*;
 
 #[derive(Clone, Default)]
@@ -88,8 +88,8 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 let (id2, meta2) = inner.queue.pop().unwrap();
 
                 let mut ids = IdGenerator::new();
-                let deck1 = shared::cards::deck_to_cards(&meta1.chosen_deck, &mut ids);
-                let deck2 = shared::cards::deck_to_cards(&meta2.chosen_deck, &mut ids);
+                let deck1 = crate::engine::deck_to_cards(&meta1.chosen_deck, &mut ids);
+                let deck2 = crate::engine::deck_to_cards(&meta2.chosen_deck, &mut ids);
 
                 let is_p1_white = rand::random::<bool>();
                 let game = Game::new(id1.clone(), id2.clone(), is_p1_white, deck1, deck2, ids);
@@ -122,8 +122,8 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             println!("starting bot game for {}", socket.id);
             let player_id = socket.id.to_string();
             let mut ids = IdGenerator::new();
-            let player_deck = shared::cards::deck_to_cards(&meta.chosen_deck, &mut ids);
-            let bot_deck = shared::cards::deck_to_cards(&bot::default_deck(), &mut ids);
+            let player_deck = crate::engine::deck_to_cards(&meta.chosen_deck, &mut ids);
+            let bot_deck = crate::engine::deck_to_cards(&bot::default_deck(), &mut ids);
 
             // randomize who goes first (white always moves first in Game)
             let is_player_white = rand::random::<bool>();

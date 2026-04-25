@@ -27,6 +27,7 @@ COPY client/index.html ./dist/index.html
 COPY client/mq_js_bundle.js ./dist/mq_js_bundle.js
 COPY client/app_ws.js ./dist/app_ws.js
 COPY client/app_storage.js ./dist/app_storage.js
+COPY client/app_location.js ./dist/app_location.js
 COPY client/static/favicon.png ./dist/favicon.png
 COPY client/static/media ./dist/media
 EXPOSE 3000
