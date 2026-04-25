@@ -32,8 +32,9 @@ pub struct DragRender<'a> {
     pub mx: f32,
     pub my: f32,
     pub targetable_ids: HashSet<u32>,
-    pub trade_drop_active: bool,        // dragging a tradeable card with enough mana
-    pub hovered_minion_id: Option<u32>, // battlefield minion being hovered for preview
+    pub trade_drop_active: bool,
+    pub hovered_minion_id: Option<u32>,
+    pub anim_offsets: Vec<(u32, Vec2)>, // (entity_id, pixel offset) for bump anims
 }
 
 pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
@@ -44,8 +45,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, false, cache, false);
-    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets);
 
     // Debug: hand zone boundary
     let hz = layout::hand_zone_rect(w, h);
@@ -185,7 +186,7 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)]) {
     let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
@@ -194,7 +195,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         let deck_r = layout::self_deck_rect(w, h);
 
         draw_hero(&board.hero, w - 100.0, hero_y, true);
-        draw_battlefield(&board.battlefield, w, h, true, cache);
+        draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
         draw_hand(&board.hand, w, hand_y, true, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
@@ -205,7 +206,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         let deck_r = layout::enemy_deck_rect(w, h);
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
-        draw_battlefield(&board.battlefield, w, h, false, cache);
+        draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
         draw_hand(&board.hand, w, hand_y, false, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
@@ -456,14 +457,18 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
 }
 
-fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache) {
+fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, anim_offsets: &[(u32, Vec2)]) {
     let rects = if is_self {
         layout::self_minion_rects(minions.len(), w, h)
     } else {
         layout::enemy_minion_rects(minions.len(), w, h)
     };
     for (minion, rect) in minions.iter().zip(rects.iter()) {
-        draw_minion_card(minion, rect.x, rect.y, rect.w, rect.h, cache);
+        let off = anim_offsets.iter()
+            .find(|(id, _)| *id == minion.entity_id)
+            .map(|(_, v)| *v)
+            .unwrap_or(Vec2::ZERO);
+        draw_minion_card(minion, rect.x + off.x, rect.y + off.y, rect.w, rect.h, cache);
     }
 }
 

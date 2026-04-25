@@ -64,6 +64,7 @@ async fn main() {
     let mut drag: Option<DragState> = None;
     let mut hover_id: Option<u32> = None;
     let mut hover_timer: f32 = 0.0;
+    let mut anims: Vec<BumpAnim> = vec![];
 
     loop {
         let (mx, my) = mouse_position();
@@ -105,7 +106,7 @@ async fn main() {
         }
 
         // --- Input ---
-        handle_input(&mut screen, &mut net, &mut drag, mx, my, w, h);
+        handle_input(&mut screen, &mut net, &mut drag, &mut anims, mx, my, w, h);
 
         // --- Render ---
         clear_background(Color::from_rgba(12, 12, 20, 255));
@@ -115,11 +116,16 @@ async fn main() {
             Screen::Lobby => { show_mouse(true); render::draw_lobby(USERNAME); }
             Screen::Mulligan { state, selected } => { show_mouse(true); render::draw_mulligan(state, selected, &cache); }
             Screen::Playing(state) => {
+                // Tick anims
+                let dt = get_frame_time();
+                for a in &mut anims { a.tick(dt); }
+                anims.retain(|a| !a.done());
+
                 // Update hover
                 if drag.is_none() {
                     let new_hover = find_hovered_minion(Vec2::new(mx, my), state, w, h);
                     if new_hover == hover_id {
-                        hover_timer += get_frame_time();
+                        hover_timer += dt;
                     } else {
                         hover_id = new_hover;
                         hover_timer = 0.0;
@@ -128,7 +134,10 @@ async fn main() {
                     hover_id = None;
                     hover_timer = 0.0;
                 }
-                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer);
+                let anim_offsets: Vec<(u32, Vec2)> = anims.iter()
+                    .map(|a| (a.entity_id, a.offset()))
+                    .collect();
+                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer, anim_offsets);
                 let targeting_active = drag_render.card.is_some()
                     && !drag_render.targetable_ids.is_empty()
                     && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
@@ -140,6 +149,63 @@ async fn main() {
 
         next_frame().await;
     }
+}
+
+struct BumpAnim {
+    entity_id: u32,
+    dir: Vec2,
+    reach: f32, // px to travel — computed so the card edge just touches the target
+    t: f32,
+}
+
+impl BumpAnim {
+    fn new(entity_id: u32, dir: Vec2, reach: f32) -> Self {
+        Self { entity_id, dir, reach, t: 0.0 }
+    }
+
+    fn tick(&mut self, dt: f32) {
+        self.t = (self.t + dt / 0.38).min(1.0);
+    }
+
+    fn done(&self) -> bool { self.t >= 1.0 }
+
+    fn offset(&self) -> Vec2 {
+        let frac = if self.t < 0.35 {
+            let p = self.t / 0.35;
+            p * (2.0 - p)          // ease-out quad: 0 → 1
+        } else {
+            let p = (self.t - 0.35) / 0.65;
+            (1.0 - p) * (1.0 - p) // ease-in quad: 1 → 0
+        };
+        self.dir * self.reach * frac
+    }
+}
+
+fn make_bump_anim(attacker_id: u32, target_id: u32, state: &GameStateClient, w: f32, h: f32) -> Option<BumpAnim> {
+    let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+    let a_center = state.self_board.battlefield.iter().zip(self_rects.iter())
+        .find(|(m, _)| m.entity_id == attacker_id)
+        .map(|(_, r)| Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0))?;
+
+    let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
+    let t_center = state.enemy_board.battlefield.iter().zip(enemy_rects.iter())
+        .find(|(m, _)| m.entity_id == target_id)
+        .map(|(_, r)| Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0))
+        .or_else(|| {
+            if state.enemy_board.hero.entity_id == target_id {
+                let r = layout::enemy_hero_rect(w, h);
+                Some(Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0))
+            } else {
+                None
+            }
+        })?;
+
+    let delta = t_center - a_center;
+    let dist = delta.length();
+    let dir = delta / dist;
+    // travel until the attacker's edge just meets the target's edge
+    let reach = (dist - 50.0 - 50.0).max(20.0);
+    Some(BumpAnim::new(attacker_id, dir, reach))
 }
 
 fn target_spec_from_effect(effect: &Effect) -> Option<&TargetSpec> {
@@ -268,7 +334,7 @@ fn find_hovered_minion(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     None
 }
 
-fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32) -> DragRender<'a> {
+fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32, anim_offsets: Vec<(u32, Vec2)>) -> DragRender<'a> {
     let targetable_ids = compute_targetable_ids(drag, state);
     let trade_drop_active = match drag {
         Some(DragState::Card { index }) => state.self_board.hand.get(*index)
@@ -281,22 +347,22 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
         Some(DragState::Card { index }) => DragRender {
             card: state.self_board.hand.get(*index),
             minion_id: None,
-            mx,
-            my,
+            mx, my,
             targetable_ids,
             trade_drop_active,
             hovered_minion_id,
+            anim_offsets,
         },
         Some(DragState::Minion { entity_id }) => DragRender {
             card: None,
             minion_id: Some(*entity_id),
-            mx,
-            my,
+            mx, my,
             targetable_ids,
             trade_drop_active,
             hovered_minion_id,
+            anim_offsets,
         },
-        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_minion_id },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_minion_id, anim_offsets },
     }
 }
 
@@ -304,6 +370,7 @@ fn handle_input(
     screen: &mut Screen,
     net: &mut NetworkClient,
     drag: &mut Option<DragState>,
+    anims: &mut Vec<BumpAnim>,
     mx: f32, my: f32,
     w: f32, h: f32,
 ) {
@@ -427,6 +494,9 @@ fn handle_input(
                             }
                             DragState::Minion { entity_id } => {
                                 if let Some(target_id) = find_target(mouse, state, w, h, &targets) {
+                                    if let Some(anim) = make_bump_anim(entity_id, target_id, state, w, h) {
+                                        anims.push(anim);
+                                    }
                                     net.attack(&AttackData { origin_id: entity_id, target_id });
                                 }
                             }
