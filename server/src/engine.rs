@@ -1,11 +1,12 @@
 #![allow(unused)]
 // engine.rs
 
-use crate::cards;
 use crate::settings;
-use crate::types::*;
 use rand::Rng;
 use rand::seq::SliceRandom;
+use shared::cards;
+use shared::ids::IdGenerator;
+use shared::types::*;
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
@@ -29,21 +30,6 @@ struct QueuedEffect {
     owner: PlayerSide,
     target_id: Option<u32>,
     self_id: Option<u32>,
-}
-
-pub struct IdGenerator {
-    next: u32,
-}
-
-impl IdGenerator {
-    pub fn new() -> Self {
-        Self { next: 0 }
-    }
-    pub fn next_id(&mut self) -> u32 {
-        let id = self.next;
-        self.next += 1;
-        id
-    }
 }
 
 pub struct Game {

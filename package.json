@@ -1,10 +1,8 @@
 {
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:native": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:native-client\"",
-    "dev:server": "cd server && cargo watch -x run",
-    "dev:client": "cd client && npm run dev",
-    "dev:native-client": "cd native && cargo watch -x run"
+    "dev:server": "cargo watch -x 'run -p server'",
+    "dev:client": "cargo watch -x 'run -p client'"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

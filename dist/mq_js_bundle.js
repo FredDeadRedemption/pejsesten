@@ -1,0 +1,1 @@
+../client/mq_js_bundle.js
