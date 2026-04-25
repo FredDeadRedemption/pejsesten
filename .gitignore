@@ -1,3 +1,6 @@
 server/target/
 node_modules
 /native/target
+/client/target
+/target
+.claude/settings.local.json

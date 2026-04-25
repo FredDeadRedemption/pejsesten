@@ -1,11 +1,63 @@
 #![allow(unused)]
 // engine.rs
 
-use crate::cards;
 use crate::settings;
-use crate::types::*;
 use rand::Rng;
 use rand::seq::SliceRandom;
+use shared::cards;
+use shared::types::*;
+
+pub struct IdGenerator {
+    next: u32,
+}
+
+impl IdGenerator {
+    pub fn new() -> Self {
+        Self { next: 0 }
+    }
+    pub fn next_id(&mut self) -> u32 {
+        let id = self.next;
+        self.next += 1;
+        id
+    }
+}
+
+fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
+    MinionEntity {
+        attack: c.base_attack,
+        defence: c.base_defence,
+        max_defence: c.base_defence,
+        ward_active: c.attributes.contains(&MinionAttribute::Ward),
+        stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
+        exhausted: false,
+        entity_id,
+        cost: c.base_cost,
+        turns_in_hand: 0,
+        turns_on_board: 0,
+        just_drawn: false,
+        card: c.clone(),
+    }
+}
+
+fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
+    IncantationEntity {
+        entity_id,
+        cost: c.base_cost,
+        turns_in_hand: 0,
+        just_drawn: false,
+        card: c.clone(),
+    }
+}
+
+pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
+    deck.iter()
+        .filter_map(|id| cards::get_card_by_id(*id))
+        .map(|card| match card {
+            Card::Minion(c) => CardEntity::Minion(instantiate_minion(c, ids.next_id())),
+            Card::Incantation(c) => CardEntity::Incantation(instantiate_incantation(c, ids.next_id())),
+        })
+        .collect()
+}
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
@@ -29,21 +81,6 @@ struct QueuedEffect {
     owner: PlayerSide,
     target_id: Option<u32>,
     self_id: Option<u32>,
-}
-
-pub struct IdGenerator {
-    next: u32,
-}
-
-impl IdGenerator {
-    pub fn new() -> Self {
-        Self { next: 0 }
-    }
-    pub fn next_id(&mut self) -> u32 {
-        let id = self.next;
-        self.next += 1;
-        id
-    }
 }
 
 pub struct Game {

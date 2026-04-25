@@ -1,11 +1,7 @@
 mod bot;
-mod cards;
 mod engine;
 mod settings;
-mod types;
 
-use axum::Json;
-use axum::routing::get;
 use engine::Game;
 use serde::Deserialize;
 use socketioxide::{
@@ -15,9 +11,10 @@ use socketioxide::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
-use types::*;
+use tower_http::services::ServeDir;
 
 use crate::engine::IdGenerator;
+use shared::types::*;
 
 #[derive(Clone, Default)]
 struct ServerState {
@@ -91,8 +88,8 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 let (id2, meta2) = inner.queue.pop().unwrap();
 
                 let mut ids = IdGenerator::new();
-                let deck1 = cards::deck_to_cards(&meta1.chosen_deck, &mut ids);
-                let deck2 = cards::deck_to_cards(&meta2.chosen_deck, &mut ids);
+                let deck1 = crate::engine::deck_to_cards(&meta1.chosen_deck, &mut ids);
+                let deck2 = crate::engine::deck_to_cards(&meta2.chosen_deck, &mut ids);
 
                 let is_p1_white = rand::random::<bool>();
                 let game = Game::new(id1.clone(), id2.clone(), is_p1_white, deck1, deck2, ids);
@@ -125,8 +122,8 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             println!("starting bot game for {}", socket.id);
             let player_id = socket.id.to_string();
             let mut ids = IdGenerator::new();
-            let player_deck = cards::deck_to_cards(&meta.chosen_deck, &mut ids);
-            let bot_deck = cards::deck_to_cards(&bot::default_deck(), &mut ids);
+            let player_deck = crate::engine::deck_to_cards(&meta.chosen_deck, &mut ids);
+            let bot_deck = crate::engine::deck_to_cards(&bot::default_deck(), &mut ids);
 
             // randomize who goes first (white always moves first in Game)
             let is_player_white = rand::random::<bool>();
@@ -295,10 +292,6 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
     });
 }
 
-async fn get_cards_handler() -> Json<Vec<Card>> {
-    Json(cards::get_collectible_cards())
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = ServerState::default();
@@ -309,9 +302,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         on_connect(socket, State(state), io_clone.clone())
     });
 
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "dist".to_string());
     let app = axum::Router::new()
-        .route("/", get(async || "Hello World"))
-        .route("/cards", get(get_cards_handler))
+        .fallback_service(ServeDir::new(&static_dir))
         .layer(layer)
         .layer(CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any));
 

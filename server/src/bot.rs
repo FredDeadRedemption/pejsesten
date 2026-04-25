@@ -1,6 +1,6 @@
 use crate::engine::Game;
 use crate::settings;
-use crate::types::*;
+use shared::types::*;
 use socketioxide::SocketIo;
 
 async fn broadcast(io: &SocketIo, game: &Game) {
