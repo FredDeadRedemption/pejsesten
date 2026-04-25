@@ -33,6 +33,7 @@ pub struct DragRender<'a> {
     pub my: f32,
     pub targetable_ids: HashSet<u32>,
     pub trade_drop_active: bool,        // dragging a tradeable card with enough mana
+    pub hovered_minion_id: Option<u32>, // battlefield minion being hovered for preview
 }
 
 pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
@@ -53,6 +54,10 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     if state.your_turn {
         draw_end_turn_button(w, mid);
         draw_drop_targets(state, drag, w, h);
+    }
+
+    if let Some(hid) = drag.hovered_minion_id {
+        draw_minion_preview(hid, state, cache, w, h);
     }
 
     // Dragged card/minion floats above everything else
@@ -303,6 +308,85 @@ fn draw_card_layers(
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
+
+const PREVIEW_W: f32 = 195.0;
+const PREVIEW_H: f32 = 285.0;
+
+fn draw_minion_preview(entity_id: u32, state: &GameStateClient, cache: &TextureCache, w: f32, h: f32) {
+    let found = {
+        let rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+        state.self_board.battlefield.iter().zip(rects.iter())
+            .find(|(m, _)| m.entity_id == entity_id)
+            .map(|(m, r)| (m, *r))
+    }.or_else(|| {
+        let rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
+        state.enemy_board.battlefield.iter().zip(rects.iter())
+            .find(|(m, _)| m.entity_id == entity_id)
+            .map(|(m, r)| (m, *r))
+    });
+
+    let Some((minion, rect)) = found else { return; };
+
+    let pw = PREVIEW_W;
+    let ph = PREVIEW_H;
+    let px = if rect.x + rect.w + pw + 10.0 <= w {
+        rect.x + rect.w + 10.0
+    } else {
+        rect.x - pw - 10.0
+    };
+    let py = (rect.y + rect.h / 2.0 - ph / 2.0).clamp(0.0, h - ph);
+
+    draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
+    draw_card_preview(minion, px, py, pw, ph, cache);
+}
+
+fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
+    let card = &minion.card;
+    let color = &card.color;
+
+    if let Some(bg) = cache.bg(color) {
+        draw_texture_cover(bg, x, y, w, h, WHITE);
+    } else {
+        let bg_col = match color {
+            crate::types::Color::White => Color::new(0.75, 0.70, 0.55, 1.0),
+            crate::types::Color::Black => Color::new(0.18, 0.14, 0.22, 1.0),
+        };
+        draw_rectangle(x, y, w, h, bg_col);
+    }
+
+    // cost gem
+    let gem = 22.0;
+    draw_rectangle(x + 2.0, y + 2.0, gem, gem, COL_MANA);
+    draw_text_centered(&card.base_cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 16.0, WHITE);
+
+    // name
+    let name_fit = fit_text(&card.name, w - gem - 10.0, 13.0);
+    draw_text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 13.0, BLACK);
+
+    // art
+    let art_y = y + gem + 4.0;
+    let art_h = h * ART_FRAC;
+    if let Some(art) = cache.art(&card.image_url) {
+        draw_texture_cover(art, x + 2.0, art_y, w - 4.0, art_h, WHITE);
+    } else {
+        draw_rectangle(x + 2.0, art_y, w - 4.0, art_h, COL_CARD_BG);
+    }
+
+    // description
+    let desc_y = art_y + art_h;
+    let desc_h = h - (gem + 4.0) - art_h - 28.0;
+    draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
+    let desc = card.description.as_deref().unwrap_or("");
+    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 10.0, w - 12.0, 11.0, BLACK);
+
+    // bottom bar with current stats
+    let bot_y = y + h - 26.0;
+    draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
+    draw_stat_badge(minion.attack, x + 8.0, bot_y + 18.0, COL_ATK);
+    draw_stat_badge(minion.defence, x + w - 22.0, bot_y + 18.0, COL_DEF);
+
+    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
+}
 
 fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache) {
     let rects = if is_self {
@@ -707,6 +791,24 @@ fn draw_deck_editor(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw:
 fn draw_text_centered(text: &str, cx: f32, cy: f32, size: f32, color: Color) {
     let d = measure_text(text, None, size as u16, 1.0);
     draw_text(text, cx - d.width / 2.0, cy, size, color);
+}
+
+fn draw_wrapped_text(text: &str, x: f32, mut y: f32, max_w: f32, size: f32, color: Color) {
+    let line_h = size + 3.0;
+    let mut line = String::new();
+    for word in text.split_whitespace() {
+        let candidate = if line.is_empty() { word.to_string() } else { format!("{} {}", line, word) };
+        if measure_text(&candidate, None, size as u16, 1.0).width > max_w && !line.is_empty() {
+            draw_text(&line, x, y, size, color);
+            y += line_h;
+            line = word.to_string();
+        } else {
+            line = candidate;
+        }
+    }
+    if !line.is_empty() {
+        draw_text(&line, x, y, size, color);
+    }
 }
 
 fn strip_html(s: &str) -> String {

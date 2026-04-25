@@ -62,6 +62,8 @@ async fn main() {
     let mut screen = Screen::Connecting;
     let mut connected = false;
     let mut drag: Option<DragState> = None;
+    let mut hover_id: Option<u32> = None;
+    let mut hover_timer: f32 = 0.0;
 
     loop {
         let (mx, my) = mouse_position();
@@ -113,7 +115,20 @@ async fn main() {
             Screen::Lobby => render::draw_lobby(USERNAME),
             Screen::Mulligan { state, selected } => render::draw_mulligan(state, selected, &cache),
             Screen::Playing(state) => {
-                let drag_render = make_drag_render(&drag, state, mx, my);
+                // Update hover
+                if drag.is_none() {
+                    let new_hover = find_hovered_minion(Vec2::new(mx, my), state, w, h);
+                    if new_hover == hover_id {
+                        hover_timer += get_frame_time();
+                    } else {
+                        hover_id = new_hover;
+                        hover_timer = 0.0;
+                    }
+                } else {
+                    hover_id = None;
+                    hover_timer = 0.0;
+                }
+                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer);
                 render::draw_game(state, &cache, &drag_render);
             }
             Screen::DeckBuilder(db_state) => render::draw_deck_builder(db_state, &cache),
@@ -237,7 +252,19 @@ fn compute_targetable_ids(drag: &Option<DragState>, state: &GameStateClient) -> 
     ids
 }
 
-fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32) -> DragRender<'a> {
+fn find_hovered_minion(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> Option<u32> {
+    let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+    for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
+        if r.contains(mouse) { return Some(m.entity_id); }
+    }
+    let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
+    for (m, r) in state.enemy_board.battlefield.iter().zip(enemy_rects.iter()) {
+        if r.contains(mouse) { return Some(m.entity_id); }
+    }
+    None
+}
+
+fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32) -> DragRender<'a> {
     let targetable_ids = compute_targetable_ids(drag, state);
     let trade_drop_active = match drag {
         Some(DragState::Card { index }) => state.self_board.hand.get(*index)
@@ -245,6 +272,7 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             .unwrap_or(false),
         _ => false,
     };
+    let hovered_minion_id = if hover_timer >= 0.25 { hover_id } else { None };
     match drag {
         Some(DragState::Card { index }) => DragRender {
             card: state.self_board.hand.get(*index),
@@ -253,6 +281,7 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             my,
             targetable_ids,
             trade_drop_active,
+            hovered_minion_id,
         },
         Some(DragState::Minion { entity_id }) => DragRender {
             card: None,
@@ -261,8 +290,9 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             my,
             targetable_ids,
             trade_drop_active,
+            hovered_minion_id,
         },
-        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_minion_id },
     }
 }
 
