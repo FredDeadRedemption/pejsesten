@@ -17,6 +17,9 @@ const COL_ENEMY: Color = Color::new(0.7, 0.2, 0.2, 1.0);
 const COL_CARD_BG: Color = Color::new(0.15, 0.15, 0.25, 1.0);
 const COL_MANA: Color = Color::new(0.34, 0.60, 0.80, 1.0);
 const COL_MANA_EMPTY: Color = Color::new(0.12, 0.12, 0.22, 1.0);
+const COL_EMBER: Color = Color::new(0.95, 0.45, 0.18, 1.0);
+const COL_EMBER_EMPTY: Color = Color::new(0.22, 0.10, 0.06, 1.0);
+const EMBER_MAX: i32 = 5;
 const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
@@ -198,6 +201,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
         draw_hand(&board.hand, w, hand_y, true, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
+        draw_embers(board.embers, 20.0, mana_y - 24.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
     } else {
         let hand_y = 10.0;
@@ -209,6 +213,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
         draw_hand(&board.hand, w, hand_y, false, cache);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
+        draw_embers(board.embers, 20.0, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
     }
 }
@@ -505,6 +510,17 @@ fn draw_hero(hero: &crate::types::Hero, x: f32, y: f32, is_self: bool) {
     let dims = measure_text(&hp, None, 24, 1.0);
     draw_text(&hp, x + HERO_W / 2.0 - dims.width / 2.0, y + HERO_H / 2.0 + 8.0, 24.0, WHITE);
     draw_text("HP", x + 4.0, y + HERO_H - 5.0, 11.0, LIGHTGRAY);
+}
+
+fn draw_embers(current: i32, x: f32, y: f32) {
+    let r = 5.0;
+    let gap = r * 2.4;
+    for i in 0..EMBER_MAX {
+        let cx = x + r + i as f32 * gap;
+        let color = if i < current { COL_EMBER } else { COL_EMBER_EMPTY };
+        draw_circle(cx, y + r, r, color);
+        draw_circle_lines(cx, y + r, r, 1.0, Color::new(1.0, 0.7, 0.4, 0.5));
+    }
 }
 
 fn draw_mana(current: i32, max: i32, x: f32, y: f32) {

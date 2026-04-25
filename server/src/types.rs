@@ -236,6 +236,7 @@ pub struct Board {
     pub hero: Hero,
     pub base_mana: i32,
     pub mana: i32,
+    pub embers: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

@@ -23,7 +23,8 @@ export let gameState = $state<GameStateClient>({
 		graveyard: [],
 		deck: [],
 		base_mana: 0,
-		mana: 0
+		mana: 0,
+		embers: 0
 	},
 	self_board: {
 		battlefield: [],
@@ -36,7 +37,8 @@ export let gameState = $state<GameStateClient>({
 		graveyard: [],
 		deck: [],
 		base_mana: 0,
-		mana: 0
+		mana: 0,
+		embers: 0
 	},
 	turn_count: 0,
 	cards_played_this_turn: 0,

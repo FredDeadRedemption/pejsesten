@@ -49,6 +49,7 @@
 
 <div class="hand" bind:this={handElement} class:hidden={!OPEN_CARDS}>
 	<div class="mana">{gameState.enemy_board.mana}/{gameState.self_board.base_mana}</div>
+	<div class="embers">{gameState.enemy_board.embers}</div>
 	{#each gameState.enemy_board.hand as raw, index}
 		{@const card = getEntity(raw)}
 		{@const affordable =
@@ -98,6 +99,20 @@
 		margin: 5px;
 		border-radius: 100px;
 		background-color: rgb(88, 120, 161);
+	}
+
+	.embers {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		align-self: flex-end;
+		font-size: x-large;
+		color: $white;
+		height: 45px;
+		width: 45px;
+		margin: 5px;
+		border-radius: 100px;
+		background-color: rgb(196, 88, 38);
 	}
 
 	.dragger {

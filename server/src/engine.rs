@@ -109,6 +109,7 @@ impl Game {
                     },
                     base_mana: settings::STARTING_MANA,
                     mana: settings::STARTING_MANA,
+                    embers: settings::STARTING_EMBERS,
                 },
                 black: Board {
                     deck: black_deck,
@@ -122,6 +123,7 @@ impl Game {
                     },
                     base_mana: settings::STARTING_MANA - 1,
                     mana: settings::STARTING_MANA - 1,
+                    embers: settings::STARTING_EMBERS - 1,
                 },
                 white_player_id,
                 black_player_id,
@@ -629,6 +631,7 @@ impl Game {
             source_board.hand.extend(drawn);
             source_board.base_mana = (source_board.base_mana + 1).min(settings::MAX_MANA);
             source_board.mana = source_board.base_mana;
+            source_board.embers = (source_board.embers + 1).min(settings::MAX_EMBERS);
             for minion in source_board.battlefield.iter_mut() {
                 minion.exhausted = false;
                 minion.turns_on_board += 1;

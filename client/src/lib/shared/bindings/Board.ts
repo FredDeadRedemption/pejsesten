@@ -3,4 +3,4 @@ import type { CardEntity } from "./CardEntity";
 import type { Hero } from "./Hero";
 import type { MinionEntity } from "./MinionEntity";
 
-export type Board = { deck: Array<CardEntity>, hand: Array<CardEntity>, graveyard: Array<MinionEntity>, battlefield: Array<MinionEntity>, hero: Hero, base_mana: number, mana: number, };
+export type Board = { deck: Array<CardEntity>, hand: Array<CardEntity>, graveyard: Array<MinionEntity>, battlefield: Array<MinionEntity>, hero: Hero, base_mana: number, mana: number, embers: number, };
