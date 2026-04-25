@@ -60,20 +60,25 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
         draw_minion_preview(hid, state, cache, w, h);
     }
 
-    // Dragged card/minion floats above everything else
+    let targeting_active = drag.card.is_some()
+        && !drag.targetable_ids.is_empty()
+        && !layout::hand_zone_rect(w, h).contains(Vec2::new(drag.mx, drag.my));
+
+    // Dragged card floats above everything — hidden when crosshair takes over
     if let Some(card) = drag.card {
-        let cx = drag.mx - CARD_W / 2.0;
-        let cy = drag.my - CARD_H * 0.6;
-        draw_rectangle(cx + 4.0, cy + 6.0, CARD_W, CARD_H, COL_DRAG_SHADOW);
-        draw_card(card, cx, cy, CARD_W, CARD_H, cache);
+        if !targeting_active {
+            let cx = drag.mx - CARD_W / 2.0;
+            let cy = drag.my - CARD_H * 0.6;
+            draw_rectangle(cx + 4.0, cy + 6.0, CARD_W, CARD_H, COL_DRAG_SHADOW);
+            draw_card(card, cx, cy, CARD_W, CARD_H, cache);
+        }
     }
     if let Some(mid_id) = drag.minion_id {
-        if let Some(m) = state.self_board.battlefield.iter().find(|m| m.entity_id == mid_id) {
-            let cx = drag.mx - MINION_W / 2.0;
-            let cy = drag.my - MINION_H * 0.6;
-            draw_rectangle(cx + 4.0, cy + 6.0, MINION_W, MINION_H, COL_DRAG_SHADOW);
-            draw_minion_card(m, cx, cy, MINION_W, MINION_H, cache);
-        }
+        draw_attack_arrow(drag.mx, drag.my, mid_id, state, w, h);
+    }
+
+    if targeting_active {
+        draw_crosshair(drag.mx, drag.my);
     }
 }
 
@@ -311,6 +316,69 @@ fn draw_card_layers(
 
 const PREVIEW_W: f32 = 195.0;
 const PREVIEW_H: f32 = 285.0;
+
+fn draw_attack_arrow(mx: f32, my: f32, minion_id: u32, state: &GameStateClient, w: f32, h: f32) {
+    let rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+    let Some(rect) = state.self_board.battlefield.iter().zip(rects.iter())
+        .find(|(m, _)| m.entity_id == minion_id)
+        .map(|(_, r)| *r) else { return; };
+
+    let x0 = rect.x + rect.w / 2.0;
+    let y0 = rect.y + rect.h / 2.0;
+    let dx = mx - x0;
+    let dy = my - y0;
+    let dist = (dx * dx + dy * dy).sqrt();
+    if dist < 1.0 { return; }
+
+    let bend = dist * 0.1;
+    let cpx = (x0 + mx) / 2.0 - (dy / dist) * bend;
+    let cpy = (y0 + my) / 2.0 + (dx / dist) * bend;
+
+    let col_start = Color::new(0.23, 0.07, 0.05, 1.0); // #3B130C
+    let col_end   = Color::new(0.88, 0.32, 0.21, 1.0); // #E05236
+
+    let bezier = |t: f32| -> (f32, f32) {
+        let mt = 1.0 - t;
+        (mt*mt*x0 + 2.0*mt*t*cpx + t*t*mx, mt*mt*y0 + 2.0*mt*t*cpy + t*t*my)
+    };
+
+    // Dashed segments with gradient
+    let n = 80;
+    let dash = 6.0;
+    let gap  = 3.0;
+    let mut drawing = true;
+    let mut budget = dash;
+    let mut prev = bezier(0.0);
+
+    for i in 1..=n {
+        let t = i as f32 / n as f32;
+        let p = bezier(t);
+        let seg = ((p.0-prev.0).powi(2) + (p.1-prev.1).powi(2)).sqrt();
+        if drawing {
+            let col = Color::new(
+                col_start.r + (col_end.r - col_start.r) * t,
+                col_start.g + (col_end.g - col_start.g) * t,
+                col_start.b + (col_end.b - col_start.b) * t,
+                1.0,
+            );
+            draw_line(prev.0, prev.1, p.0, p.1, 2.5, col);
+        }
+        budget -= seg;
+        if budget <= 0.0 {
+            drawing = !drawing;
+            budget = if drawing { dash } else { gap };
+        }
+        prev = p;
+    }
+
+    // Arrowhead pointing in the tangent direction at t=1
+    let dir = Vec2::new(mx - cpx, my - cpy).normalize();
+    let perp = Vec2::new(-dir.y, dir.x);
+    let size = 14.0;
+    let tip  = Vec2::new(mx, my);
+    let base = tip - dir * size;
+    draw_triangle(tip, base + perp * (size * 0.5), base - perp * (size * 0.5), col_end);
+}
 
 fn draw_minion_preview(entity_id: u32, state: &GameStateClient, cache: &TextureCache, w: f32, h: f32) {
     let found = {
@@ -791,6 +859,20 @@ fn draw_deck_editor(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw:
 fn draw_text_centered(text: &str, cx: f32, cy: f32, size: f32, color: Color) {
     let d = measure_text(text, None, size as u16, 1.0);
     draw_text(text, cx - d.width / 2.0, cy, size, color);
+}
+
+fn draw_crosshair(mx: f32, my: f32) {
+    let r = 11.0;
+    let gap = 5.0;
+    let len = 14.0;
+    let thick = 1.5;
+    let col = Color::new(0.95, 0.25, 0.15, 0.92);
+
+    draw_circle_lines(mx, my, r, thick, col);
+    draw_line(mx, my - r - gap, mx, my - r - gap - len, thick, col);
+    draw_line(mx, my + r + gap, mx, my + r + gap + len, thick, col);
+    draw_line(mx - r - gap, my, mx - r - gap - len, my, thick, col);
+    draw_line(mx + r + gap, my, mx + r + gap + len, my, thick, col);
 }
 
 fn draw_wrapped_text(text: &str, x: f32, mut y: f32, max_w: f32, size: f32, color: Color) {

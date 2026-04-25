@@ -111,9 +111,9 @@ async fn main() {
         clear_background(Color::from_rgba(12, 12, 20, 255));
 
         match &screen {
-            Screen::Connecting => render::draw_connecting(),
-            Screen::Lobby => render::draw_lobby(USERNAME),
-            Screen::Mulligan { state, selected } => render::draw_mulligan(state, selected, &cache),
+            Screen::Connecting => { show_mouse(true); render::draw_connecting(); }
+            Screen::Lobby => { show_mouse(true); render::draw_lobby(USERNAME); }
+            Screen::Mulligan { state, selected } => { show_mouse(true); render::draw_mulligan(state, selected, &cache); }
             Screen::Playing(state) => {
                 // Update hover
                 if drag.is_none() {
@@ -129,6 +129,10 @@ async fn main() {
                     hover_timer = 0.0;
                 }
                 let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer);
+                let targeting_active = drag_render.card.is_some()
+                    && !drag_render.targetable_ids.is_empty()
+                    && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
+                show_mouse(!targeting_active);
                 render::draw_game(state, &cache, &drag_render);
             }
             Screen::DeckBuilder(db_state) => render::draw_deck_builder(db_state, &cache),
