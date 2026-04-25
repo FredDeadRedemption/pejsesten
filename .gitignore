@@ -1,6 +1,7 @@
-server/target/
-node_modules
+/server/target
 /native/target
 /client/target
 /target
+/dist
 .claude/settings.local.json
+.vscode/settings.json
