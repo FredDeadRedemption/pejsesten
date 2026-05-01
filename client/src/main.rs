@@ -129,8 +129,12 @@ async fn main() {
         }
 
         // Enter card flip test from lobby (async load handled here so we can .await)
-        if matches!(screen, Screen::Lobby) && is_key_pressed(KeyCode::T) {
-            screen = Screen::CardFlipTest(Card3D::load().await);
+        if matches!(screen, Screen::Lobby) {
+            let clicked = is_mouse_button_released(MouseButton::Left)
+                && layout::lobby_card_flip_test_rect(w, h).contains(Vec2::new(mx, my));
+            if is_key_pressed(KeyCode::T) || clicked {
+                screen = Screen::CardFlipTest(Card3D::load().await);
+            }
         }
 
         // --- Input ---

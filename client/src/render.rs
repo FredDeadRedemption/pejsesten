@@ -144,6 +144,7 @@ pub fn draw_lobby(username: &str) {
     draw_button("Play vs Bot    [B]", w / 2.0 - 115.0, h / 2.0 + 62.0, 230.0, 46.0);
     draw_button_danger("Reset Server  [R]", w / 2.0 - 115.0, h / 2.0 + 130.0, 230.0, 36.0);
     draw_button("Deck Builder  [D]", w / 2.0 - 115.0, h / 2.0 + 180.0, 230.0, 46.0);
+    draw_button("Card Flip Test  [T]", w / 2.0 - 115.0, h / 2.0 + 242.0, 230.0, 46.0);
 }
 
 pub fn draw_connecting() {
