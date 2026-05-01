@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::HashSet;
 
+mod card3d;
 mod clipboard;
 mod deckbuilder;
 mod decks;
@@ -9,6 +10,7 @@ mod network;
 mod render;
 mod textures;
 
+use card3d::Card3D;
 use deckbuilder::{card_id, DeckBuilderState, Panel};
 use network::{NetworkClient, ServerEvent};
 use render::DragRender;
@@ -58,6 +60,7 @@ enum Screen {
     Mulligan { state: GameStateClient, selected: Vec<usize> },
     Playing(GameStateClient),
     DeckBuilder(DeckBuilderState),
+    CardFlipTest(Card3D),
 }
 
 enum DragState {
@@ -125,16 +128,38 @@ async fn main() {
             poll_clipboard_import(db);
         }
 
+        // Enter card flip test from lobby (async load handled here so we can .await)
+        if matches!(screen, Screen::Lobby) && is_key_pressed(KeyCode::T) {
+            screen = Screen::CardFlipTest(Card3D::load().await);
+        }
+
         // --- Input ---
         handle_input(&mut screen, &mut net, &mut drag, &mut anims, mx, my, w, h);
 
         // --- Render ---
         clear_background(Color::from_rgba(12, 12, 20, 255));
 
+        // Card flip test: tick + input handled here (needs &mut access)
+        if let Screen::CardFlipTest(card) = &mut screen {
+            let dt = get_frame_time();
+            card.update(dt);
+            if is_key_pressed(KeyCode::Space) || is_mouse_button_pressed(MouseButton::Left) {
+                card.flip();
+            }
+            if is_key_pressed(KeyCode::Escape) {
+                screen = Screen::Lobby;
+            }
+        }
+
         match &screen {
             Screen::Connecting => { show_mouse(true); render::draw_connecting(); }
             Screen::Lobby => { show_mouse(true); render::draw_lobby(USERNAME); }
             Screen::Mulligan { state, selected } => { show_mouse(true); render::draw_mulligan(state, selected, &cache); }
+            Screen::CardFlipTest(card) => {
+                show_mouse(true);
+                card.draw();
+                draw_text("Card Flip Test — Space/Click to flip, Esc to go back", 20.0, 30.0, 22.0, WHITE);
+            }
             Screen::Playing(state) => {
                 // Tick anims
                 let dt = get_frame_time();
