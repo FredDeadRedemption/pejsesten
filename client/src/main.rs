@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 mod card3d;
 mod clipboard;
@@ -87,6 +87,7 @@ async fn main() {
     let mut hover_id: Option<u32> = None;
     let mut hover_timer: f32 = 0.0;
     let mut anims: Vec<BumpAnim> = vec![];
+    let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
 
     loop {
         let (mx, my) = mouse_position();
@@ -170,6 +171,14 @@ async fn main() {
                 for a in &mut anims { a.tick(dt); }
                 anims.retain(|a| !a.done());
 
+                // Sync hand-flip animations: new cards start back-facing and rotate to front
+                let hand_ids: HashSet<u32> = state.self_board.hand.iter().map(|c| c.entity_id()).collect();
+                hand_flips.retain(|id, _| hand_ids.contains(id));
+                for card in &state.self_board.hand {
+                    hand_flips.entry(card.entity_id()).or_insert_with(CardFlip::new_drawn);
+                }
+                for f in hand_flips.values_mut() { f.update(dt); }
+
                 // Update hover
                 if drag.is_none() {
                     let new_hover = find_hovered_minion(Vec2::new(mx, my), state, w, h);
@@ -186,7 +195,10 @@ async fn main() {
                 let anim_offsets: Vec<(u32, Vec2)> = anims.iter()
                     .map(|a| (a.entity_id, a.offset()))
                     .collect();
-                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer, anim_offsets);
+                let hand_flip_vec: Vec<(u32, f32)> = hand_flips.iter()
+                    .map(|(id, f)| (*id, f.cos()))
+                    .collect();
+                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer, anim_offsets, hand_flip_vec);
                 let targeting_active = drag_render.card.is_some()
                     && !drag_render.targetable_ids.is_empty()
                     && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
@@ -227,6 +239,26 @@ impl BumpAnim {
             (1.0 - p) * (1.0 - p) // ease-in quad: 1 → 0
         };
         self.dir * self.reach * frac
+    }
+}
+
+struct CardFlip {
+    rotation_y: f32,
+    target_y: f32,
+}
+
+impl CardFlip {
+    fn new_drawn() -> Self {
+        Self { rotation_y: std::f32::consts::PI, target_y: 0.0 }
+    }
+
+    fn update(&mut self, dt: f32) {
+        let diff = self.target_y - self.rotation_y;
+        self.rotation_y += diff * 8.0 * dt;
+    }
+
+    fn cos(&self) -> f32 {
+        self.rotation_y.cos()
     }
 }
 
@@ -383,7 +415,7 @@ fn find_hovered_minion(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     None
 }
 
-fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32, anim_offsets: Vec<(u32, Vec2)>) -> DragRender<'a> {
+fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32, anim_offsets: Vec<(u32, Vec2)>, hand_flips: Vec<(u32, f32)>) -> DragRender<'a> {
     let targetable_ids = compute_targetable_ids(drag, state);
     let trade_drop_active = match drag {
         Some(DragState::Card { index }) => state.self_board.hand.get(*index)
@@ -401,6 +433,7 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             trade_drop_active,
             hovered_minion_id,
             anim_offsets,
+            hand_flips,
         },
         Some(DragState::Minion { entity_id }) => DragRender {
             card: None,
@@ -410,8 +443,9 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             trade_drop_active,
             hovered_minion_id,
             anim_offsets,
+            hand_flips,
         },
-        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_minion_id, anim_offsets },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_minion_id, anim_offsets, hand_flips },
     }
 }
 

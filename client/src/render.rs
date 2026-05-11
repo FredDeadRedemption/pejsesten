@@ -38,6 +38,7 @@ pub struct DragRender<'a> {
     pub trade_drop_active: bool,
     pub hovered_minion_id: Option<u32>,
     pub anim_offsets: Vec<(u32, Vec2)>, // (entity_id, pixel offset) for bump anims
+    pub hand_flips: Vec<(u32, f32)>,    // (entity_id, cos(rotation_y)) for draw-from-deck flip
 }
 
 pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
@@ -48,8 +49,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets);
-    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips);
 
     // Debug: hand zone boundary
     let hz = layout::hand_zone_rect(w, h);
@@ -74,7 +75,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
             let cx = drag.mx - CARD_W / 2.0;
             let cy = drag.my - CARD_H * 0.6;
             draw_rectangle(cx + 4.0, cy + 6.0, CARD_W, CARD_H, COL_DRAG_SHADOW);
-            draw_card(card, cx, cy, CARD_W, CARD_H, cache);
+            draw_card(card, cx, cy, CARD_W, CARD_H, cache, 1.0);
         }
     }
     if let Some(mid_id) = drag.minion_id {
@@ -105,7 +106,7 @@ pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &Textur
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (full_w + spacing);
         let is_selected = selected.contains(&i);
-        draw_card(card, x, card_y, full_w, full_h, cache);
+        draw_card(card, x, card_y, full_w, full_h, cache, 1.0);
 
         if is_selected {
             draw_rectangle(x, card_y, full_w, full_h, Color::new(0.6, 0.0, 0.0, 0.45));
@@ -190,7 +191,7 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)]) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)]) {
     let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
@@ -200,7 +201,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, true);
         draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
-        draw_hand(&board.hand, w, hand_y, true, cache);
+        draw_hand(&board.hand, w, hand_y, true, cache, hand_flips);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y - 24.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
@@ -212,7 +213,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
         draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
-        draw_hand(&board.hand, w, hand_y, false, cache);
+        draw_hand(&board.hand, w, hand_y, false, cache, hand_flips);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
@@ -221,7 +222,16 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
 // ── Card rendering ─────────────────────────────────────────────────────────────
 
-fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
+fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache, flip_cos: f32) {
+    let scale = flip_cos.abs().clamp(0.0, 1.0);
+    let scaled_w = (w * scale).max(1.0);
+    let sx = x + (w - scaled_w) / 2.0;
+
+    if flip_cos < 0.0 {
+        draw_card_back(sx, y, scaled_w, h);
+        return;
+    }
+
     let (color, image_url, name, cost, description) = match card {
         CardEntity::Minion(m) => (
             &m.card.color,
@@ -239,15 +249,16 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         ),
     };
 
-    draw_card_layers(x, y, w, h, color, image_url, name, cost, description, cache, WHITE);
+    draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, description, cache, WHITE, scale, true);
 
     if let CardEntity::Minion(m) = card {
-        draw_stat_badge(m.attack, x + 6.0, y + h - 14.0, COL_ATK);
-        draw_stat_badge(m.defence, x + w - 18.0, y + h - 14.0, COL_DEF);
-    } else {
+        draw_stat_badge(m.attack, sx + 6.0 * scale, y + h - 14.0, COL_ATK, scale);
+        draw_stat_badge(m.defence, sx + scaled_w - 18.0 * scale, y + h - 14.0, COL_DEF, scale);
+    } else if scale > 0.6 {
         let sl = "incantation";
-        let sd = measure_text(sl, None, 10, 1.0);
-        draw_text(sl, x + w / 2.0 - sd.width / 2.0, y + h - 6.0, 10.0, DARKGRAY);
+        let font = (10.0 * scale) as u16;
+        let sd = measure_text(sl, None, font, 1.0);
+        draw_text(sl, sx + scaled_w / 2.0 - sd.width / 2.0, y + h - 6.0, font as f32, DARKGRAY);
     }
 }
 
@@ -263,6 +274,8 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
         minion.card.description.as_deref().unwrap_or(""),
         cache,
         tint,
+        1.0,
+        false,
     );
 
     let border = if minion.ward_active {
@@ -276,14 +289,16 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
     };
     draw_rectangle_lines(x, y, w, h, 2.0, border);
 
-    draw_stat_badge(minion.attack, x + 6.0, y + h - 14.0, COL_ATK);
-    draw_stat_badge(minion.defence, x + w - 18.0, y + h - 14.0, COL_DEF);
+    draw_stat_badge(minion.attack, x + 6.0, y + h - 14.0, COL_ATK, 1.0);
+    draw_stat_badge(minion.defence, x + w - 18.0, y + h - 14.0, COL_DEF, 1.0);
 }
 
 fn draw_card_layers(
     x: f32, y: f32, w: f32, h: f32,
     color: &CardColor, image_url: &str, name: &str, cost: i32, description: &str,
     cache: &TextureCache, tint: Color,
+    scale: f32,
+    show_text: bool,
 ) {
     if let Some(bg) = cache.bg(color) {
         draw_texture_cover(bg, x, y, w, h, tint);
@@ -295,28 +310,43 @@ fn draw_card_layers(
         draw_rectangle(x, y, w, h, bg_col);
     }
 
-    let gem_size = TOP_BAR - 4.0;
-    draw_rectangle(x + 2.0, y + 2.0, gem_size, gem_size, COL_MANA);
-    draw_text_centered(&cost.to_string(), x + 2.0 + gem_size / 2.0, y + 2.0 + gem_size * 0.72, 14.0, WHITE);
+    let gem_size = (TOP_BAR - 4.0) * scale;
+    draw_rectangle(x + 2.0 * scale, y + 2.0, gem_size, gem_size, COL_MANA);
+    if scale > 0.6 {
+        let cost_font = (14.0 * scale).round();
+        draw_text_centered(&cost.to_string(), x + 2.0 * scale + gem_size / 2.0, y + 2.0 + gem_size * 0.72, cost_font, WHITE);
 
-    let name_str = fit_text(name, w - gem_size - 8.0, 11.0);
-    draw_text(&name_str, x + gem_size + 6.0, y + 2.0 + gem_size * 0.72, 11.0, BLACK);
+        if show_text {
+            let name_font = (11.0 * scale).round();
+            let name_str = fit_text(name, (w - gem_size - 8.0 * scale).max(0.0), name_font);
+            draw_text(&name_str, x + gem_size + 6.0 * scale, y + 2.0 + gem_size * 0.72, name_font, BLACK);
+        }
+    }
 
     let art_y = y + TOP_BAR;
     let art_h = h * ART_FRAC;
     if let Some(art) = cache.art(image_url) {
-        draw_texture_cover(art, x + 2.0, art_y, w - 4.0, art_h, tint);
+        draw_texture_cover(art, x + 2.0 * scale, art_y, (w - 4.0 * scale).max(0.0), art_h, tint);
     } else {
-        draw_rectangle(x + 2.0, art_y, w - 4.0, art_h, COL_CARD_BG);
+        draw_rectangle(x + 2.0 * scale, art_y, (w - 4.0 * scale).max(0.0), art_h, COL_CARD_BG);
     }
 
     let desc_y = art_y + art_h;
     let desc_h = h - TOP_BAR - art_h - BOTTOM_BAR;
-    draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
-    let desc_str = fit_text(&strip_html(description), w - 10.0, 9.0);
-    draw_text(&desc_str, x + 5.0, desc_y + 12.0, 9.0, BLACK);
+    draw_rectangle(x + 2.0 * scale, desc_y, (w - 4.0 * scale).max(0.0), desc_h, COL_DESC_BG);
+    if scale > 0.6 && show_text {
+        let desc_font = (14.0 * scale).round();
+        draw_wrapped_text(
+            &strip_html(description),
+            x + 5.0 * scale,
+            desc_y + desc_font,
+            (w - 10.0 * scale).max(0.0),
+            desc_font,
+            BLACK,
+        );
+    }
 
-    draw_rectangle(x + 2.0, y + h - BOTTOM_BAR, w - 4.0, BOTTOM_BAR, COL_DESC_BG);
+    draw_rectangle(x + 2.0 * scale, y + h - BOTTOM_BAR, (w - 4.0 * scale).max(0.0), BOTTOM_BAR, COL_DESC_BG);
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -430,13 +460,13 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     }
 
     // cost gem
-    let gem = 22.0;
+    let gem = 30.0;
     draw_rectangle(x + 2.0, y + 2.0, gem, gem, COL_MANA);
-    draw_text_centered(&card.base_cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 16.0, WHITE);
+    draw_text_centered(&card.base_cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 22.0, WHITE);
 
     // name
-    let name_fit = fit_text(&card.name, w - gem - 10.0, 13.0);
-    draw_text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 13.0, BLACK);
+    let name_fit = fit_text(&card.name, w - gem - 10.0, 18.0);
+    draw_text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
 
     // art
     let art_y = y + gem + 4.0;
@@ -452,13 +482,13 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let desc_h = h - (gem + 4.0) - art_h - 28.0;
     draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
     let desc = card.description.as_deref().unwrap_or("");
-    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 10.0, w - 12.0, 11.0, BLACK);
+    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 18.0, w - 12.0, 18.0, BLACK);
 
     // bottom bar with current stats
     let bot_y = y + h - 26.0;
     draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
-    draw_stat_badge(minion.attack, x + 8.0, bot_y + 18.0, COL_ATK);
-    draw_stat_badge(minion.defence, x + w - 22.0, bot_y + 18.0, COL_DEF);
+    draw_stat_badge(minion.attack, x + 8.0, bot_y + 18.0, COL_ATK, 1.0);
+    draw_stat_badge(minion.defence, x + w - 22.0, bot_y + 18.0, COL_DEF, 1.0);
 
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
 }
@@ -478,7 +508,7 @@ fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cac
     }
 }
 
-fn draw_hand(hand: &[CardEntity], w: f32, y: f32, is_self: bool, cache: &TextureCache) {
+fn draw_hand(hand: &[CardEntity], w: f32, y: f32, is_self: bool, cache: &TextureCache, hand_flips: &[(u32, f32)]) {
     let count = hand.len() as f32;
     let total = count * (CARD_W + CARD_GAP) - CARD_GAP;
     let start_x = w / 2.0 - total / 2.0;
@@ -486,7 +516,11 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, is_self: bool, cache: &Texture
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (CARD_W + CARD_GAP);
         if is_self {
-            draw_card(card, x, y, CARD_W, CARD_H, cache);
+            let flip_cos = hand_flips.iter()
+                .find(|(id, _)| *id == card.entity_id())
+                .map(|(_, v)| *v)
+                .unwrap_or(1.0);
+            draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
         } else {
             draw_card_back(x, y, CARD_W, CARD_H);
         }
@@ -554,12 +588,17 @@ fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
     draw_text_centered(&count.to_string(), x + w / 2.0, y + h / 2.0 + 6.0, 20.0, WHITE);
 }
 
-fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color) {
-    draw_rectangle(x - 2.0, y - 13.0, 20.0, 18.0, color);
-    draw_rectangle_lines(x - 2.0, y - 13.0, 20.0, 18.0, 1.0, BLACK);
-    let s = val.to_string();
-    let d = measure_text(&s, None, 13, 1.0);
-    draw_text(&s, x + 8.0 - d.width / 2.0, y, 13.0, WHITE);
+fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color, scale: f32) {
+    let bw = 20.0 * scale;
+    let bh = 18.0 * scale;
+    draw_rectangle(x - 2.0 * scale, y - 13.0 * scale, bw, bh, color);
+    draw_rectangle_lines(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 1.0, BLACK);
+    if scale > 0.6 {
+        let font = (13.0 * scale).round();
+        let s = val.to_string();
+        let d = measure_text(&s, None, font as u16, 1.0);
+        draw_text(&s, x + 8.0 * scale - d.width / 2.0, y, font, WHITE);
+    }
 }
 
 fn draw_turn_indicator(state: &GameStateClient, w: f32, mid: f32) {
