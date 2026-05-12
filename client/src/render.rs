@@ -36,7 +36,7 @@ pub struct DragRender<'a> {
     pub my: f32,
     pub targetable_ids: HashSet<u32>,
     pub trade_drop_active: bool,
-    pub hovered_minion_id: Option<u32>,
+    pub hovered_id: Option<u32>,
     pub anim_offsets: Vec<(u32, Vec2)>, // (entity_id, pixel offset) for bump anims
     pub hand_flips: Vec<(u32, f32)>,    // (entity_id, cos(rotation_y)) for draw-from-deck flip
 }
@@ -61,8 +61,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
         draw_drop_targets(state, drag, w, h);
     }
 
-    if let Some(hid) = drag.hovered_minion_id {
-        draw_minion_preview(hid, state, cache, w, h);
+    if let Some(hid) = drag.hovered_id {
+        draw_entity_preview(hid, state, cache, w, h);
     }
 
     let targeting_active = drag.card.is_some()
@@ -417,7 +417,24 @@ fn draw_attack_arrow(mx: f32, my: f32, minion_id: u32, state: &GameStateClient, 
     draw_triangle(tip, base + perp * (size * 0.5), base - perp * (size * 0.5), col_end);
 }
 
-fn draw_minion_preview(entity_id: u32, state: &GameStateClient, cache: &TextureCache, w: f32, h: f32) {
+fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureCache, w: f32, h: f32) {
+    let pw = PREVIEW_W;
+    let ph = PREVIEW_H;
+
+    // Hand cards: preview floats above the hovered card so it doesn't overlap the hand row.
+    let hand_rects = layout::hand_rects(state.self_board.hand.len(), w, h);
+    if let Some((card, rect)) = state.self_board.hand.iter().zip(hand_rects.iter())
+        .find(|(c, _)| c.entity_id() == entity_id)
+        .map(|(c, r)| (c, *r))
+    {
+        let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(0.0, w - pw);
+        let py = (rect.y - ph - 10.0).max(0.0);
+        draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
+        draw_card_entity_preview(card, px, py, pw, ph, cache);
+        return;
+    }
+
+    // Battlefield minions: preview floats to the side of the minion.
     let found = {
         let rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
         state.self_board.battlefield.iter().zip(rects.iter())
@@ -432,8 +449,6 @@ fn draw_minion_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
 
     let Some((minion, rect)) = found else { return; };
 
-    let pw = PREVIEW_W;
-    let ph = PREVIEW_H;
     let px = if rect.x + rect.w + pw + 10.0 <= w {
         rect.x + rect.w + 10.0
     } else {
@@ -443,6 +458,57 @@ fn draw_minion_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
 
     draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
     draw_card_preview(minion, px, py, pw, ph, cache);
+}
+
+fn draw_card_entity_preview(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
+    match card {
+        CardEntity::Minion(m) => draw_card_preview(m, x, y, w, h, cache),
+        CardEntity::Incantation(i) => draw_incantation_preview(i, x, y, w, h, cache),
+    }
+}
+
+fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
+    let card = &inc.card;
+    let color = &card.color;
+
+    if let Some(bg) = cache.bg(color) {
+        draw_texture_cover(bg, x, y, w, h, WHITE);
+    } else {
+        let bg_col = match color {
+            shared::types::Color::White => Color::new(0.75, 0.70, 0.55, 1.0),
+            shared::types::Color::Black => Color::new(0.18, 0.14, 0.22, 1.0),
+        };
+        draw_rectangle(x, y, w, h, bg_col);
+    }
+
+    let gem = 30.0;
+    draw_rectangle(x + 2.0, y + 2.0, gem, gem, COL_MANA);
+    draw_text_centered(&inc.cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 22.0, WHITE);
+
+    let name_fit = fit_text(&card.name, w - gem - 10.0, 18.0);
+    draw_text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
+
+    let art_y = y + gem + 4.0;
+    let art_h = h * ART_FRAC;
+    if let Some(art) = cache.art(&card.image_url) {
+        draw_texture_cover(art, x + 2.0, art_y, w - 4.0, art_h, WHITE);
+    } else {
+        draw_rectangle(x + 2.0, art_y, w - 4.0, art_h, COL_CARD_BG);
+    }
+
+    let desc_y = art_y + art_h;
+    let desc_h = h - (gem + 4.0) - art_h - 28.0;
+    draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
+    let desc = card.description.as_deref().unwrap_or("");
+    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 18.0, w - 12.0, 18.0, BLACK);
+
+    let bot_y = y + h - 26.0;
+    draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
+    let sl = "incantation";
+    let sd = measure_text(sl, None, 14, 1.0);
+    draw_text(sl, x + w / 2.0 - sd.width / 2.0, bot_y + 17.0, 14.0, DARKGRAY);
+
+    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
 }
 
 fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {

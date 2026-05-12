@@ -181,7 +181,7 @@ async fn main() {
 
                 // Update hover
                 if drag.is_none() {
-                    let new_hover = find_hovered_minion(Vec2::new(mx, my), state, w, h);
+                    let new_hover = find_hovered_entity(Vec2::new(mx, my), state, w, h);
                     if new_hover == hover_id {
                         hover_timer += dt;
                     } else {
@@ -403,7 +403,11 @@ fn compute_targetable_ids(drag: &Option<DragState>, state: &GameStateClient) -> 
     ids
 }
 
-fn find_hovered_minion(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> Option<u32> {
+fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> Option<u32> {
+    let hand_rects = layout::hand_rects(state.self_board.hand.len(), w, h);
+    for (c, r) in state.self_board.hand.iter().zip(hand_rects.iter()) {
+        if r.contains(mouse) { return Some(c.entity_id()); }
+    }
     let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
     for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
         if r.contains(mouse) { return Some(m.entity_id); }
@@ -423,7 +427,7 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             .unwrap_or(false),
         _ => false,
     };
-    let hovered_minion_id = if hover_timer >= 0.25 { hover_id } else { None };
+    let hovered_id = if hover_timer >= 0.25 { hover_id } else { None };
     match drag {
         Some(DragState::Card { index }) => DragRender {
             card: state.self_board.hand.get(*index),
@@ -431,7 +435,7 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             mx, my,
             targetable_ids,
             trade_drop_active,
-            hovered_minion_id,
+            hovered_id,
             anim_offsets,
             hand_flips,
         },
@@ -441,11 +445,11 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             mx, my,
             targetable_ids,
             trade_drop_active,
-            hovered_minion_id,
+            hovered_id,
             anim_offsets,
             hand_flips,
         },
-        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_minion_id, anim_offsets, hand_flips },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_id, anim_offsets, hand_flips },
     }
 }
 
