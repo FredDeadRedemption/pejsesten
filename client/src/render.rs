@@ -335,7 +335,7 @@ fn draw_card_layers(
     let desc_h = h - TOP_BAR - art_h - BOTTOM_BAR;
     draw_rectangle(x + 2.0 * scale, desc_y, (w - 4.0 * scale).max(0.0), desc_h, COL_DESC_BG);
     if scale > 0.6 && show_text {
-        let desc_font = (14.0 * scale).round();
+        let desc_font = (17.0 * scale).round();
         draw_wrapped_text(
             &strip_html(description),
             x + 5.0 * scale,
@@ -500,7 +500,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     let desc_h = h - (gem + 4.0) - art_h - 28.0;
     draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
     let desc = card.description.as_deref().unwrap_or("");
-    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 18.0, w - 12.0, 18.0, BLACK);
+    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 21.0, w - 12.0, 21.0, BLACK);
 
     let bot_y = y + h - 26.0;
     draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
@@ -548,7 +548,7 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let desc_h = h - (gem + 4.0) - art_h - 28.0;
     draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
     let desc = card.description.as_deref().unwrap_or("");
-    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 18.0, w - 12.0, 18.0, BLACK);
+    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 21.0, w - 12.0, 21.0, BLACK);
 
     // bottom bar with current stats
     let bot_y = y + h - 26.0;
@@ -1004,31 +1004,42 @@ fn draw_crosshair(mx: f32, my: f32) {
 
 fn draw_wrapped_text(text: &str, x: f32, mut y: f32, max_w: f32, size: f32, color: Color) {
     let line_h = size + 3.0;
-    let mut line = String::new();
-    for word in text.split_whitespace() {
-        let candidate = if line.is_empty() { word.to_string() } else { format!("{} {}", line, word) };
-        if measure_text(&candidate, None, size as u16, 1.0).width > max_w && !line.is_empty() {
-            draw_text(&line, x, y, size, color);
-            y += line_h;
-            line = word.to_string();
-        } else {
-            line = candidate;
+    for paragraph in text.split('\n') {
+        let mut line = String::new();
+        for word in paragraph.split_whitespace() {
+            let candidate = if line.is_empty() { word.to_string() } else { format!("{} {}", line, word) };
+            if measure_text(&candidate, None, size as u16, 1.0).width > max_w && !line.is_empty() {
+                draw_text(&line, x, y, size, color);
+                y += line_h;
+                line = word.to_string();
+            } else {
+                line = candidate;
+            }
         }
-    }
-    if !line.is_empty() {
         draw_text(&line, x, y, size, color);
+        y += line_h;
     }
 }
 
 fn strip_html(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
+    let mut tag = String::new();
     let mut in_tag = false;
     for c in s.chars() {
         match c {
-            '<' => in_tag = true,
-            '>' => in_tag = false,
-            _ if !in_tag => out.push(c),
-            _ => {}
+            '<' => {
+                in_tag = true;
+                tag.clear();
+            }
+            '>' if in_tag => {
+                in_tag = false;
+                let t = tag.trim_start_matches('/').trim().to_ascii_lowercase();
+                if t == "br" || t == "br/" || t.starts_with("br ") {
+                    out.push('\n');
+                }
+            }
+            _ if in_tag => tag.push(c),
+            _ => out.push(c),
         }
     }
     out.replace("&nbsp;", " ")
