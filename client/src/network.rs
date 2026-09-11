@@ -4,7 +4,7 @@ use shared::types::{AttackData, GameStateClient, PlayerMetaData};
 
 pub enum ServerEvent {
     GameState(GameStateClient),
-    Redirect(String),
+    Redirect,
 }
 
 enum SioState {
@@ -184,9 +184,7 @@ impl NetworkClient {
                                 serde_json::from_value(data.clone()).ok()?;
                             Some(ServerEvent::GameState(state))
                         }
-                        "redirect" => {
-                            Some(ServerEvent::Redirect(data.as_str()?.to_string()))
-                        }
+                        "redirect" => Some(ServerEvent::Redirect),
                         _ => None,
                     }
                 }
