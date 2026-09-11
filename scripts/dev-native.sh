@@ -1,6 +1,5 @@
 #!/bin/sh
 # Native dev loop: server + auto-restarting macroquad client.
-# Requires cargo-watch (cargo install cargo-watch).
 set -e
 cd "$(dirname "$0")/.."
 
