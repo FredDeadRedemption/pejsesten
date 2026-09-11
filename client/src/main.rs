@@ -9,6 +9,7 @@ mod layout;
 mod network;
 mod render;
 mod textures;
+mod ui;
 
 use card3d::Card3D;
 use deckbuilder::{card_id, DeckBuilderState, Panel};
@@ -90,9 +91,10 @@ async fn main() {
     let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
 
     loop {
-        let (mx, my) = mouse_position();
-        let w = screen_width();
-        let h = screen_height();
+        let mouse = ui::mouse_ui();
+        let (mx, my) = (mouse.x, mouse.y);
+        let canvas = ui::size();
+        let (w, h) = (canvas.x, canvas.y);
 
         // --- Network ---
         while let Some(event) = net.poll() {
@@ -110,7 +112,7 @@ async fn main() {
                         GamePhase::Playing => Screen::Playing(state),
                     };
                 }
-                ServerEvent::Redirect(_) => {}
+                ServerEvent::Redirect => {}
             }
         }
 
@@ -143,6 +145,7 @@ async fn main() {
 
         // --- Render ---
         clear_background(Color::from_rgba(12, 12, 20, 255));
+        ui::set_ui_camera();
 
         // Card flip test: tick + input handled here (needs &mut access)
         if let Screen::CardFlipTest(card) = &mut screen {
@@ -163,7 +166,7 @@ async fn main() {
             Screen::CardFlipTest(card) => {
                 show_mouse(true);
                 card.draw();
-                draw_text("Card Flip Test — Space/Click to flip, Esc to go back", 20.0, 30.0, 22.0, WHITE);
+                ui::text("Card Flip Test — Space/Click to flip, Esc to go back", 20.0, 30.0, 22.0, WHITE);
             }
             Screen::Playing(state) => {
                 // Tick anims

@@ -2,10 +2,9 @@ use macroquad::prelude::*;
 use std::collections::HashSet;
 
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState, Panel};
-use crate::layout::{
-    self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W, MINION_H, MINION_W,
-};
+use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
 use crate::textures::{draw_texture_cover, TextureCache};
+use crate::ui;
 use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity};
 
 const ART_FRAC: f32 = 0.38;
@@ -42,8 +41,8 @@ pub struct DragRender<'a> {
 }
 
 pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
-    let w = screen_width();
-    let h = screen_height();
+    let w = ui::size().x;
+    let h = ui::size().y;
     let mid = h / 2.0;
 
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
@@ -88,12 +87,12 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
 }
 
 pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &TextureCache) {
-    let w = screen_width();
-    let h = screen_height();
+    let w = ui::size().x;
+    let h = ui::size().y;
 
     let title = "Choose cards to replace";
-    let dims = measure_text(title, None, 28, 1.0);
-    draw_text(title, w / 2.0 - dims.width / 2.0, 60.0, 28.0, WHITE);
+    let dims = ui::measure(title, 28.0);
+    ui::text(title, w / 2.0 - dims.width / 2.0, 60.0, 28.0, WHITE);
 
     let hand = &state.self_board.hand;
     let full_w = 130.0;
@@ -111,35 +110,35 @@ pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &Textur
         if is_selected {
             draw_rectangle(x, card_y, full_w, full_h, Color::new(0.6, 0.0, 0.0, 0.45));
             draw_rectangle_lines(x, card_y, full_w, full_h, 3.0, RED);
-            let xd = measure_text("X", None, 36, 1.0);
-            draw_text("X", x + full_w / 2.0 - xd.width / 2.0, card_y + full_h / 2.0 + 12.0, 36.0, RED);
+            let xd = ui::measure("X", 36.0);
+            ui::text("X", x + full_w / 2.0 - xd.width / 2.0, card_y + full_h / 2.0 + 12.0, 36.0, RED);
         }
 
         let hint = format!("[{}]", i + 1);
-        let hd = measure_text(&hint, None, 14, 1.0);
-        draw_text(&hint, x + full_w / 2.0 - hd.width / 2.0, card_y + full_h + 16.0, 14.0, GRAY);
+        let hd = ui::measure(&hint, 14.0);
+        ui::text(&hint, x + full_w / 2.0 - hd.width / 2.0, card_y + full_h + 16.0, 14.0, GRAY);
     }
 
     if !state.mulligan_submitted {
         draw_button("Confirm  [Enter]", w / 2.0 - 90.0, h - 80.0, 180.0, 44.0);
     } else {
         let msg = "Waiting for opponent...";
-        let md = measure_text(msg, None, 18, 1.0);
-        draw_text(msg, w / 2.0 - md.width / 2.0, h - 60.0, 18.0, GRAY);
+        let md = ui::measure(msg, 18.0);
+        ui::text(msg, w / 2.0 - md.width / 2.0, h - 60.0, 18.0, GRAY);
     }
 }
 
 pub fn draw_lobby(username: &str) {
-    let w = screen_width();
-    let h = screen_height();
+    let w = ui::size().x;
+    let h = ui::size().y;
 
     let title = "pejsesten";
-    let td = measure_text(title, None, 52, 1.0);
-    draw_text(title, w / 2.0 - td.width / 2.0, h / 3.0, 52.0, WHITE);
+    let td = ui::measure(title, 52.0);
+    ui::text(title, w / 2.0 - td.width / 2.0, h / 3.0, 52.0, WHITE);
 
     let user_label = format!("Playing as: {}", username);
-    let ud = measure_text(&user_label, None, 18, 1.0);
-    draw_text(&user_label, w / 2.0 - ud.width / 2.0, h / 3.0 + 44.0, 18.0, LIGHTGRAY);
+    let ud = ui::measure(&user_label, 18.0);
+    ui::text(&user_label, w / 2.0 - ud.width / 2.0, h / 3.0 + 44.0, 18.0, LIGHTGRAY);
 
     draw_button("Play vs Human  [H]", w / 2.0 - 115.0, h / 2.0, 230.0, 46.0);
     draw_button("Play vs Bot    [B]", w / 2.0 - 115.0, h / 2.0 + 62.0, 230.0, 46.0);
@@ -149,11 +148,11 @@ pub fn draw_lobby(username: &str) {
 }
 
 pub fn draw_connecting() {
-    let w = screen_width();
-    let h = screen_height();
+    let w = ui::size().x;
+    let h = ui::size().y;
     let text = "Connecting...";
-    let dims = measure_text(text, None, 28, 1.0);
-    draw_text(text, w / 2.0 - dims.width / 2.0, h / 2.0, 28.0, GRAY);
+    let dims = ui::measure(text, 28.0);
+    ui::text(text, w / 2.0 - dims.width / 2.0, h / 2.0, 28.0, GRAY);
 }
 
 // ── Drop target highlights ─────────────────────────────────────────────────────
@@ -256,9 +255,9 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         draw_stat_badge(m.defence, sx + scaled_w - 18.0 * scale, y + h - 14.0, COL_DEF, scale);
     } else if scale > 0.6 {
         let sl = "incantation";
-        let font = (10.0 * scale) as u16;
-        let sd = measure_text(sl, None, font, 1.0);
-        draw_text(sl, sx + scaled_w / 2.0 - sd.width / 2.0, y + h - 6.0, font as f32, DARKGRAY);
+        let font = 10.0 * scale;
+        let sd = ui::measure(sl, font);
+        ui::text(sl, sx + scaled_w / 2.0 - sd.width / 2.0, y + h - 6.0, font, DARKGRAY);
     }
 }
 
@@ -319,7 +318,7 @@ fn draw_card_layers(
         if show_text {
             let name_font = (11.0 * scale).round();
             let name_str = fit_text(name, (w - gem_size - 8.0 * scale).max(0.0), name_font);
-            draw_text(&name_str, x + gem_size + 6.0 * scale, y + 2.0 + gem_size * 0.72, name_font, BLACK);
+            ui::text(&name_str, x + gem_size + 6.0 * scale, y + 2.0 + gem_size * 0.72, name_font, BLACK);
         }
     }
 
@@ -486,7 +485,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     draw_text_centered(&inc.cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 22.0, WHITE);
 
     let name_fit = fit_text(&card.name, w - gem - 10.0, 18.0);
-    draw_text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
+    ui::text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
 
     let art_y = y + gem + 4.0;
     let art_h = h * ART_FRAC;
@@ -505,8 +504,8 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     let bot_y = y + h - 26.0;
     draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
     let sl = "incantation";
-    let sd = measure_text(sl, None, 14, 1.0);
-    draw_text(sl, x + w / 2.0 - sd.width / 2.0, bot_y + 17.0, 14.0, DARKGRAY);
+    let sd = ui::measure(sl, 14.0);
+    ui::text(sl, x + w / 2.0 - sd.width / 2.0, bot_y + 17.0, 14.0, DARKGRAY);
 
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
 }
@@ -532,7 +531,7 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
 
     // name
     let name_fit = fit_text(&card.name, w - gem - 10.0, 18.0);
-    draw_text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
+    ui::text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
 
     // art
     let art_y = y + gem + 4.0;
@@ -608,9 +607,9 @@ fn draw_hero(hero: &shared::types::Hero, x: f32, y: f32, is_self: bool) {
     draw_rectangle(x, y, HERO_W, HERO_H, color);
     draw_rectangle_lines(x, y, HERO_W, HERO_H, 2.0, WHITE);
     let hp = hero.defence.to_string();
-    let dims = measure_text(&hp, None, 24, 1.0);
-    draw_text(&hp, x + HERO_W / 2.0 - dims.width / 2.0, y + HERO_H / 2.0 + 8.0, 24.0, WHITE);
-    draw_text("HP", x + 4.0, y + HERO_H - 5.0, 11.0, LIGHTGRAY);
+    let dims = ui::measure(&hp, 24.0);
+    ui::text(&hp, x + HERO_W / 2.0 - dims.width / 2.0, y + HERO_H / 2.0 + 8.0, 24.0, WHITE);
+    ui::text("HP", x + 4.0, y + HERO_H - 5.0, 11.0, LIGHTGRAY);
 }
 
 fn draw_embers(current: i32, x: f32, y: f32) {
@@ -633,7 +632,7 @@ fn draw_mana(current: i32, max: i32, x: f32, y: f32) {
         draw_circle(cx, y + r, r, color);
         draw_circle_lines(cx, y + r, r, 1.0, Color::new(1.0, 1.0, 1.0, 0.5));
     }
-    draw_text(&format!("{}/{}", current, max), x, y + r * 2.0 + 14.0, 13.0, LIGHTGRAY);
+    ui::text(&format!("{}/{}", current, max), x, y + r * 2.0 + 14.0, 13.0, LIGHTGRAY);
 }
 
 fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
@@ -662,19 +661,19 @@ fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color, scale: f32) {
     if scale > 0.6 {
         let font = (13.0 * scale).round();
         let s = val.to_string();
-        let d = measure_text(&s, None, font as u16, 1.0);
-        draw_text(&s, x + 8.0 * scale - d.width / 2.0, y, font, WHITE);
+        let d = ui::measure(&s, font);
+        ui::text(&s, x + 8.0 * scale - d.width / 2.0, y, font, WHITE);
     }
 }
 
 fn draw_turn_indicator(state: &GameStateClient, w: f32, mid: f32) {
     let label = if state.your_turn { "YOUR TURN" } else { "OPPONENT'S TURN" };
     let color = if state.your_turn { GREEN } else { GRAY };
-    let dims = measure_text(label, None, 18, 1.0);
-    draw_text(label, w / 2.0 - dims.width / 2.0, mid - 4.0, 18.0, color);
+    let dims = ui::measure(label, 18.0);
+    ui::text(label, w / 2.0 - dims.width / 2.0, mid - 4.0, 18.0, color);
     let turn = format!("Turn {}", state.turn_count);
-    let td = measure_text(&turn, None, 13, 1.0);
-    draw_text(&turn, w / 2.0 - td.width / 2.0, mid + 12.0, 13.0, GRAY);
+    let td = ui::measure(&turn, 13.0);
+    ui::text(&turn, w / 2.0 - td.width / 2.0, mid + 12.0, 13.0, GRAY);
 }
 
 fn draw_end_turn_button(w: f32, mid: f32) {
@@ -685,22 +684,22 @@ fn draw_end_turn_button(w: f32, mid: f32) {
     draw_rectangle(bx, by, bw, bh, Color::new(0.1, 0.55, 0.18, 1.0));
     draw_rectangle_lines(bx, by, bw, bh, 1.5, GREEN);
     let label = "END TURN [E]";
-    let d = measure_text(label, None, 14, 1.0);
-    draw_text(label, bx + bw / 2.0 - d.width / 2.0, by + bh / 2.0 + 5.0, 14.0, WHITE);
+    let d = ui::measure(label, 14.0);
+    ui::text(label, bx + bw / 2.0 - d.width / 2.0, by + bh / 2.0 + 5.0, 14.0, WHITE);
 }
 
 pub fn draw_button(label: &str, x: f32, y: f32, w: f32, h: f32) {
     draw_rectangle(x, y, w, h, Color::new(0.18, 0.28, 0.48, 1.0));
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.38, 0.56, 0.82, 1.0));
-    let d = measure_text(label, None, 17, 1.0);
-    draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 6.0, 17.0, WHITE);
+    let d = ui::measure(label, 17.0);
+    ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 6.0, 17.0, WHITE);
 }
 
 pub fn draw_button_danger(label: &str, x: f32, y: f32, w: f32, h: f32) {
     draw_rectangle(x, y, w, h, Color::new(0.35, 0.08, 0.08, 1.0));
     draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.70, 0.20, 0.20, 1.0));
-    let d = measure_text(label, None, 15, 1.0);
-    draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 15.0, Color::new(0.9, 0.6, 0.6, 1.0));
+    let d = ui::measure(label, 15.0);
+    ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 15.0, Color::new(0.9, 0.6, 0.6, 1.0));
 }
 
 // ── Deck Builder ──────────────────────────────────────────────────────────────
@@ -714,8 +713,8 @@ pub const DB_FILTER_H: f32 = 38.0;
 pub const DB_ROW_H: f32 = 38.0;
 
 pub fn draw_deck_builder(state: &DeckBuilderState, cache: &TextureCache) {
-    let w = screen_width();
-    let h = screen_height();
+    let w = ui::size().x;
+    let h = ui::size().y;
 
     // Background panels
     draw_rectangle(0.0, 0.0, DB_CATALOG_W, h, Color::new(0.10, 0.10, 0.16, 1.0));
@@ -726,11 +725,11 @@ pub fn draw_deck_builder(state: &DeckBuilderState, cache: &TextureCache) {
     draw_right_panel(state, cache, w, h);
 
     if let Some((msg, _)) = &state.clipboard_msg {
-        let d = measure_text(msg, None, 16, 1.0);
+        let d = ui::measure(msg, 16.0);
         let bx = w / 2.0 - d.width / 2.0 - 10.0;
         let by = h - 50.0;
         draw_rectangle(bx, by, d.width + 20.0, 30.0, Color::new(0.1, 0.55, 0.18, 0.9));
-        draw_text(msg, bx + 10.0, by + 21.0, 16.0, WHITE);
+        ui::text(msg, bx + 10.0, by + 21.0, 16.0, WHITE);
     }
 }
 
@@ -739,7 +738,7 @@ fn draw_filter_bar(state: &DeckBuilderState, h: f32) {
     draw_rectangle(0.0, bar_y, DB_CATALOG_W, DB_FILTER_H + 4.0, Color::new(0.08, 0.08, 0.14, 1.0));
 
     // Search label
-    draw_text("Search:", 8.0, bar_y + 25.0, 14.0, LIGHTGRAY);
+    ui::text("Search:", 8.0, bar_y + 25.0, 14.0, LIGHTGRAY);
 
     // Search box (drawn but editing is handled externally; show current text)
     let sx = 68.0;
@@ -747,7 +746,7 @@ fn draw_filter_bar(state: &DeckBuilderState, h: f32) {
     draw_rectangle_lines(sx, bar_y + 5.0, 160.0, 28.0, 1.0, Color::new(0.4, 0.4, 0.6, 1.0));
     let search_disp = if state.search.is_empty() { "type to search" } else { &state.search };
     let sc = if state.search.is_empty() { DARKGRAY } else { WHITE };
-    draw_text(search_disp, sx + 6.0, bar_y + 23.0, 13.0, sc);
+    ui::text(search_disp, sx + 6.0, bar_y + 23.0, 13.0, sc);
 
     // Type toggle
     let tx = 240.0;
@@ -773,20 +772,20 @@ fn draw_toggle_btn(label: &str, x: f32, y: f32, w: f32, h: f32, active: bool) {
     let bg = if active { Color::new(0.25, 0.45, 0.72, 1.0) } else { Color::new(0.18, 0.18, 0.28, 1.0) };
     draw_rectangle(x, y, w, h, bg);
     draw_rectangle_lines(x, y, w, h, 1.0, Color::new(0.4, 0.5, 0.7, 1.0));
-    let d = measure_text(label, None, 13, 1.0);
-    draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 13.0, WHITE);
+    let d = ui::measure(label, 13.0);
+    ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 13.0, WHITE);
 }
 
 fn draw_toggle_btn_colored(label: &str, x: f32, y: f32, w: f32, h: f32, active: bool, accent: Color) {
     let bg = if active { accent } else { Color::new(0.18, 0.18, 0.28, 1.0) };
     draw_rectangle(x, y, w, h, bg);
     draw_rectangle_lines(x, y, w, h, 1.0, accent);
-    let d = measure_text(label, None, 13, 1.0);
-    draw_text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 13.0, WHITE);
+    let d = ui::measure(label, 13.0);
+    ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 13.0, WHITE);
 }
 
 fn draw_catalog(state: &DeckBuilderState, cache: &TextureCache) {
-    let h = screen_height();
+    let h = ui::size().y;
     let area_h = h - DB_FILTER_H - 8.0;
     let cols = DB_COLS;
     let row_h = DB_CARD_H + DB_CARD_GAP;
@@ -840,7 +839,7 @@ fn draw_catalog_card(card: &Card, x: f32, y: f32, cache: &TextureCache) {
 
     // name
     let name_fit = fit_text(name, DB_CARD_W - 22.0, 9.0);
-    draw_text(&name_fit, x + 20.0, y + 13.0, 9.0, BLACK);
+    ui::text(&name_fit, x + 20.0, y + 13.0, 9.0, BLACK);
 
     // bottom bar
     let bot_y = y + DB_CARD_H - 16.0;
@@ -852,8 +851,8 @@ fn draw_catalog_card(card: &Card, x: f32, y: f32, cache: &TextureCache) {
         }
     } else {
         let sl = "spell";
-        let sd = measure_text(sl, None, 8, 1.0);
-        draw_text(sl, x + DB_CARD_W / 2.0 - sd.width / 2.0, bot_y + 11.0, 8.0, DARKGRAY);
+        let sd = ui::measure(sl, 8.0);
+        ui::text(sl, x + DB_CARD_W / 2.0 - sd.width / 2.0, bot_y + 11.0, 8.0, DARKGRAY);
     }
 
     draw_rectangle_lines(x, y, DB_CARD_W, DB_CARD_H, 1.0, Color::new(0.5, 0.5, 0.5, 0.5));
@@ -871,8 +870,8 @@ fn draw_right_panel(state: &DeckBuilderState, cache: &TextureCache, w: f32, h: f
 
 fn draw_deck_list(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw: f32, h: f32) {
     let title = "Your Decks";
-    let td = measure_text(title, None, 18, 1.0);
-    draw_text(title, px + pw / 2.0 - td.width / 2.0, 28.0, 18.0, WHITE);
+    let td = ui::measure(title, 18.0);
+    ui::text(title, px + pw / 2.0 - td.width / 2.0, 28.0, 18.0, WHITE);
 
     let scroll = state.deck_scroll;
     let list_y_start = 40.0;
@@ -904,10 +903,10 @@ fn draw_deck_list(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw: f
         // dark gradient overlay
         draw_rectangle(px, ry, pw * 0.6, DB_ROW_H, Color::new(0.0, 0.0, 0.0, 0.65));
         let name_fit = fit_text(&deck.name, pw - 20.0, 14.0);
-        draw_text(&name_fit, px + 8.0, ry + DB_ROW_H / 2.0 + 6.0, 14.0, WHITE);
+        ui::text(&name_fit, px + 8.0, ry + DB_ROW_H / 2.0 + 6.0, 14.0, WHITE);
         let count_s = format!("{}", deck.cards.len());
-        let cd = measure_text(&count_s, None, 13, 1.0);
-        draw_text(&count_s, px + pw - cd.width - 8.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, LIGHTGRAY);
+        let cd = ui::measure(&count_s, 13.0);
+        ui::text(&count_s, px + pw - cd.width - 8.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, LIGHTGRAY);
         draw_rectangle_lines(px, ry, pw, DB_ROW_H, 1.0, Color::new(0.3, 0.3, 0.4, 0.7));
     }
 
@@ -925,15 +924,15 @@ fn draw_deck_editor(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw:
     draw_rectangle_lines(px, 0.0, pw, 42.0, 1.0, Color::new(0.35, 0.35, 0.55, 1.0));
 
     let disp_name = if name.is_empty() { "Unnamed Deck" } else { name };
-    let nd = measure_text(disp_name, None, 14, 1.0);
-    draw_text(disp_name, px + pw / 2.0 - nd.width / 2.0, 26.0, 14.0, WHITE);
+    let nd = ui::measure(disp_name, 14.0);
+    ui::text(disp_name, px + pw / 2.0 - nd.width / 2.0, 26.0, 14.0, WHITE);
 
     let count_label = format!("{} / 50", state.editing_cards.len());
-    let cd = measure_text(&count_label, None, 12, 1.0);
-    draw_text(&count_label, px + pw - cd.width - 6.0, 16.0, 12.0, LIGHTGRAY);
+    let cd = ui::measure(&count_label, 12.0);
+    ui::text(&count_label, px + pw - cd.width - 6.0, 16.0, 12.0, LIGHTGRAY);
 
     // Hint
-    draw_text("Click card to add · Click row to remove", px + 4.0, 38.0, 9.0, DARKGRAY);
+    ui::text("Click card to add · Click row to remove", px + 4.0, 38.0, 9.0, DARKGRAY);
 
     let scroll = state.deck_scroll;
     let list_y_start = 44.0;
@@ -964,13 +963,13 @@ fn draw_deck_editor(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw:
         if let Some(card) = state.card_by_id(card_id_val) {
             let (name_s, _, _) = card_meta(card);
             let nf = fit_text(name_s, pw - 50.0, 13.0);
-            draw_text(&nf, px + 6.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, WHITE);
+            ui::text(&nf, px + 6.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, WHITE);
         }
 
         let cnt = state.count_of(card_id_val);
         let cnt_s = format!("x{}", cnt);
-        let csd = measure_text(&cnt_s, None, 13, 1.0);
-        draw_text(&cnt_s, px + pw - csd.width - 6.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, LIGHTGRAY);
+        let csd = ui::measure(&cnt_s, 13.0);
+        ui::text(&cnt_s, px + pw - csd.width - 6.0, ry + DB_ROW_H / 2.0 + 5.0, 13.0, LIGHTGRAY);
 
         draw_rectangle_lines(px, ry, pw, DB_ROW_H, 1.0, Color::new(0.3, 0.3, 0.4, 0.6));
     }
@@ -984,8 +983,8 @@ fn draw_deck_editor(state: &DeckBuilderState, cache: &TextureCache, px: f32, pw:
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 fn draw_text_centered(text: &str, cx: f32, cy: f32, size: f32, color: Color) {
-    let d = measure_text(text, None, size as u16, 1.0);
-    draw_text(text, cx - d.width / 2.0, cy, size, color);
+    let d = ui::measure(text, size);
+    ui::text(text, cx - d.width / 2.0, cy, size, color);
 }
 
 fn draw_crosshair(mx: f32, my: f32) {
@@ -1008,15 +1007,15 @@ fn draw_wrapped_text(text: &str, x: f32, mut y: f32, max_w: f32, size: f32, colo
         let mut line = String::new();
         for word in paragraph.split_whitespace() {
             let candidate = if line.is_empty() { word.to_string() } else { format!("{} {}", line, word) };
-            if measure_text(&candidate, None, size as u16, 1.0).width > max_w && !line.is_empty() {
-                draw_text(&line, x, y, size, color);
+            if ui::measure(&candidate, size).width > max_w && !line.is_empty() {
+                ui::text(&line, x, y, size, color);
                 y += line_h;
                 line = word.to_string();
             } else {
                 line = candidate;
             }
         }
-        draw_text(&line, x, y, size, color);
+        ui::text(&line, x, y, size, color);
         y += line_h;
     }
 }
@@ -1046,13 +1045,13 @@ fn strip_html(s: &str) -> String {
 }
 
 fn fit_text(s: &str, max_w: f32, size: f32) -> String {
-    if measure_text(s, None, size as u16, 1.0).width <= max_w {
+    if ui::measure(s, size).width <= max_w {
         return s.to_string();
     }
     let mut result = String::new();
     for ch in s.chars() {
         let candidate = format!("{}{}…", result, ch);
-        if measure_text(&candidate, None, size as u16, 1.0).width > max_w {
+        if ui::measure(&candidate, size).width > max_w {
             return format!("{}…", result);
         }
         result.push(ch);

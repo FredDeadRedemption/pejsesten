@@ -72,6 +72,6 @@ impl Card3D {
             draw_affine_parallelogram(offset + e1, -e1, e2, Some(texture), WHITE);
         }
 
-        set_default_camera();
+        crate::ui::set_ui_camera();
     }
 }
