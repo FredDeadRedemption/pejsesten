@@ -1,5 +1,5 @@
 #!/bin/sh
-# Native dev loop: server + auto-restarting macroquad client.
+# Native dev loop: server in the background, client in the foreground.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -8,7 +8,6 @@ SERVER_PID=$!
 trap "kill $SERVER_PID 2>/dev/null" EXIT
 
 echo "server: pid $SERVER_PID, log: /tmp/pejsesten-server.log"
-echo "client: cargo-watch will rebuild and restart on save"
 echo
 
-exec cargo watch -x 'run -p client'
+cargo run -p client
