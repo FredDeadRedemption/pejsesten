@@ -13,6 +13,92 @@
 
 ---
 
+## Deckbuilding
+
+- 25 cards per deck.
+- Up to 3 copies of any card.
+
+Smaller decks with 3-ofs are the main anti-RnG lever: a specific card shows up by turn 7 about 65% of the time, against 42% for a 30 card deck with 2-ofs. The plan you built is the plan you draw, so losses land on decisions instead of the shuffle.
+
+Watch for: at 3 copies a legal deck is only 9 distinct cards, so the metagame narrows faster. Drop to 2 copies if it gets stale.
+
+---
+
+## Game Modes
+
+### Single Match
+
+- One deck, one game.
+- The default mode. Casual and ladder play.
+
+### Crucible
+
+Best of 3 with a deck roster. The competitive mode.
+
+- Bring 3 decks.
+- Both rosters are revealed at the start of the match.
+- Each player bans 1 of the opponent's 3 decks.
+- To win the match, win one game with **each** of your 2 remaining decks.
+- After a win, that deck is retired and you must switch.
+- After a loss, you may switch decks or keep playing the same one.
+- Match ends at 2 wins, so it runs 2 or 3 games.
+
+No sideboarding. The roster is the sideboard.
+
+Rewards range over one-deck mastery, and the loser always gets to adapt while the winner is forced off their working deck. 25 card decks are what make a 3 deck roster reasonable to build and to bring.
+
+---
+
+## Embers and Actions
+
+An **action** is a move any player can make on their turn, at any time, paid for with **embers**. Actions are not cards and are never drawn. The menu is identical for both players, so any difference in outcome is decision quality.
+
+### Economy
+
+- Start with 1 ember, gain 1 at the start of your turn, cap 5.
+- The cap is 5 because that is exactly enough to fire a 2 cost and a 3 cost action in the same turn. A double action turn costs three turns of restraint, and two 3 cost slots can never double up at all.
+- Ember totals are public.
+
+### Loadout
+
+- **Bury** is in every loadout for free.
+- Pick **2** more actions when you build the deck.
+- Loadouts are revealed at the start of the match, with the deck lists.
+- In Crucible each of your 3 decks has its own loadout.
+
+### The Rule: deck control only
+
+Actions may only touch decks, hands and graveyards. Never the board, never health.
+
+Board effects belong on cards. If a ping, a heal, a token or armour is always available to everyone, every cheap card that does those things becomes unprintable and the menu quietly becomes the real game. Deck manipulation is something cards do badly, so there is no overlap: mana buys board, ember buys certainty.
+
+Aggro is not left out by this. Digging for gas and burying dead late game cards is less flashy than a ping, not less useful.
+
+### Pool
+
+Your own deck:
+
+- [ ] Bury (1) — put a card from hand on the bottom of your deck *(free in every loadout)*
+- [ ] Swap (1) — exchange a card in hand for the top card of your deck
+- [ ] Foresee (1) — look at your top card, leave it or bottom it
+- [ ] Seal (2) — put a card from hand on top of your deck
+- [ ] Sift (2) — look at the top 3, bury any number of them
+- [ ] Unearth (2) — draw the bottom card of your deck
+- [ ] Reclaim (3) — put a minion from your graveyard on the bottom of your deck
+- [ ] Draw (3, once per turn) — draw a card
+
+Opponent's deck:
+
+- [ ] Exile (1) — remove a card in either graveyard from the game
+- [ ] Snuff (3) — your opponent's next draw comes from the bottom of their deck
+- [ ] Pry (3) — your opponent buries a card of their choice
+
+Bury and Unearth are the pair the set is built around: the bottom of your deck becomes a stash you stocked yourself, and the skill is remembering the order.
+
+Watch Draw. It is card advantage wearing a deck control costume. Keep it at 3 and once per turn, and if it turns up in nearly every loadout it is underpriced rather than popular.
+
+---
+
 ## Evergreen Keywords
 
 ### In
