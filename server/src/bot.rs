@@ -239,8 +239,10 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
     loop {
         let play_action: Option<(usize, Option<u32>)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
+            let board_full = bot_board.battlefield.len() >= settings::MAX_BOARD_SIZE;
             bot_board.hand.iter().enumerate()
                 .filter(|(_, c)| c.cost() <= bot_board.mana)
+                .filter(|(_, c)| !(board_full && matches!(c, CardEntity::Minion(_))))
                 .max_by_key(|(_, c)| card_play_score(c, bot_board, enemy_board))
                 .map(|(idx, card)| (idx, resolve_card_target(card, bot_board, enemy_board)))
         };

@@ -1,12 +1,9 @@
 const DEV_STARTING_HP: i32 = 100;
 const DEV_MAX_HP: i32 = 100;
-
 const DEV_STARTING_MANA: i32 = 10;
 const DEV_MAX_MANA: i32 = 10;
-
 const DEV_STARTING_EMBERS: i32 = 5;
 const DEV_MAX_EMBERS: i32 = 5;
-
 const DEV_STARTING_HAND_SIZE: usize = 7;
 const DEV_MAX_HAND_SIZE: usize = 10;
 const DEV_MAX_BOARD_SIZE: usize = 5;
@@ -16,13 +13,10 @@ const DEV_BOT_DELAY_MS: u64 = 250;
 
 const PROD_STARTING_HP: i32 = 30;
 const PROD_MAX_HP: i32 = 30;
-
 const PROD_STARTING_MANA: i32 = 1;
 const PROD_MAX_MANA: i32 = 10;
-
 const PROD_STARTING_EMBERS: i32 = 1;
 const PROD_MAX_EMBERS: i32 = 5;
-
 const PROD_STARTING_HAND_SIZE: usize = 3;
 const PROD_MAX_HAND_SIZE: usize = 10;
 const PROD_MAX_BOARD_SIZE: usize = 5;

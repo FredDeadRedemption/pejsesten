@@ -382,6 +382,16 @@ impl Game {
         board.deck.drain(0..n).collect()
     }
 
+    // cards that arrive at a full hand are burned
+    fn add_to_hand(board: &mut Board, cards: impl IntoIterator<Item = CardEntity>) {
+        for card in cards {
+            if board.hand.len() >= settings::MAX_HAND_SIZE {
+                return;
+            }
+            board.hand.push(card);
+        }
+    }
+
     // --- Effect queue ---
 
     fn enqueue_trigger(&mut self, trigger: Trigger) {
@@ -499,8 +509,8 @@ impl Game {
                 for tr in refs {
                     let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
-                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(settings::STARTING_HP),
-                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(settings::STARTING_HP),
+                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(settings::MAX_HP),
+                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(settings::MAX_HP),
                         TargetRef::MinionSource(i) => {
                             let m = &mut source.battlefield[i];
                             m.defence = (m.defence + heal).min(m.max_defence);
@@ -533,7 +543,7 @@ impl Game {
                 }
                 if lifesteal {
                     let (source, _) = self.boards_for_mut(owner);
-                    source.hero.defence = (source.hero.defence + damage * hit_count).min(settings::STARTING_HP);
+                    source.hero.defence = (source.hero.defence + damage * hit_count).min(settings::MAX_HP);
                 }
             }
 
@@ -575,7 +585,7 @@ impl Game {
 
                 // Step 3: push to hand
                 let source_board = self.source_board_for_mut(owner);
-                source_board.hand.extend(drawn);
+                Self::add_to_hand(source_board, drawn);
             }
 
             Effect::ReturnToHand { target_spec, cost_reduction } => {
@@ -606,10 +616,10 @@ impl Game {
 
                         match tr {
                             TargetRef::MinionSource(_) => {
-                                source.hand.push(CardEntity::Minion(minion));
+                                Self::add_to_hand(source, [CardEntity::Minion(minion)]);
                             }
                             TargetRef::MinionEnemy(_) => {
-                                enemy.hand.push(CardEntity::Minion(minion));
+                                Self::add_to_hand(enemy, [CardEntity::Minion(minion)]);
                             }
                             _ => {}
                         }
@@ -640,6 +650,9 @@ impl Game {
                 let (source_board, _) = self.boards_for_mut(owner);
 
                 for id in new_ids {
+                    if source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
+                        break;
+                    }
                     if let Some(minion) = cards::instantiate_minion_by_id(minion_card_id, id) {
                         source_board.battlefield.push(minion);
                     }
@@ -665,7 +678,7 @@ impl Game {
             for card in drawn.iter_mut() {
                 *card.just_drawn_mut() = true;
             }
-            source_board.hand.extend(drawn);
+            Self::add_to_hand(source_board, drawn);
             source_board.base_mana = (source_board.base_mana + 1).min(settings::MAX_MANA);
             source_board.mana = source_board.base_mana;
             source_board.embers = (source_board.embers + 1).min(settings::MAX_EMBERS);
@@ -689,6 +702,9 @@ impl Game {
                 None => return false,
             };
             if card.cost() > source_board.mana {
+                return false;
+            }
+            if matches!(card, CardEntity::Minion(_)) && source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                 return false;
             }
             card.clone()
@@ -854,7 +870,7 @@ impl Game {
             }
 
             if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
-                source.hero.defence = (source.hero.defence + attacker_attack).min(settings::STARTING_HP);
+                source.hero.defence = (source.hero.defence + attacker_attack).min(settings::MAX_HP);
             }
 
             let attacker_is_poisonous = source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Poisonous);
@@ -887,7 +903,7 @@ impl Game {
         let card = source_board.hand.remove(index);
         source_board.deck.push(card);
         let drawn = Self::draw_cards(source_board, 1);
-        source_board.hand.extend(drawn);
+        Self::add_to_hand(source_board, drawn);
         source_board.mana -= 1;
         true
     }
@@ -903,6 +919,7 @@ impl Game {
             cards_played_this_turn: self.state.cards_played_this_turn,
             phase: self.state.phase.clone(),
             mulligan_submitted: if for_white { self.state.mulligan_white_done } else { self.state.mulligan_black_done },
+            open_cards: settings::OPEN_CARDS,
         }
     }
 
@@ -935,7 +952,7 @@ impl Game {
         // Draw replacements first so they can't contain the returned cards
         let draw_count = cards_to_return.len();
         let new_cards: Vec<CardEntity> = board.deck.drain(0..draw_count.min(board.deck.len())).collect();
-        board.hand.extend(new_cards);
+        Self::add_to_hand(board, new_cards);
 
         // Shuffle returned cards back into the deck
         let mut rng = rand::rng();

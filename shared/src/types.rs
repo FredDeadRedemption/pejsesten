@@ -237,6 +237,7 @@ pub struct GameStateClient {
     pub cards_played_this_turn: u32,
     pub phase: GamePhase,
     pub mulligan_submitted: bool,
+    pub open_cards: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

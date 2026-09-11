@@ -48,8 +48,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips);
-    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips, state.open_cards);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips, state.open_cards);
 
     // Debug: hand zone boundary
     let hz = layout::hand_zone_rect(w, h);
@@ -190,7 +190,7 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)]) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)], open_cards: bool) {
     let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
@@ -212,7 +212,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
         draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
-        draw_hand(&board.hand, w, hand_y, false, cache, hand_flips);
+        draw_hand(&board.hand, w, hand_y, open_cards, cache, hand_flips);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
@@ -573,14 +573,14 @@ fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cac
     }
 }
 
-fn draw_hand(hand: &[CardEntity], w: f32, y: f32, is_self: bool, cache: &TextureCache, hand_flips: &[(u32, f32)]) {
+fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &TextureCache, hand_flips: &[(u32, f32)]) {
     let count = hand.len() as f32;
     let total = count * (CARD_W + CARD_GAP) - CARD_GAP;
     let start_x = w / 2.0 - total / 2.0;
 
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (CARD_W + CARD_GAP);
-        if is_self {
+        if face_up {
             let flip_cos = hand_flips.iter()
                 .find(|(id, _)| *id == card.entity_id())
                 .map(|(_, v)| *v)
