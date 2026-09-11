@@ -1,9 +1,10 @@
 use serde_json::Value;
 
-use shared::types::{AttackData, GameStateClient, PlayerMetaData};
+use shared::types::{AttackData, GameStateClient, PlayerMetaData, ScenarioFrameInfo};
 
 pub enum ServerEvent {
     GameState(GameStateClient),
+    ScenarioFrame(ScenarioFrameInfo),
     Redirect,
 }
 
@@ -138,6 +139,10 @@ impl NetworkClient {
         self.emit("submitMulligan", serde_json::json!({ "indices": indices }));
     }
 
+    pub fn run_scenarios(&mut self) {
+        self.emit("runScenarios", Value::Null);
+    }
+
     pub fn reset_server(&mut self) {
         self.emit("resetServer", serde_json::Value::Null);
     }
@@ -183,6 +188,10 @@ impl NetworkClient {
                             let state: GameStateClient =
                                 serde_json::from_value(data.clone()).ok()?;
                             Some(ServerEvent::GameState(state))
+                        }
+                        "scenarioFrame" => {
+                            let info: ScenarioFrameInfo = serde_json::from_value(data.clone()).ok()?;
+                            Some(ServerEvent::ScenarioFrame(info))
                         }
                         "redirect" => Some(ServerEvent::Redirect),
                         _ => None,

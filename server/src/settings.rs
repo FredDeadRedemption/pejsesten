@@ -11,6 +11,9 @@ const DEV_MULLIGAN: bool = true;
 const DEV_OPEN_CARDS: bool = true;
 const DEV_BOT_DELAY_MS: u64 = 250;
 
+/// Pause between frames when the scenario catalogue is played back visually.
+pub const SCENARIO_FRAME_MS: u64 = 100;
+
 const PROD_STARTING_HP: i32 = 30;
 const PROD_MAX_HP: i32 = 30;
 const PROD_STARTING_MANA: i32 = 1;

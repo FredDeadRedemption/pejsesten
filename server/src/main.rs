@@ -1,5 +1,6 @@
 mod bot;
 mod engine;
+mod scenario;
 mod settings;
 
 use engine::Game;
@@ -105,6 +106,14 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
 
                 inner.game = Some(game);
             }
+        }
+    });
+
+    socket.on("runScenarios", {
+        let io = io.clone();
+        move |socket: SocketRef| async move {
+            println!("running scenario catalogue for {}", socket.id);
+            scenario::runner::run(io, socket.id.to_string()).await;
         }
     });
 

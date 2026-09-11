@@ -92,6 +92,10 @@ pub fn lobby_card_flip_test_rect(w: f32, h: f32) -> Rect {
     Rect::new(w / 2.0 - 115.0, h / 2.0 + 242.0, 230.0, 46.0)
 }
 
+pub fn lobby_scenarios_rect(w: f32, h: f32) -> Rect {
+    Rect::new(w / 2.0 - 115.0, h / 2.0 + 304.0, 230.0, 46.0)
+}
+
 fn centered_rects(count: usize, rw: f32, rh: f32, gap: f32, cx: f32, y: f32) -> Vec<Rect> {
     if count == 0 {
         return vec![];

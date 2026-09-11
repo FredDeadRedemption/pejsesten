@@ -18,7 +18,7 @@ use render::DragRender;
 use shared::types::{
     AttackData, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
     IncantationAttribute, MinionAttribute, MinionEntity, PlayerMetaData, Requirement, TargetMode,
-    TargetSide, TargetSpec,
+    ScenarioFrameInfo, TargetSide, TargetSpec,
 };
 use textures::TextureCache;
 
@@ -89,6 +89,7 @@ async fn main() {
     let mut hover_timer: f32 = 0.0;
     let mut anims: Vec<BumpAnim> = vec![];
     let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
+    let mut scenario: Option<ScenarioFrameInfo> = None;
 
     loop {
         let mouse = ui::mouse_ui();
@@ -112,6 +113,7 @@ async fn main() {
                         GamePhase::Playing => Screen::Playing(state),
                     };
                 }
+                ServerEvent::ScenarioFrame(info) => scenario = Some(info),
                 ServerEvent::Redirect => {}
             }
         }
@@ -141,7 +143,7 @@ async fn main() {
         }
 
         // --- Input ---
-        handle_input(&mut screen, &mut net, &mut drag, &mut anims, mx, my, w, h);
+        handle_input(&mut screen, &mut net, &mut drag, &mut anims, &mut scenario, mx, my, w, h);
 
         // --- Render ---
         clear_background(Color::from_rgba(12, 12, 20, 255));
@@ -209,6 +211,10 @@ async fn main() {
                 render::draw_game(state, &cache, &drag_render);
             }
             Screen::DeckBuilder(db_state) => render::draw_deck_builder(db_state, &cache),
+        }
+
+        if let Some(info) = &scenario {
+            render::draw_scenario_banner(info);
         }
 
         next_frame().await;
@@ -461,9 +467,19 @@ fn handle_input(
     net: &mut NetworkClient,
     drag: &mut Option<DragState>,
     anims: &mut Vec<BumpAnim>,
+    scenario: &mut Option<ScenarioFrameInfo>,
     mx: f32, my: f32,
     w: f32, h: f32,
 ) {
+    // scenario playback is a spectator view; swallow board input so clicks can't reach a real game
+    if scenario.is_some() {
+        if is_key_pressed(KeyCode::Escape) {
+            *scenario = None;
+            *screen = Screen::Lobby;
+        }
+        return;
+    }
+
     match screen {
         Screen::Lobby => {
             let clicked = is_mouse_button_released(MouseButton::Left);
@@ -486,6 +502,11 @@ fn handle_input(
             if is_key_pressed(KeyCode::R) || (clicked && layout::lobby_reset_rect(w, h).contains(mouse)) {
                 net.reset_server();
             }
+            if is_key_pressed(KeyCode::S) || (clicked && layout::lobby_scenarios_rect(w, h).contains(mouse)) {
+                net.run_scenarios();
+                return;
+            }
+
             if is_key_pressed(KeyCode::D) || (clicked && layout::lobby_deck_builder_rect(w, h).contains(mouse)) {
                 *screen = Screen::DeckBuilder(DeckBuilderState::new());
             }

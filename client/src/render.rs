@@ -5,7 +5,7 @@ use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState,
 use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::ui;
-use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity};
+use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
 
 const ART_FRAC: f32 = 0.38;
 const TOP_BAR: f32 = 28.0;
@@ -145,6 +145,38 @@ pub fn draw_lobby(username: &str) {
     draw_button_danger("Reset Server  [R]", w / 2.0 - 115.0, h / 2.0 + 130.0, 230.0, 36.0);
     draw_button("Deck Builder  [D]", w / 2.0 - 115.0, h / 2.0 + 180.0, 230.0, 46.0);
     draw_button("Card Flip Test  [T]", w / 2.0 - 115.0, h / 2.0 + 242.0, 230.0, 46.0);
+    draw_button("Run Scenarios  [S]", w / 2.0 - 115.0, h / 2.0 + 304.0, 230.0, 46.0);
+}
+
+/// Narration strip for a scenario playback frame, drawn over the board.
+pub fn draw_scenario_banner(info: &ScenarioFrameInfo) {
+    let w = ui::size().x;
+    let bar_h = 68.0;
+    draw_rectangle(0.0, 0.0, w, bar_h, Color::new(0.05, 0.05, 0.08, 0.88));
+
+    let accent = if info.ok { Color::new(0.35, 0.80, 0.45, 1.0) } else { Color::new(0.90, 0.30, 0.30, 1.0) };
+    draw_rectangle(0.0, bar_h - 3.0, w, 3.0, accent);
+
+    let counter = format!("{}/{}", info.case_index, info.case_total);
+    ui::text(&counter, 16.0, 26.0, 18.0, GRAY);
+
+    let heading = format!("[{}] {}", info.group, info.case);
+    ui::text(&heading, 76.0, 26.0, 20.0, WHITE);
+
+    let tick = if info.kind == "check" { if info.ok { "PASS  " } else { "FAIL  " } } else { "" };
+    ui::text(&format!("{}{}", tick, info.label), 76.0, 52.0, 18.0, if info.kind == "check" { accent } else { LIGHTGRAY });
+
+    if info.failed > 0 {
+        let fail = format!("{} failed", info.failed);
+        let d = ui::measure(&fail, 18.0);
+        ui::text(&fail, w - d.width - 16.0, 26.0, 18.0, Color::new(0.90, 0.30, 0.30, 1.0));
+    }
+
+    if info.done {
+        let msg = "scenarios complete — Esc to return to the lobby";
+        let d = ui::measure(msg, 18.0);
+        ui::text(msg, w - d.width - 16.0, 52.0, 18.0, LIGHTGRAY);
+    }
 }
 
 pub fn draw_connecting() {

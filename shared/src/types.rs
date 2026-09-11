@@ -226,6 +226,20 @@ pub struct GameStateServer {
     pub mulligan_black_done: bool,
 }
 
+/// Banner sent alongside each scenario frame so the client can narrate the run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScenarioFrameInfo {
+    pub case: String,
+    pub group: String,
+    pub label: String,
+    pub kind: String,
+    pub ok: bool,
+    pub case_index: usize,
+    pub case_total: usize,
+    pub failed: usize,
+    pub done: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameStateClient {
     pub self_board: Board,

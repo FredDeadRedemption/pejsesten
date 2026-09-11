@@ -6,6 +6,7 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 use shared::cards;
 use shared::types::*;
+use std::collections::HashMap;
 
 pub struct IdGenerator {
     next: u32,
@@ -22,7 +23,7 @@ impl IdGenerator {
     }
 }
 
-fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
+pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
     MinionEntity {
         attack: c.base_attack,
         defence: c.base_defence,
@@ -39,7 +40,7 @@ fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
     }
 }
 
-fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
+pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
     IncantationEntity {
         entity_id,
         cost: c.base_cost,
@@ -87,6 +88,8 @@ pub struct Game {
     pub state: GameStateServer,
     effect_queue: Vec<QueuedEffect>,
     ids: IdGenerator,
+    // summon looks here before the global card registry, so scenarios can summon cards that aren't in cards.rs
+    summon_pool: HashMap<u32, MinionCard>,
 }
 
 /// Extracts the TargetSpec from an effect if it has one.
@@ -160,7 +163,7 @@ impl Game {
                     },
                     base_mana: settings::STARTING_MANA - 1,
                     mana: settings::STARTING_MANA - 1,
-                    embers: settings::STARTING_EMBERS - 1,
+                    embers: settings::STARTING_EMBERS,
                 },
                 white_player_id,
                 black_player_id,
@@ -173,11 +176,22 @@ impl Game {
             },
             effect_queue: vec![],
             ids: ids,
+            summon_pool: HashMap::new(),
         }
     }
 
     // --- Board access ---
     // white and black are separate struct fields so Rust allows split mutable borrows
+
+    /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
+    pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
+        Game { state, effect_queue: vec![], ids, summon_pool: HashMap::new() }
+    }
+
+    /// Makes a card summonable by id without it existing in the global registry.
+    pub fn register_summonable(&mut self, card: MinionCard) {
+        self.summon_pool.insert(card.id, card);
+    }
 
     fn source_board(&self) -> &Board {
         if self.state.white_turn { &self.state.white } else { &self.state.black }
@@ -330,15 +344,17 @@ impl Game {
         if let Some(id) = target_id {
             let target_ref = self.find_target_ref(id, owner);
             let (source, enemy) = self.boards_for(owner);
+            let hits_minions = matches!(spec.entity_type, EntityType::Minion | EntityType::All);
+            let hits_heroes = matches!(spec.entity_type, EntityType::Hero | EntityType::All);
             let valid = target_ref.as_ref().map_or(false, |tr| match tr {
                 TargetRef::MinionSource(i) => {
-                    matches!(spec.side, TargetSide::Friendly | TargetSide::All) && Self::filters_match(&spec.filters, &source.battlefield[*i])
+                    hits_minions && matches!(spec.side, TargetSide::Friendly | TargetSide::All) && Self::filters_match(&spec.filters, &source.battlefield[*i])
                 }
                 TargetRef::MinionEnemy(i) => {
-                    matches!(spec.side, TargetSide::Enemy | TargetSide::All) && !enemy.battlefield[*i].stealth_active && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
+                    hits_minions && matches!(spec.side, TargetSide::Enemy | TargetSide::All) && !enemy.battlefield[*i].stealth_active && Self::filters_match(&spec.filters, &enemy.battlefield[*i])
                 }
-                TargetRef::HeroSource => matches!(spec.side, TargetSide::Friendly | TargetSide::All) && spec.filters.is_empty(),
-                TargetRef::HeroEnemy => matches!(spec.side, TargetSide::Enemy | TargetSide::All) && spec.filters.is_empty(),
+                TargetRef::HeroSource => hits_heroes && matches!(spec.side, TargetSide::Friendly | TargetSide::All) && spec.filters.is_empty(),
+                TargetRef::HeroEnemy => hits_heroes && matches!(spec.side, TargetSide::Enemy | TargetSide::All) && spec.filters.is_empty(),
             });
             return if valid { target_ref.map(|t| vec![t]).unwrap_or_default() } else { vec![] };
         }
@@ -642,20 +658,24 @@ impl Game {
             }
 
             Effect::Summon { minion_card_id, summon_amount } => {
-                let mut new_ids = Vec::with_capacity(summon_amount as usize);
+                let mut summoned = Vec::with_capacity(summon_amount);
                 for _ in 0..summon_amount {
-                    new_ids.push(self.ids.next_id());
+                    let id = self.ids.next_id();
+                    let minion = match self.summon_pool.get(&minion_card_id) {
+                        Some(c) => Some(instantiate_minion(c, id)),
+                        None => cards::instantiate_minion_by_id(minion_card_id, id),
+                    };
+                    if let Some(m) = minion {
+                        summoned.push(m);
+                    }
                 }
 
                 let (source_board, _) = self.boards_for_mut(owner);
-
-                for id in new_ids {
+                for minion in summoned {
                     if source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                         break;
                     }
-                    if let Some(minion) = cards::instantiate_minion_by_id(minion_card_id, id) {
-                        source_board.battlefield.push(minion);
-                    }
+                    source_board.battlefield.push(minion);
                 }
             }
         }
