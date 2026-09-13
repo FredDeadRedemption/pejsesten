@@ -30,6 +30,10 @@ const COL_GLOW_CONDITION: Color = Color::new(1.0, 0.84, 0.25, 1.0);
 const COL_GLOW_PLAYABLE: Color = Color::new(0.35, 0.65, 1.0, 1.0);
 const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
 
+const GLOW_RINGS: usize = 10;
+const GLOW_SPREAD: f32 = 15.0;
+const GLOW_RIM: f32 = 2.0;
+
 // ── Public entry points ────────────────────────────────────────────────────────
 
 pub struct DragRender<'a> {
@@ -606,8 +610,8 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
                 .find(|(id, _)| *id == card.entity_id())
                 .map(|(_, v)| *v)
                 .unwrap_or(1.0);
-            if let Some(glow) = hints.get(i).and_then(glow_colour) {
-                draw_glow(x, y, CARD_W, CARD_H, glow);
+            if let Some(glow) = hints.get(i).and_then(glow_style) {
+                draw_glow(x, y, CARD_W, CARD_H, &glow, i as f32 * 0.55, flip_cos.clamp(0.0, 1.0));
             }
             draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
         } else {
@@ -616,22 +620,37 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
     }
 }
 
+struct Glow {
+    color: Color,
+    intensity: f32,
+    speed: f32,
+}
+
 /// A met condition outranks plain affordability: it is the rarer thing to notice.
-fn glow_colour(hint: &CardHint) -> Option<Color> {
+fn glow_style(hint: &CardHint) -> Option<Glow> {
     match (hint.condition_met, hint.playable) {
-        (true, _) => Some(COL_GLOW_CONDITION),
-        (false, true) => Some(COL_GLOW_PLAYABLE),
+        (true, _) => Some(Glow { color: COL_GLOW_CONDITION, intensity: 0.60, speed: 3.0 }),
+        (false, true) => Some(Glow { color: COL_GLOW_PLAYABLE, intensity: 0.34, speed: 1.6 }),
         _ => None,
     }
 }
 
-fn draw_glow(x: f32, y: f32, w: f32, h: f32, color: Color) {
-    let rings = 5;
-    for i in 1..=rings {
-        let pad = i as f32 * 2.5;
-        let a = 0.45 * (1.0 - (i - 1) as f32 / rings as f32);
-        draw_rectangle_lines(x - pad, y - pad, w + pad * 2.0, h + pad * 2.0, 3.0, Color { a, ..color });
+/// Phase offsets the pulse per card so a full hand shimmers instead of strobing in unison.
+/// Fade tracks the draw flip, since the card is a narrow sliver mid-animation.
+fn draw_glow(x: f32, y: f32, w: f32, h: f32, glow: &Glow, phase: f32, fade: f32) {
+    let pulse = 0.62 + 0.38 * (get_time() as f32 * glow.speed + phase).sin();
+
+    // rings overlap so the alpha layers composite into a soft falloff rather than banding
+    for i in 1..=GLOW_RINGS {
+        let t = i as f32 / GLOW_RINGS as f32;
+        let pad = GLOW_RIM + t * GLOW_SPREAD * (0.80 + 0.20 * pulse);
+        let a = glow.intensity * pulse * fade * (1.0 - t).powi(2);
+        draw_rectangle_lines(x - pad, y - pad, w + pad * 2.0, h + pad * 2.0, 3.0, Color { a, ..glow.color });
     }
+
+    // sits clear of the card edge; draw_card paints over anything inside the rect
+    let a = (0.35 + 0.45 * pulse) * fade;
+    draw_rectangle_lines(x - GLOW_RIM, y - GLOW_RIM, w + GLOW_RIM * 2.0, h + GLOW_RIM * 2.0, 2.5, Color { a, ..glow.color });
 }
 
 fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
