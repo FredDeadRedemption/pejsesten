@@ -8,6 +8,12 @@ use crate::ui;
 use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
 
 
+// mana gem as a fraction of card height, stat badge as a multiple of its base size
+const GEM_HAND: f32 = 0.14;
+const GEM_BOARD: f32 = 0.18;
+const BADGE_HAND: f32 = 1.2;
+const BADGE_BOARD: f32 = 1.5;
+
 const COL_SELF: Color = Color::new(0.2, 0.5, 0.8, 1.0);
 const COL_ENEMY: Color = Color::new(0.7, 0.2, 0.2, 1.0);
 const COL_CARD_BG: Color = Color::new(0.15, 0.15, 0.25, 1.0);
@@ -330,11 +336,12 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         ),
     };
 
-    draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, description, cache, WHITE, scale, true);
+    draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, description, cache, WHITE, scale, GEM_HAND, true);
 
     if let CardEntity::Minion(m) = card {
-        draw_stat_badge(m.attack, sx + 6.0 * scale, y + h - 5.0 * scale, COL_ATK, scale);
-        draw_stat_badge(m.defence, sx + scaled_w - 18.0 * scale, y + h - 5.0 * scale, COL_DEF, scale);
+        let badge = scale * BADGE_HAND;
+        draw_stat_badge(m.attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
+        draw_stat_badge(m.defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
     } else if scale > 0.6 {
         let sl = "incantation";
         let font = 10.0 * scale;
@@ -356,6 +363,7 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
         cache,
         tint,
         1.0,
+        GEM_BOARD,
         false,
     );
 
@@ -370,8 +378,8 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
     };
     draw_rectangle_lines(x, y, w, h, 2.0, border);
 
-    draw_stat_badge(minion.attack, x + 6.0, y + h - 5.0, COL_ATK, 1.0);
-    draw_stat_badge(minion.defence, x + w - 18.0, y + h - 5.0, COL_DEF, 1.0);
+    draw_stat_badge(minion.attack, x + 2.0 + 2.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
+    draw_stat_badge(minion.defence, x + w - 2.0 - 18.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
 }
 
 fn draw_card_layers(
@@ -379,18 +387,20 @@ fn draw_card_layers(
     color: &CardColor, image_url: &str, name: &str, cost: i32, description: &str,
     cache: &TextureCache, tint: Color,
     scale: f32,
+    gem_frac: f32,
     show_text: bool,
 ) {
     let frame = draw_card_frame(x, y, w, h, color, image_url, cache, tint);
 
-    let gem = frame.title.h.min(frame.title.w);
+    // gem overhangs the title bar into the art window
+    let gem = (h * gem_frac).min(w * 0.4);
     draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
     if scale <= 0.6 {
         return;
     }
 
-    let cost_font = (gem * 0.85).round();
-    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, cost_font, WHITE);
+    let cost_font = (gem * 0.7).round();
+    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, cost_font, WHITE);
     if !show_text {
         return;
     }
