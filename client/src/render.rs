@@ -153,7 +153,7 @@ pub fn draw_lobby(username: &str) {
     draw_button("Glow Test  [G]", w / 2.0 - 115.0, h / 2.0 + 366.0, 230.0, 46.0);
 }
 
-/// Side-by-side glow states over the live config, so glow.json can be tuned by eye.
+/// Side-by-side glow states over the live config, so the config file can be tuned by eye.
 pub fn draw_glow_test(cards: &[CardEntity], cache: &TextureCache, reloads: u32) {
     let w = ui::size().x;
     let h = ui::size().y;

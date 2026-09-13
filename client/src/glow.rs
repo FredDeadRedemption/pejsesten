@@ -2,12 +2,44 @@
 //! without a rebuild; the baked defaults are what wasm and a missing file both get.
 
 use macroquad::prelude::Color;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::cell::RefCell;
 
-pub const FILE: &str = "glow.json";
+pub const FILE: &str = "glow.toml";
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+/// Written out when the file is missing. Kept in step with [`Config::default`] by a test,
+/// since a stale value here would silently win over the Rust default.
+#[cfg(not(target_arch = "wasm32"))]
+const TEMPLATE: &str = r#"# Hand-card glow. Saved edits apply straight away, no rebuild.
+
+rings = 18
+# how far past the card edge the outermost ring sits
+spread = 18.0
+# gap between the card edge and the innermost ring; nonzero reads as a hard outline
+inset = 0.0
+thickness = 3.0
+# alpha exponent across the rings, higher fades to nothing sooner
+falloff = 2.2
+# dimmest point of the pulse, as a fraction of full brightness
+pulse_floor = 0.45
+# fraction of the spread that breathes with the pulse
+breathe = 0.18
+# pulse offset per hand slot, so a full hand waves instead of strobing in unison
+phase_step = 0.55
+
+# a met condition is the rarer thing to notice, so it outshines plain affordability
+[condition]
+color = [1.0, 0.84, 0.25]
+intensity = 0.42
+speed = 3.0
+
+[playable]
+color = [0.35, 0.65, 1.0]
+intensity = 0.26
+speed = 1.6
+"#;
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 pub struct Style {
     pub color: [f32; 3],
     pub intensity: f32,
@@ -20,22 +52,16 @@ impl Style {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub rings: usize,
-    /// How far past the card edge the outermost ring sits.
     pub spread: f32,
-    /// Gap between the card edge and the innermost ring. Nonzero reads as a hard outline.
     pub inset: f32,
     pub thickness: f32,
-    /// Alpha exponent across the rings. Higher fades to nothing sooner.
     pub falloff: f32,
-    /// Dimmest point of the pulse, as a fraction of full brightness.
     pub pulse_floor: f32,
-    /// Fraction of the spread that breathes with the pulse.
     pub breathe: f32,
-    /// Pulse offset per hand slot, so a full hand waves instead of strobing in unison.
     pub phase_step: f32,
     pub condition: Style,
     pub playable: Style,
@@ -88,16 +114,14 @@ impl Watcher {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod backend {
-    use super::{set, Config, Watcher, FILE};
+    use super::{set, Watcher, FILE, TEMPLATE};
 
     const POLL_SECONDS: f32 = 0.4;
 
     impl Watcher {
         pub fn new() -> Self {
             if std::fs::metadata(FILE).is_err() {
-                if let Ok(text) = serde_json::to_string_pretty(&Config::default()) {
-                    let _ = std::fs::write(FILE, text);
-                }
+                let _ = std::fs::write(FILE, TEMPLATE);
             }
             let mut watcher = Watcher { reloads: 0, poll_timer: 0.0, stamp: None };
             watcher.poll();
@@ -118,7 +142,7 @@ mod backend {
             let Ok(text) = std::fs::read_to_string(FILE) else {
                 return;
             };
-            match serde_json::from_str(&text) {
+            match toml::from_str(&text) {
                 Ok(config) => {
                     set(config);
                     self.reloads += 1;
@@ -148,5 +172,16 @@ mod backend {
         }
 
         pub fn tick(&mut self, _dt: f32) {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Config, TEMPLATE};
+
+    #[test]
+    fn template_matches_defaults() {
+        let parsed: Config = toml::from_str(TEMPLATE).expect("template parses");
+        assert_eq!(parsed, Config::default());
     }
 }
