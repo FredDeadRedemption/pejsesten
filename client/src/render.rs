@@ -7,9 +7,6 @@ use crate::textures::{draw_texture_cover, TextureCache};
 use crate::ui;
 use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
 
-const ART_FRAC: f32 = 0.38;
-const TOP_BAR: f32 = 28.0;
-const BOTTOM_BAR: f32 = 26.0;
 
 const COL_SELF: Color = Color::new(0.2, 0.5, 0.8, 1.0);
 const COL_ENEMY: Color = Color::new(0.7, 0.2, 0.2, 1.0);
@@ -22,7 +19,6 @@ const EMBER_MAX: i32 = 5;
 const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
-const COL_DESC_BG: Color = Color::new(0.82, 0.76, 0.67, 0.9);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
 const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
 
@@ -253,6 +249,60 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
 // ── Card rendering ─────────────────────────────────────────────────────────────
 
+/// Windows of the 136x192 card frame template, as fractions of the card rect.
+struct CardFrame {
+    title: Rect,
+    art: Rect,
+    type_bar: Rect,
+    text: Rect,
+}
+
+impl CardFrame {
+    fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+        let win = |fx: f32, fy: f32, fw: f32, fh: f32| {
+            Rect::new(x + w * fx, y + h * fy, w * fw, h * fh)
+        };
+        Self {
+            title: win(0.0515, 0.0260, 0.8971, 0.0885),
+            art: win(0.0809, 0.1198, 0.8382, 0.4375),
+            type_bar: win(0.0515, 0.5573, 0.8971, 0.0833),
+            text: win(0.0662, 0.6406, 0.8676, 0.2865),
+        }
+    }
+}
+
+/// The template's art window is transparent, so the art is drawn under the frame.
+fn draw_card_frame(
+    x: f32, y: f32, w: f32, h: f32,
+    color: &CardColor, image_url: &str, cache: &TextureCache, tint: Color,
+) -> CardFrame {
+    let frame = CardFrame::new(x, y, w, h);
+    let tex = cache.frame(color);
+
+    if tex.is_none() {
+        let bg = match color {
+            CardColor::White => Color::new(0.75, 0.70, 0.55, 1.0),
+            CardColor::Black => Color::new(0.18, 0.14, 0.22, 1.0),
+        };
+        draw_rectangle(x, y, w, h, bg);
+    }
+
+    let art = frame.art;
+    match cache.art(image_url) {
+        Some(tex) => draw_texture_cover(tex, art.x, art.y, art.w, art.h, tint),
+        None => draw_rectangle(art.x, art.y, art.w, art.h, COL_CARD_BG),
+    }
+
+    if let Some(tex) = tex {
+        draw_texture_ex(tex, x, y, tint, DrawTextureParams {
+            dest_size: Some(Vec2::new(w, h)),
+            ..Default::default()
+        });
+    }
+
+    frame
+}
+
 fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache, flip_cos: f32) {
     let scale = flip_cos.abs().clamp(0.0, 1.0);
     let scaled_w = (w * scale).max(1.0);
@@ -283,8 +333,8 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
     draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, description, cache, WHITE, scale, true);
 
     if let CardEntity::Minion(m) = card {
-        draw_stat_badge(m.attack, sx + 6.0 * scale, y + h - 14.0, COL_ATK, scale);
-        draw_stat_badge(m.defence, sx + scaled_w - 18.0 * scale, y + h - 14.0, COL_DEF, scale);
+        draw_stat_badge(m.attack, sx + 6.0 * scale, y + h - 5.0 * scale, COL_ATK, scale);
+        draw_stat_badge(m.defence, sx + scaled_w - 18.0 * scale, y + h - 5.0 * scale, COL_DEF, scale);
     } else if scale > 0.6 {
         let sl = "incantation";
         let font = 10.0 * scale;
@@ -320,8 +370,8 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
     };
     draw_rectangle_lines(x, y, w, h, 2.0, border);
 
-    draw_stat_badge(minion.attack, x + 6.0, y + h - 14.0, COL_ATK, 1.0);
-    draw_stat_badge(minion.defence, x + w - 18.0, y + h - 14.0, COL_DEF, 1.0);
+    draw_stat_badge(minion.attack, x + 6.0, y + h - 5.0, COL_ATK, 1.0);
+    draw_stat_badge(minion.defence, x + w - 18.0, y + h - 5.0, COL_DEF, 1.0);
 }
 
 fn draw_card_layers(
@@ -331,53 +381,33 @@ fn draw_card_layers(
     scale: f32,
     show_text: bool,
 ) {
-    if let Some(bg) = cache.bg(color) {
-        draw_texture_cover(bg, x, y, w, h, tint);
-    } else {
-        let bg_col = match color {
-            CardColor::White => Color::new(0.75, 0.70, 0.55, 1.0),
-            CardColor::Black => Color::new(0.18, 0.14, 0.22, 1.0),
-        };
-        draw_rectangle(x, y, w, h, bg_col);
+    let frame = draw_card_frame(x, y, w, h, color, image_url, cache, tint);
+
+    let gem = frame.title.h.min(frame.title.w);
+    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    if scale <= 0.6 {
+        return;
     }
 
-    let gem_size = (TOP_BAR - 4.0) * scale;
-    draw_rectangle(x + 2.0 * scale, y + 2.0, gem_size, gem_size, COL_MANA);
-    if scale > 0.6 {
-        let cost_font = (14.0 * scale).round();
-        draw_text_centered(&cost.to_string(), x + 2.0 * scale + gem_size / 2.0, y + 2.0 + gem_size * 0.72, cost_font, WHITE);
-
-        if show_text {
-            let name_font = (11.0 * scale).round();
-            let name_str = fit_text(name, (w - gem_size - 8.0 * scale).max(0.0), name_font);
-            ui::text(&name_str, x + gem_size + 6.0 * scale, y + 2.0 + gem_size * 0.72, name_font, BLACK);
-        }
+    let cost_font = (gem * 0.85).round();
+    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, cost_font, WHITE);
+    if !show_text {
+        return;
     }
 
-    let art_y = y + TOP_BAR;
-    let art_h = h * ART_FRAC;
-    if let Some(art) = cache.art(image_url) {
-        draw_texture_cover(art, x + 2.0 * scale, art_y, (w - 4.0 * scale).max(0.0), art_h, tint);
-    } else {
-        draw_rectangle(x + 2.0 * scale, art_y, (w - 4.0 * scale).max(0.0), art_h, COL_CARD_BG);
-    }
+    let name_font = (11.0 * scale).round();
+    let name_str = fit_text(name, (frame.title.w - gem - 4.0).max(0.0), name_font);
+    ui::text(&name_str, frame.title.x + gem + 3.0, frame.title.y + frame.title.h * 0.78, name_font, BLACK);
 
-    let desc_y = art_y + art_h;
-    let desc_h = h - TOP_BAR - art_h - BOTTOM_BAR;
-    draw_rectangle(x + 2.0 * scale, desc_y, (w - 4.0 * scale).max(0.0), desc_h, COL_DESC_BG);
-    if scale > 0.6 && show_text {
-        let desc_font = (17.0 * scale).round();
-        draw_wrapped_text(
-            &strip_html(description),
-            x + 5.0 * scale,
-            desc_y + desc_font,
-            (w - 10.0 * scale).max(0.0),
-            desc_font,
-            BLACK,
-        );
-    }
-
-    draw_rectangle(x + 2.0 * scale, y + h - BOTTOM_BAR, (w - 4.0 * scale).max(0.0), BOTTOM_BAR, COL_DESC_BG);
+    let desc_font = (frame.text.h * 0.20 * scale).round().max(8.0);
+    draw_wrapped_text(
+        &strip_html(description),
+        frame.text.x + 3.0,
+        frame.text.y + desc_font,
+        (frame.text.w - 6.0).max(0.0),
+        desc_font,
+        BLACK,
+    );
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -500,94 +530,41 @@ fn draw_card_entity_preview(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, c
 
 fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
     let card = &inc.card;
-    let color = &card.color;
+    let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
-    if let Some(bg) = cache.bg(color) {
-        draw_texture_cover(bg, x, y, w, h, WHITE);
-    } else {
-        let bg_col = match color {
-            shared::types::Color::White => Color::new(0.75, 0.70, 0.55, 1.0),
-            shared::types::Color::Black => Color::new(0.18, 0.14, 0.22, 1.0),
-        };
-        draw_rectangle(x, y, w, h, bg_col);
-    }
+    let gem = frame.title.h;
+    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_text_centered(&inc.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
 
-    let gem = 30.0;
-    draw_rectangle(x + 2.0, y + 2.0, gem, gem, COL_MANA);
-    draw_text_centered(&inc.cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 22.0, WHITE);
+    let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
+    ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
 
-    let name_fit = fit_text(&card.name, w - gem - 10.0, 18.0);
-    ui::text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
-
-    let art_y = y + gem + 4.0;
-    let art_h = h * ART_FRAC;
-    if let Some(art) = cache.art(&card.image_url) {
-        draw_texture_cover(art, x + 2.0, art_y, w - 4.0, art_h, WHITE);
-    } else {
-        draw_rectangle(x + 2.0, art_y, w - 4.0, art_h, COL_CARD_BG);
-    }
-
-    let desc_y = art_y + art_h;
-    let desc_h = h - (gem + 4.0) - art_h - 28.0;
-    draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
-    let desc = card.description.as_deref().unwrap_or("");
-    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 21.0, w - 12.0, 21.0, BLACK);
-
-    let bot_y = y + h - 26.0;
-    draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
     let sl = "incantation";
     let sd = ui::measure(sl, 14.0);
-    ui::text(sl, x + w / 2.0 - sd.width / 2.0, bot_y + 17.0, 14.0, DARKGRAY);
+    ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, frame.type_bar.y + frame.type_bar.h * 0.75, 14.0, DARKGRAY);
 
-    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
+    let desc = card.description.as_deref().unwrap_or("");
+    let desc_font = (frame.text.h * 0.20).round();
+    draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 }
 
 fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
     let card = &minion.card;
-    let color = &card.color;
+    let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
-    if let Some(bg) = cache.bg(color) {
-        draw_texture_cover(bg, x, y, w, h, WHITE);
-    } else {
-        let bg_col = match color {
-            shared::types::Color::White => Color::new(0.75, 0.70, 0.55, 1.0),
-            shared::types::Color::Black => Color::new(0.18, 0.14, 0.22, 1.0),
-        };
-        draw_rectangle(x, y, w, h, bg_col);
-    }
+    let gem = frame.title.h;
+    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_text_centered(&card.base_cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
 
-    // cost gem
-    let gem = 30.0;
-    draw_rectangle(x + 2.0, y + 2.0, gem, gem, COL_MANA);
-    draw_text_centered(&card.base_cost.to_string(), x + 2.0 + gem / 2.0, y + 2.0 + gem * 0.78, 22.0, WHITE);
+    let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
+    ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
 
-    // name
-    let name_fit = fit_text(&card.name, w - gem - 10.0, 18.0);
-    ui::text(&name_fit, x + gem + 6.0, y + 2.0 + gem * 0.78, 18.0, BLACK);
-
-    // art
-    let art_y = y + gem + 4.0;
-    let art_h = h * ART_FRAC;
-    if let Some(art) = cache.art(&card.image_url) {
-        draw_texture_cover(art, x + 2.0, art_y, w - 4.0, art_h, WHITE);
-    } else {
-        draw_rectangle(x + 2.0, art_y, w - 4.0, art_h, COL_CARD_BG);
-    }
-
-    // description
-    let desc_y = art_y + art_h;
-    let desc_h = h - (gem + 4.0) - art_h - 28.0;
-    draw_rectangle(x + 2.0, desc_y, w - 4.0, desc_h, COL_DESC_BG);
     let desc = card.description.as_deref().unwrap_or("");
-    draw_wrapped_text(&strip_html(desc), x + 6.0, desc_y + 21.0, w - 12.0, 21.0, BLACK);
+    let desc_font = (frame.text.h * 0.20).round();
+    draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 
-    // bottom bar with current stats
-    let bot_y = y + h - 26.0;
-    draw_rectangle(x + 2.0, bot_y, w - 4.0, 24.0, COL_DESC_BG);
-    draw_stat_badge(minion.attack, x + 8.0, bot_y + 18.0, COL_ATK, 1.0);
-    draw_stat_badge(minion.defence, x + w - 22.0, bot_y + 18.0, COL_DEF, 1.0);
-
-    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.6, 0.6, 0.6, 0.7));
+    draw_stat_badge(minion.attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0);
+    draw_stat_badge(minion.defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
 }
 
 fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, anim_offsets: &[(u32, Vec2)]) {
@@ -841,53 +818,28 @@ fn draw_catalog(state: &DeckBuilderState, cache: &TextureCache) {
 }
 
 fn draw_catalog_card(card: &Card, x: f32, y: f32, cache: &TextureCache) {
-    let (name, color, is_minion) = card_meta(card);
+    let (name, color, _) = card_meta(card);
     let image_url = card_image_url(card);
     let cost = card_cost(card);
 
-    // background
-    if let Some(bg) = cache.bg(color) {
-        draw_texture_cover(bg, x, y, DB_CARD_W, DB_CARD_H, WHITE);
-    } else {
-        let bg_col = match color {
-            CardColor::White => Color::new(0.75, 0.70, 0.55, 1.0),
-            CardColor::Black => Color::new(0.18, 0.14, 0.22, 1.0),
-        };
-        draw_rectangle(x, y, DB_CARD_W, DB_CARD_H, bg_col);
-    }
+    let frame = draw_card_frame(x, y, DB_CARD_W, DB_CARD_H, color, image_url, cache, WHITE);
 
-    // art
-    let art_y = y + 18.0;
-    let art_h = DB_CARD_H * 0.40;
-    if let Some(art) = cache.art(image_url) {
-        draw_texture_cover(art, x + 1.0, art_y, DB_CARD_W - 2.0, art_h, WHITE);
-    } else {
-        draw_rectangle(x + 1.0, art_y, DB_CARD_W - 2.0, art_h, COL_CARD_BG);
-    }
+    let gem = frame.title.h;
+    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 10.0, WHITE);
 
-    // cost gem
-    draw_rectangle(x + 2.0, y + 2.0, 16.0, 14.0, COL_MANA);
-    draw_text_centered(&cost.to_string(), x + 10.0, y + 13.0, 11.0, WHITE);
+    let name_fit = fit_text(name, frame.title.w - gem - 4.0, 9.0);
+    ui::text(&name_fit, frame.title.x + gem + 3.0, frame.title.y + frame.title.h * 0.78, 9.0, BLACK);
 
-    // name
-    let name_fit = fit_text(name, DB_CARD_W - 22.0, 9.0);
-    ui::text(&name_fit, x + 20.0, y + 13.0, 9.0, BLACK);
-
-    // bottom bar
-    let bot_y = y + DB_CARD_H - 16.0;
-    draw_rectangle(x + 1.0, bot_y, DB_CARD_W - 2.0, 15.0, COL_DESC_BG);
-    if is_minion {
-        if let Card::Minion(m) = card {
-            draw_text_centered(&m.base_attack.to_string(), x + 10.0, bot_y + 11.0, 10.0, Color::new(0.8, 0.6, 0.1, 1.0));
-            draw_text_centered(&m.base_defence.to_string(), x + DB_CARD_W - 10.0, bot_y + 11.0, 10.0, Color::new(0.8, 0.25, 0.25, 1.0));
-        }
+    let label_y = frame.type_bar.y + frame.type_bar.h * 0.8;
+    if let Card::Minion(m) = card {
+        draw_text_centered(&m.base_attack.to_string(), frame.type_bar.x + 8.0, label_y, 10.0, Color::new(0.8, 0.6, 0.1, 1.0));
+        draw_text_centered(&m.base_defence.to_string(), frame.type_bar.right() - 8.0, label_y, 10.0, Color::new(0.8, 0.25, 0.25, 1.0));
     } else {
         let sl = "spell";
         let sd = ui::measure(sl, 8.0);
-        ui::text(sl, x + DB_CARD_W / 2.0 - sd.width / 2.0, bot_y + 11.0, 8.0, DARKGRAY);
+        ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, label_y, 8.0, DARKGRAY);
     }
-
-    draw_rectangle_lines(x, y, DB_CARD_W, DB_CARD_H, 1.0, Color::new(0.5, 0.5, 0.5, 0.5));
 }
 
 fn draw_right_panel(state: &DeckBuilderState, cache: &TextureCache, w: f32, h: f32) {

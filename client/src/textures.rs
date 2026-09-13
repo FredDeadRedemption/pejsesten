@@ -23,9 +23,7 @@ impl TextureCache {
     }
 
     pub async fn preload_for_state(&mut self, state: &GameStateClient) {
-        // Card backgrounds
-        self.load("cards/card-bg-white.png").await;
-        self.load("cards/card-bg-black.png").await;
+        self.load_frames().await;
         self.load("cards/missing-texture.png").await;
 
         // Art from all visible cards
@@ -60,14 +58,24 @@ impl TextureCache {
         self.load(&key).await;
     }
 
+    async fn load_frames(&mut self) {
+        for color in [CardColor::White, CardColor::Black] {
+            self.load_filtered(frame_key(&color), FilterMode::Nearest).await;
+        }
+    }
+
     async fn load(&mut self, key: &str) {
+        self.load_filtered(key, FilterMode::Linear).await
+    }
+
+    async fn load_filtered(&mut self, key: &str, filter: FilterMode) {
         if self.map.contains_key(key) {
             return;
         }
         let path = format!("{}{}", MEDIA_ROOT, key);
         match load_texture(&path).await {
             Ok(tex) => {
-                tex.set_filter(FilterMode::Linear);
+                tex.set_filter(filter);
                 self.map.insert(key.to_string(), tex);
             }
             Err(e) => eprintln!("[textures] failed to load {}: {}", path, e),
@@ -75,8 +83,7 @@ impl TextureCache {
     }
 
     pub async fn preload_cards(&mut self, cards: &[Card]) {
-        self.load("cards/card-bg-white.png").await;
-        self.load("cards/card-bg-black.png").await;
+        self.load_frames().await;
         self.load("cards/missing-texture.png").await;
         for card in cards {
             let url = match card {
@@ -87,12 +94,8 @@ impl TextureCache {
         }
     }
 
-    pub fn bg(&self, color: &CardColor) -> Option<&Texture2D> {
-        let key = match color {
-            CardColor::White => "cards/card-bg-white.png",
-            CardColor::Black => "cards/card-bg-black.png",
-        };
-        self.map.get(key)
+    pub fn frame(&self, color: &CardColor) -> Option<&Texture2D> {
+        self.map.get(frame_key(color))
     }
 
     pub fn art(&self, image_url: &str) -> Option<&Texture2D> {
@@ -102,6 +105,13 @@ impl TextureCache {
             image_url
         };
         self.map.get(key)
+    }
+}
+
+fn frame_key(color: &CardColor) -> &'static str {
+    match color {
+        CardColor::White => "cards/card-frame-white.png",
+        CardColor::Black => "cards/card-frame-black.png",
     }
 }
 
