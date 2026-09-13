@@ -5,6 +5,7 @@ mod card3d;
 mod clipboard;
 mod deckbuilder;
 mod decks;
+mod glow;
 mod layout;
 mod network;
 mod render;
@@ -16,7 +17,7 @@ use deckbuilder::{card_id, DeckBuilderState, Panel};
 use network::{NetworkClient, ServerEvent};
 use render::DragRender;
 use shared::types::{
-    AttackData, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
+    AttackData, Card, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
     IncantationAttribute, MinionAttribute, MinionEntity, PlayerMetaData, Requirement, TargetMode,
     ScenarioFrameInfo, TargetSide, TargetSpec,
 };
@@ -62,6 +63,7 @@ enum Screen {
     Playing(GameStateClient),
     DeckBuilder(DeckBuilderState),
     CardFlipTest(Card3D),
+    GlowTest(Vec<CardEntity>),
 }
 
 enum DragState {
@@ -90,8 +92,10 @@ async fn main() {
     let mut anims: Vec<BumpAnim> = vec![];
     let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
     let mut scenario: Option<ScenarioFrameInfo> = None;
+    let mut glow_watcher = glow::Watcher::new();
 
     loop {
+        glow_watcher.tick(get_frame_time());
         let mouse = ui::mouse_ui();
         let (mx, my) = (mouse.x, mouse.y);
         let canvas = ui::size();
@@ -139,6 +143,14 @@ async fn main() {
                 && layout::lobby_card_flip_test_rect(w, h).contains(Vec2::new(mx, my));
             if is_key_pressed(KeyCode::T) || clicked {
                 screen = Screen::CardFlipTest(Card3D::load().await);
+            }
+        }
+
+        if matches!(screen, Screen::Lobby) {
+            let clicked = is_mouse_button_released(MouseButton::Left)
+                && layout::lobby_glow_test_rect(w, h).contains(Vec2::new(mx, my));
+            if is_key_pressed(KeyCode::G) || clicked {
+                screen = Screen::GlowTest(load_glow_samples(&mut cache).await);
             }
         }
 
@@ -211,6 +223,10 @@ async fn main() {
                 render::draw_game(state, &cache, &drag_render);
             }
             Screen::DeckBuilder(db_state) => render::draw_deck_builder(db_state, &cache),
+            Screen::GlowTest(cards) => {
+                show_mouse(true);
+                render::draw_glow_test(cards, &cache, glow_watcher.reloads());
+            }
         }
 
         if let Some(info) = &scenario {
@@ -219,6 +235,24 @@ async fn main() {
 
         next_frame().await;
     }
+}
+
+/// Three minions off the top of the collectible pool, purely to have art under the glow.
+async fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
+    let picks: Vec<Card> = shared::cards::get_collectible_cards()
+        .into_iter()
+        .filter(|c| matches!(c, Card::Minion(_)))
+        .take(3)
+        .collect();
+    cache.preload_cards(&picks).await;
+
+    picks.iter()
+        .enumerate()
+        .filter_map(|(i, card)| match card {
+            Card::Minion(m) => shared::cards::instantiate_minion_by_id(m.id, i as u32).map(CardEntity::Minion),
+            Card::Incantation(_) => None,
+        })
+        .collect()
 }
 
 struct BumpAnim {
@@ -623,6 +657,12 @@ fn handle_input(
             // Cancel drag with right click or Escape
             if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
                 *drag = None;
+            }
+        }
+
+        Screen::GlowTest(_) => {
+            if is_key_pressed(KeyCode::Escape) {
+                *screen = Screen::Lobby;
             }
         }
 

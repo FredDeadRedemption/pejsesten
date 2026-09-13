@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState, Panel};
 use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
 use crate::textures::{draw_texture_cover, TextureCache};
+use crate::glow;
 use crate::ui;
 use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
 
@@ -26,13 +27,8 @@ const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
-const COL_GLOW_CONDITION: Color = Color::new(1.0, 0.84, 0.25, 1.0);
-const COL_GLOW_PLAYABLE: Color = Color::new(0.35, 0.65, 1.0, 1.0);
 const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
 
-const GLOW_RINGS: usize = 10;
-const GLOW_SPREAD: f32 = 15.0;
-const GLOW_RIM: f32 = 2.0;
 
 // ── Public entry points ────────────────────────────────────────────────────────
 
@@ -154,6 +150,61 @@ pub fn draw_lobby(username: &str) {
     draw_button("Deck Builder  [D]", w / 2.0 - 115.0, h / 2.0 + 180.0, 230.0, 46.0);
     draw_button("Card Flip Test  [T]", w / 2.0 - 115.0, h / 2.0 + 242.0, 230.0, 46.0);
     draw_button("Run Scenarios  [S]", w / 2.0 - 115.0, h / 2.0 + 304.0, 230.0, 46.0);
+    draw_button("Glow Test  [G]", w / 2.0 - 115.0, h / 2.0 + 366.0, 230.0, 46.0);
+}
+
+/// Side-by-side glow states over the live config, so glow.json can be tuned by eye.
+pub fn draw_glow_test(cards: &[CardEntity], cache: &TextureCache, reloads: u32) {
+    let w = ui::size().x;
+    let h = ui::size().y;
+    let cfg = glow::current();
+
+    let title = "Glow Test";
+    let td = ui::measure(title, 34.0);
+    ui::text(title, w / 2.0 - td.width / 2.0, 62.0, 34.0, WHITE);
+
+    let hint = format!("editing {} - {} reloads - [Esc] back", glow::FILE, reloads);
+    let hd = ui::measure(&hint, 16.0);
+    ui::text(&hint, w / 2.0 - hd.width / 2.0, 88.0, 16.0, GRAY);
+
+    let cw = CARD_W * 1.6;
+    let ch = CARD_H * 1.6;
+    let gap = 70.0;
+    let columns: [(&str, Option<glow::Style>); 3] = [
+        ("no hint", None),
+        ("playable", Some(cfg.playable)),
+        ("condition met", Some(cfg.condition)),
+    ];
+    let total = columns.len() as f32 * cw + (columns.len() - 1) as f32 * gap;
+    let start_x = w / 2.0 - total / 2.0;
+    let y = h / 2.0 - ch / 2.0;
+
+    for (i, (label, style)) in columns.iter().enumerate() {
+        let x = start_x + i as f32 * (cw + gap);
+        if let Some(style) = style {
+            draw_glow(&cfg, style, x, y, cw, ch, i as f32 * cfg.phase_step, 1.0);
+        }
+        match cards.get(i) {
+            Some(card) => draw_card(card, x, y, cw, ch, cache, 1.0),
+            None => draw_card_back(x, y, cw, ch),
+        }
+        let ld = ui::measure(label, 18.0);
+        ui::text(label, x + cw / 2.0 - ld.width / 2.0, y + ch + 30.0, 18.0, LIGHTGRAY);
+    }
+
+    let lines = [
+        format!("rings        {}", cfg.rings),
+        format!("spread       {:.1}", cfg.spread),
+        format!("inset        {:.1}", cfg.inset),
+        format!("thickness    {:.1}", cfg.thickness),
+        format!("falloff      {:.2}", cfg.falloff),
+        format!("pulse_floor  {:.2}", cfg.pulse_floor),
+        format!("breathe      {:.2}", cfg.breathe),
+        format!("phase_step   {:.2}", cfg.phase_step),
+    ];
+    for (i, line) in lines.iter().enumerate() {
+        ui::text(line, 28.0, h - 28.0 - (lines.len() - 1 - i) as f32 * 20.0, 16.0, GRAY);
+    }
 }
 
 /// Narration strip for a scenario playback frame, drawn over the board.
@@ -602,6 +653,7 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
     let count = hand.len() as f32;
     let total = count * (CARD_W + CARD_GAP) - CARD_GAP;
     let start_x = w / 2.0 - total / 2.0;
+    let cfg = glow::current();
 
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (CARD_W + CARD_GAP);
@@ -610,8 +662,8 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
                 .find(|(id, _)| *id == card.entity_id())
                 .map(|(_, v)| *v)
                 .unwrap_or(1.0);
-            if let Some(glow) = hints.get(i).and_then(glow_style) {
-                draw_glow(x, y, CARD_W, CARD_H, &glow, i as f32 * 0.55, flip_cos.clamp(0.0, 1.0));
+            if let Some(style) = hints.get(i).and_then(|h| glow_style(&cfg, h)) {
+                draw_glow(&cfg, &style, x, y, CARD_W, CARD_H, i as f32 * cfg.phase_step, flip_cos.clamp(0.0, 1.0));
             }
             draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
         } else {
@@ -620,37 +672,30 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
     }
 }
 
-struct Glow {
-    color: Color,
-    intensity: f32,
-    speed: f32,
-}
-
 /// A met condition outranks plain affordability: it is the rarer thing to notice.
-fn glow_style(hint: &CardHint) -> Option<Glow> {
+fn glow_style(cfg: &glow::Config, hint: &CardHint) -> Option<glow::Style> {
     match (hint.condition_met, hint.playable) {
-        (true, _) => Some(Glow { color: COL_GLOW_CONDITION, intensity: 0.60, speed: 3.0 }),
-        (false, true) => Some(Glow { color: COL_GLOW_PLAYABLE, intensity: 0.34, speed: 1.6 }),
+        (true, _) => Some(cfg.condition),
+        (false, true) => Some(cfg.playable),
         _ => None,
     }
 }
 
-/// Phase offsets the pulse per card so a full hand shimmers instead of strobing in unison.
-/// Fade tracks the draw flip, since the card is a narrow sliver mid-animation.
-fn draw_glow(x: f32, y: f32, w: f32, h: f32, glow: &Glow, phase: f32, fade: f32) {
-    let pulse = 0.62 + 0.38 * (get_time() as f32 * glow.speed + phase).sin();
+/// Phase spaces the pulse per hand slot; fade tracks the draw flip, since the card
+/// is a narrow sliver mid-animation and a full-width aura would frame empty space.
+pub fn draw_glow(cfg: &glow::Config, style: &glow::Style, x: f32, y: f32, w: f32, h: f32, phase: f32, fade: f32) {
+    let wave = 0.5 + 0.5 * (get_time() as f32 * style.speed + phase).sin();
+    let pulse = cfg.pulse_floor + (1.0 - cfg.pulse_floor) * wave;
+    let breathe = 1.0 - cfg.breathe + cfg.breathe * pulse;
+    let color = style.color();
 
-    // rings overlap so the alpha layers composite into a soft falloff rather than banding
-    for i in 1..=GLOW_RINGS {
-        let t = i as f32 / GLOW_RINGS as f32;
-        let pad = GLOW_RIM + t * GLOW_SPREAD * (0.80 + 0.20 * pulse);
-        let a = glow.intensity * pulse * fade * (1.0 - t).powi(2);
-        draw_rectangle_lines(x - pad, y - pad, w + pad * 2.0, h + pad * 2.0, 3.0, Color { a, ..glow.color });
+    // rings overlap so the alpha layers composite into a falloff instead of banding
+    for i in 1..=cfg.rings {
+        let t = i as f32 / cfg.rings as f32;
+        let pad = cfg.inset + t * cfg.spread * breathe;
+        let a = style.intensity * pulse * fade * (1.0 - t).powf(cfg.falloff);
+        draw_rectangle_lines(x - pad, y - pad, w + pad * 2.0, h + pad * 2.0, cfg.thickness, Color { a, ..color });
     }
-
-    // sits clear of the card edge; draw_card paints over anything inside the rect
-    let a = (0.35 + 0.45 * pulse) * fade;
-    draw_rectangle_lines(x - GLOW_RIM, y - GLOW_RIM, w + GLOW_RIM * 2.0, h + GLOW_RIM * 2.0, 2.5, Color { a, ..glow.color });
 }
 
 fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
