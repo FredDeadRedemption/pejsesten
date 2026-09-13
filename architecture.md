@@ -16,7 +16,8 @@ pejsesten/
 │   ├── app_storage.js  # custom plugin: localStorage
 │   └── static/         # card art, favicon
 ├── docs/               # design notes
-├── scripts/            # dev-native.sh, dev-web.sh
+├── scripts/            # dev-web.sh
+├── xtask/              # dev launcher behind `cargo dev`
 └── Dockerfile          # multi-stage: builds wasm + server, ships one container
 ```
 
@@ -159,10 +160,12 @@ Server URL is set via `option_env!("SERVER_URL")`, defaulting to `ws://localhost
 ### Native dev loop
 
 ```sh
-./scripts/dev-native.sh
+cargo dev
 ```
 
-Starts the server in the background and runs the client under `cargo watch`. Save → ~1 sec rebuild → window relaunches. Ctrl-C kills both.
+A cargo alias (`.cargo/config.toml`) for `cargo run -p xtask`. Builds and starts the server in the background, waits for port 3000 to accept, then runs the client in the foreground. Server output goes to `/tmp/pejsesten-server.log`. Ctrl-C, or closing the window, kills both.
+
+Plain `cargo run` still builds and runs the client alone (`default-members` in the workspace manifest), for when a server is already up.
 
 ### Web dev loop
 

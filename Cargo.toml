@@ -1,4 +1,4 @@
 [workspace]
-members = ["server", "client", "shared"]
+members = ["server", "client", "shared", "xtask"]
 default-members = ["client"]
 resolver = "2"
