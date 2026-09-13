@@ -1,5 +1,8 @@
+use crate::clipboard;
 use crate::decks::{self, Deck};
 use shared::types::{Card, Color as CardColor};
+
+pub const MAX_DECK_CARDS: usize = 50;
 
 pub const RANDOM_NAMES: &[&str] = &[
     "Pixie's Rejected Tarot",
@@ -37,15 +40,10 @@ pub struct DeckBuilderState {
     pub search: String,
     pub filter_type: FilterType,
     pub filter_color: ColorFilter,
-    pub catalog_scroll: f32,
-    pub deck_scroll: f32,
 
     pub decks: Vec<Deck>,
     pub panel: Panel,
     pub editing_cards: Vec<u32>,
-
-    // text input cursor for name
-    pub name_cursor: usize,
 
     // clipboard feedback timer
     pub clipboard_msg: Option<(String, f32)>,
@@ -64,12 +62,9 @@ impl DeckBuilderState {
             search: String::new(),
             filter_type: FilterType::All,
             filter_color: ColorFilter::All,
-            catalog_scroll: 0.0,
-            deck_scroll: 0.0,
             decks,
             panel: Panel::DeckList,
             editing_cards: vec![],
-            name_cursor: 0,
             clipboard_msg: None,
             import_pending: false,
             textures_preloaded: false,
@@ -95,24 +90,19 @@ impl DeckBuilderState {
             }
             Some(i)
         }).collect();
-        self.catalog_scroll = 0.0;
     }
 
     pub fn open_new_deck(&mut self) {
         let name = random_deck_name();
         self.editing_cards = vec![];
-        self.name_cursor = name.len();
         self.panel = Panel::Editor { id: None, name };
-        self.deck_scroll = 0.0;
     }
 
     pub fn open_deck(&mut self, id: u64) {
         if let Some(d) = self.decks.iter().find(|d| d.id == id) {
             let name = d.name.clone();
             self.editing_cards = d.cards.clone();
-            self.name_cursor = name.len();
             self.panel = Panel::Editor { id: Some(id), name };
-            self.deck_scroll = 0.0;
         }
     }
 
@@ -145,7 +135,7 @@ impl DeckBuilderState {
     }
 
     pub fn add_card(&mut self, card_id: u32) {
-        if self.editing_cards.len() < 50 {
+        if self.editing_cards.len() < MAX_DECK_CARDS {
             self.editing_cards.push(card_id);
         }
     }
@@ -178,6 +168,55 @@ impl DeckBuilderState {
             *t -= dt;
             if *t <= 0.0 {
                 self.clipboard_msg = None;
+            }
+        }
+    }
+
+    /// Copies the deck under edit to the clipboard as the shareable base64 blob.
+    pub fn export_current(&mut self) {
+        let (id, name) = match &self.panel {
+            Panel::Editor { id, name } => (*id, name.clone()),
+            Panel::DeckList => return,
+        };
+        let deck = Deck { id: id.unwrap_or_else(decks::now_id), name, cards: self.editing_cards.clone() };
+        clipboard::write(&decks::export_one(&deck));
+        self.set_clipboard_msg("Deck copied!".to_string());
+    }
+
+    pub fn export_all(&mut self) {
+        clipboard::write(&decks::export_all(&self.decks));
+        self.set_clipboard_msg("All decks copied!".to_string());
+    }
+
+    pub fn request_import(&mut self) {
+        clipboard::request_read();
+        self.import_pending = true;
+    }
+
+    /// Clipboard reads resolve a frame or more later on web, so the result is picked up here.
+    pub fn poll_import(&mut self) {
+        if !self.import_pending {
+            return;
+        }
+        let Some(result) = clipboard::take_read_result() else {
+            return;
+        };
+        self.import_pending = false;
+
+        match result.and_then(|clip| decks::import_from_base64(&clip)) {
+            Ok(imported) => {
+                for deck in imported {
+                    match self.decks.iter().position(|d| d.id == deck.id) {
+                        Some(i) => self.decks[i] = deck,
+                        None => self.decks.push(deck),
+                    }
+                }
+                decks::save(&self.decks);
+                self.set_clipboard_msg("Decks imported!".to_string());
+            }
+            Err(e) => {
+                eprintln!("[import] failed: {}", e);
+                self.set_clipboard_msg("Import failed!".to_string());
             }
         }
     }
