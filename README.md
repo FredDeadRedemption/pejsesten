@@ -167,6 +167,20 @@ You choose the heir by sequencing, so the value chain is entirely in your hands 
 
 Flagged experimental because the ceiling is unknown: stacking several Bequeath deaths into one recipient could hand a single body four keywords, and it is not obvious yet whether inherited buffs should stack, overwrite, or be capped at one donor. Needs play before it is trusted.
 
+### Triad
+
+A single payoff when you play the third copy of a card in a game.
+
+> **Hearthwarden** — 3/3. **Triad:** summon a 6/6.
+
+Easier to balance than Escalate, which ramps with every copy and has an open top end. Triad has exactly one payoff moment, so it can be priced once and left alone.
+
+It is really a quest folded into a single card slot: one card, three plays, a reward. At 25 cards with 3 copies you expect to have seen about 1.6 copies by turn 10, so landing all three is a genuine achievement, and the digging actions are what make it reachable at all.
+
+Both players can count the copies, so the third one always arrives telegraphed. That is the interaction — the opponent knows what is coming and has to decide whether to race it or attack the deck.
+
+Keep it to three copies of the **same card**, not three of a race. Tighter, more memorable, and it forces a real playset commitment instead of a loose tribal check.
+
 ---
 
 ## Evergreen Keywords
