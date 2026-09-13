@@ -240,6 +240,12 @@ pub struct ScenarioFrameInfo {
     pub done: bool,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CardHint {
+    pub playable: bool,
+    pub condition_met: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameStateClient {
     pub self_board: Board,
@@ -252,6 +258,7 @@ pub struct GameStateClient {
     pub phase: GamePhase,
     pub mulligan_submitted: bool,
     pub open_cards: bool,
+    pub hand_hints: Vec<CardHint>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

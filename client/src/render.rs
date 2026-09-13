@@ -5,7 +5,7 @@ use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState,
 use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::ui;
-use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
+use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
 
 
 // mana gem as a fraction of card height, stat badge as a multiple of its base size
@@ -26,6 +26,8 @@ const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
+const COL_GLOW_CONDITION: Color = Color::new(1.0, 0.84, 0.25, 1.0);
+const COL_GLOW_PLAYABLE: Color = Color::new(0.35, 0.65, 1.0, 1.0);
 const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
 
 // ── Public entry points ────────────────────────────────────────────────────────
@@ -50,8 +52,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips, state.open_cards);
-    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips, state.open_cards);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &[]);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &state.hand_hints);
 
     // Debug: hand zone boundary
     let hz = layout::hand_zone_rect(w, h);
@@ -224,7 +226,7 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)], open_cards: bool) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)], open_cards: bool, hand_hints: &[CardHint]) {
     let mid = h / 2.0;
     if is_self {
         let hand_y = h - CARD_H - 10.0;
@@ -234,7 +236,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, true);
         draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
-        draw_hand(&board.hand, w, hand_y, true, cache, hand_flips);
+        draw_hand(&board.hand, w, hand_y, true, cache, hand_flips, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y - 24.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
@@ -246,7 +248,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
         draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
-        draw_hand(&board.hand, w, hand_y, open_cards, cache, hand_flips);
+        draw_hand(&board.hand, w, hand_y, open_cards, cache, hand_flips, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
@@ -592,7 +594,7 @@ fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cac
     }
 }
 
-fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &TextureCache, hand_flips: &[(u32, f32)]) {
+fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &TextureCache, hand_flips: &[(u32, f32)], hints: &[CardHint]) {
     let count = hand.len() as f32;
     let total = count * (CARD_W + CARD_GAP) - CARD_GAP;
     let start_x = w / 2.0 - total / 2.0;
@@ -604,10 +606,31 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
                 .find(|(id, _)| *id == card.entity_id())
                 .map(|(_, v)| *v)
                 .unwrap_or(1.0);
+            if let Some(glow) = hints.get(i).and_then(glow_colour) {
+                draw_glow(x, y, CARD_W, CARD_H, glow);
+            }
             draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
         } else {
             draw_card_back(x, y, CARD_W, CARD_H);
         }
+    }
+}
+
+/// A met condition outranks plain affordability: it is the rarer thing to notice.
+fn glow_colour(hint: &CardHint) -> Option<Color> {
+    match (hint.condition_met, hint.playable) {
+        (true, _) => Some(COL_GLOW_CONDITION),
+        (false, true) => Some(COL_GLOW_PLAYABLE),
+        _ => None,
+    }
+}
+
+fn draw_glow(x: f32, y: f32, w: f32, h: f32, color: Color) {
+    let rings = 5;
+    for i in 1..=rings {
+        let pad = i as f32 * 2.5;
+        let a = 0.45 * (1.0 - (i - 1) as f32 / rings as f32);
+        draw_rectangle_lines(x - pad, y - pad, w + pad * 2.0, h + pad * 2.0, 3.0, Color { a, ..color });
     }
 }
 

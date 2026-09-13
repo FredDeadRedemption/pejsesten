@@ -184,6 +184,7 @@ impl Game {
     // white and black are separate struct fields so Rust allows split mutable borrows
 
     /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
+    /// Caller owns id continuity: pass a generator already past the state's entity ids.
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
         Game { state, effect_queue: vec![], ids, summon_pool: HashMap::new() }
     }
@@ -940,7 +941,26 @@ impl Game {
             phase: self.state.phase.clone(),
             mulligan_submitted: if for_white { self.state.mulligan_white_done } else { self.state.mulligan_black_done },
             open_cards: settings::OPEN_CARDS,
+            hand_hints: self.hand_hints(for_white),
         }
+    }
+
+    /// Play affordances for a hand. Requirements are turn scoped, so off-turn hands get none.
+    fn hand_hints(&self, for_white: bool) -> Vec<CardHint> {
+        let board = if for_white { &self.state.white } else { &self.state.black };
+        if for_white != self.state.white_turn {
+            return board.hand.iter().map(|_| CardHint::default()).collect();
+        }
+
+        board.hand.iter().map(|card| {
+            let has_room = !matches!(card, CardEntity::Minion(_))
+                || board.battlefield.len() < settings::MAX_BOARD_SIZE;
+            CardHint {
+                playable: card.cost() <= board.mana && has_room,
+                condition_met: card.abilities().iter()
+                    .any(|a| !a.requirements.is_empty() && self.check_requirements(&a.requirements, card)),
+            }
+        }).collect()
     }
 
     pub fn submit_mulligan(&mut self, player_id: &str, mut indices: Vec<usize>) -> bool {
