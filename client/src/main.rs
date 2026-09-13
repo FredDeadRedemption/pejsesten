@@ -251,6 +251,8 @@ impl BumpAnim {
     }
 }
 
+const FLIP_RATE: f32 = 8.0;
+
 struct CardFlip {
     rotation_y: f32,
     target_y: f32,
@@ -261,9 +263,11 @@ impl CardFlip {
         Self { rotation_y: std::f32::consts::PI, target_y: 0.0 }
     }
 
+    // exponential form: a texture preload can stall a frame for >0.25s, and the plain
+    // dt lerp overshoots past that, leaving the card spinning at a sliver forever
     fn update(&mut self, dt: f32) {
         let diff = self.target_y - self.rotation_y;
-        self.rotation_y += diff * 8.0 * dt;
+        self.rotation_y += diff * (1.0 - (-FLIP_RATE * dt).exp());
     }
 
     fn cos(&self) -> f32 {
