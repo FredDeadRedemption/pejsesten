@@ -16,8 +16,7 @@ pejsesten/
 │   ├── app_storage.js  # custom plugin: localStorage
 │   └── static/         # card art, favicon
 ├── docs/               # design notes
-├── scripts/            # dev-web.sh
-├── xtask/              # dev launcher behind `cargo dev`
+├── xtask/              # dev launchers behind `cargo dev` and `cargo dev web`
 └── Dockerfile          # multi-stage: builds wasm + server, ships one container
 ```
 
@@ -163,14 +162,14 @@ Server URL is set via `option_env!("SERVER_URL")`, defaulting to `ws://localhost
 cargo dev
 ```
 
-A cargo alias (`.cargo/config.toml`) for `cargo run -p xtask`. Builds and starts the server in the background, waits for port 3000 to accept, then runs the client in the foreground. Server output goes to `/tmp/pejsesten-server.log`. Ctrl-C, or closing the window, kills both.
+A cargo alias (`.cargo/config.toml`) for `cargo run -p xtask --`. Builds and starts the server in the background, waits for port 3000 to accept, then runs the client in the foreground. Server output goes to `/tmp/pejsesten-server.log`. Ctrl-C, or closing the window, kills both.
 
 Plain `cargo run` still builds and runs the client alone (`default-members` in the workspace manifest), for when a server is already up.
 
 ### Web dev loop
 
 ```sh
-./scripts/dev-web.sh
+cargo dev web
 ```
 
 Builds the wasm bundle, symlinks `client/index.html`, `mq_js_bundle.js`, `app_ws.js`, `app_storage.js`, `favicon.png`, the `media/` dir, and the wasm into `dist/`, then runs the server with `STATIC_DIR=dist`. Open `http://localhost:3000`. Iterate by rebuilding the wasm in another terminal — symlinks pick up the new artifact, just refresh the tab.
@@ -189,7 +188,7 @@ Single Railway service, single origin. The server hosts the static files via `to
 
 ## Cheat sheet
 
-- "How do I add a new browser API to the wasm client?" — Write a JS plugin (~30 lines) and matching Rust `extern "C"` block. Add the JS file to `index.html`, `dev-web.sh`, and the Dockerfile.
+- "How do I add a new browser API to the wasm client?" — Write a JS plugin (~30 lines) and matching Rust `extern "C"` block. Add the JS file to `index.html`, the link list in `xtask/src/main.rs`, and the Dockerfile.
 - "Why is `ewebsock` desktop-only?" — It pulls `wasm-bindgen` transitively, which can't coexist with `mq_js_bundle.js`. We use our `app_ws.js` plugin on wasm instead.
 - "Why does `MEDIA_ROOT` differ between targets?" — Native loads from disk via an absolute path baked at compile time. Wasm loads via HTTP from `/media/...`, served by the same axum server.
 - "Where do decks save?" — `decks.json` in CWD on desktop, `localStorage` under key `pejsesten.decks` on wasm.

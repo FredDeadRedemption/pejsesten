@@ -1,33 +1,41 @@
 use std::env;
-use std::fs::File;
+use std::fs::{self, File};
+use std::io::ErrorKind;
 use std::net::TcpStream;
+use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::thread::sleep;
 use std::time::Duration;
 
 fn main() {
-    if let Err(message) = dev() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask always sits one level below the workspace root")
+        .to_path_buf();
+
+    let result = match env::args().nth(1).as_deref() {
+        None | Some("native") => native(&root),
+        Some("web") => web(&root),
+        Some(task) => Err(format!("unknown task `{task}`, expected `native` or `web`")),
+    };
+
+    if let Err(message) = result {
         eprintln!("{message}");
         std::process::exit(1);
     }
 }
 
 /// Native dev loop: server in the background, client in the foreground.
-fn dev() -> Result<(), String> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask always sits one level below the workspace root")
-        .to_path_buf();
-
-    if !cargo(&root, &["build", "-p", "server"]) {
+fn native(root: &Path) -> Result<(), String> {
+    if !run(cargo(root, &["build", "-p", "server"])) {
         return Err("server build failed".into());
     }
 
     let log_path = env::temp_dir().join("pejsesten-server.log");
     let log = File::create(&log_path).map_err(|e| format!("{}: {e}", log_path.display()))?;
     let server = Command::new(root.join("target/debug/server"))
-        .current_dir(&root)
+        .current_dir(root)
         .stdout(Stdio::from(log.try_clone().map_err(|e| e.to_string())?))
         .stderr(Stdio::from(log))
         .spawn()
@@ -46,18 +54,75 @@ fn dev() -> Result<(), String> {
         }
     }
 
-    match cargo(&root, &["run", "-p", "client"]) {
+    match run(cargo(root, &["run", "-p", "client"])) {
         true => Ok(()),
         false => Err("client exited with an error".into()),
     }
 }
 
-fn cargo(root: &Path, args: &[&str]) -> bool {
-    Command::new(env!("CARGO"))
-        .args(args)
-        .current_dir(root)
-        .status()
-        .is_ok_and(|status| status.success())
+/// Web dev loop: wasm bundle plus assets in dist/, served by the server.
+fn web(root: &Path) -> Result<(), String> {
+    let wasm = &[
+        "build",
+        "-p",
+        "client",
+        "--target",
+        "wasm32-unknown-unknown",
+        "--release",
+    ];
+    if !run(cargo(root, wasm)) {
+        return Err("wasm build failed".into());
+    }
+
+    let dist = root.join("dist");
+    fs::create_dir_all(&dist).map_err(|e| format!("{}: {e}", dist.display()))?;
+
+    // symlinks, so a wasm rebuild only needs a browser refresh
+    let links = [
+        (
+            "target/wasm32-unknown-unknown/release/client.wasm",
+            "client.wasm",
+        ),
+        ("client/index.html", "index.html"),
+        ("client/mq_js_bundle.js", "mq_js_bundle.js"),
+        ("client/app_ws.js", "app_ws.js"),
+        ("client/app_storage.js", "app_storage.js"),
+        ("client/app_location.js", "app_location.js"),
+        ("client/static/favicon.png", "favicon.png"),
+        ("client/static/media", "media"),
+    ];
+    for (target, name) in links {
+        link(&root.join(target), &dist.join(name))?;
+    }
+
+    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    println!("\n→ http://localhost:{port}\n");
+
+    let mut server = cargo(root, &["run", "-p", "server"]);
+    server.env("STATIC_DIR", "dist");
+    match run(server) {
+        true => Ok(()),
+        false => Err("server exited with an error".into()),
+    }
+}
+
+fn link(target: &Path, at: &Path) -> Result<(), String> {
+    match fs::remove_file(at) {
+        Ok(()) => {}
+        Err(e) if e.kind() == ErrorKind::NotFound => {}
+        Err(e) => return Err(format!("{}: {e}", at.display())),
+    }
+    symlink(target, at).map_err(|e| format!("{}: {e}", at.display()))
+}
+
+fn cargo(root: &Path, args: &[&str]) -> Command {
+    let mut command = Command::new(env!("CARGO"));
+    command.args(args).current_dir(root);
+    command
+}
+
+fn run(mut command: Command) -> bool {
+    command.status().is_ok_and(|status| status.success())
 }
 
 /// Kills the server on every exit path, including the error ones.
