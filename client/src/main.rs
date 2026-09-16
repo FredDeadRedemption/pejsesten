@@ -6,6 +6,7 @@ mod clipboard;
 mod deckbuilder;
 mod deckbuilder_ui;
 mod decks;
+mod fx;
 mod glow;
 mod layout;
 mod network;
@@ -189,6 +190,7 @@ async fn main() {
         // --- Render ---
         clear_background(Color::from_rgba(12, 12, 20, 255));
         ui::set_ui_camera();
+        fx::draw_background(w, h);
 
         // Card flip test: tick + input handled here (needs &mut access)
         if let Screen::CardFlipTest(card) = &mut screen {

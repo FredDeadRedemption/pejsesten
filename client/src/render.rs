@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
 use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
 use crate::textures::{draw_texture_cover, TextureCache};
+use crate::fx;
 use crate::glow;
 use crate::ui;
 use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, OmenCard, OmenEntity, ScenarioFrameInfo};
@@ -15,8 +16,6 @@ const GEM_BOARD: f32 = 0.18;
 const BADGE_HAND: f32 = 1.2;
 const BADGE_BOARD: f32 = 1.5;
 
-const COL_SELF: Color = Color::new(0.2, 0.5, 0.8, 1.0);
-const COL_ENEMY: Color = Color::new(0.7, 0.2, 0.2, 1.0);
 const COL_CARD_BG: Color = Color::new(0.15, 0.15, 0.25, 1.0);
 const COL_MANA: Color = Color::new(0.34, 0.60, 0.80, 1.0);
 const COL_MANA_EMPTY: Color = Color::new(0.12, 0.12, 0.22, 1.0);
@@ -27,7 +26,6 @@ const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
-const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
 const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
 const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
 
@@ -57,10 +55,6 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &[]);
     draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &state.hand_hints);
 
-    // Debug: hand zone boundary
-    let hz = layout::hand_zone_rect(w, h);
-    draw_rectangle_lines(hz.x, hz.y, hz.w, hz.h, 1.0, Color::new(1.0, 1.0, 0.0, 0.4));
-
     if state.your_turn {
         draw_end_turn_button(w, mid);
         draw_drop_targets(state, drag, w, h);
@@ -79,7 +73,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
         if !targeting_active {
             let cx = drag.mx - CARD_W / 2.0;
             let cy = drag.my - CARD_H * 0.6;
-            draw_rectangle(cx + 4.0, cy + 6.0, CARD_W, CARD_H, COL_DRAG_SHADOW);
+            fx::soft_shadow(cx + 2.0, cy + 4.0, CARD_W, CARD_H);
             draw_card(card, cx, cy, CARD_W, CARD_H, cache, 1.0);
         }
     }
@@ -111,6 +105,7 @@ pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &Textur
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (full_w + spacing);
         let is_selected = selected.contains(&i);
+        fx::soft_shadow(x, card_y, full_w, full_h);
         draw_card(card, x, card_y, full_w, full_h, cache, 1.0);
 
         if is_selected {
@@ -183,6 +178,7 @@ pub fn draw_glow_test(cards: &[CardEntity], cache: &TextureCache, reloads: u32) 
 
     for (i, (label, style)) in columns.iter().enumerate() {
         let x = start_x + i as f32 * (cw + gap);
+        fx::soft_shadow(x, y, cw, ch);
         if let Some(style) = style {
             draw_glow(&cfg, style, x, y, cw, ch, i as f32 * cfg.phase_step, 1.0);
         }
@@ -420,6 +416,7 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
 
 fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
     let tint = if minion.exhausted { Color::new(0.5, 0.5, 0.55, 1.0) } else { WHITE };
+    fx::soft_shadow(x, y, w, h);
 
     draw_card_layers(
         x, y, w, h,
@@ -462,7 +459,7 @@ fn draw_card_layers(
 
     // gem overhangs the title bar into the art window
     let gem = (h * gem_frac).min(w * 0.4);
-    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_mana_gem(frame.title.x, frame.title.y, gem);
     if scale <= 0.6 {
         return;
     }
@@ -573,7 +570,7 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
             _ => 0.0,
         };
         let py = (rect.y - ph - panel - 10.0).max(0.0);
-        draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
+        fx::soft_shadow(px, py, pw, ph);
         draw_card_entity_preview(card, px, py, pw, ph, cache);
         return;
     }
@@ -595,7 +592,7 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
         let block_h = ph + 6.0 + omen_panel_height(omen);
         let px = rect.x + rect.w + 10.0;
         let py = (rect.y + rect.h / 2.0 - block_h / 2.0).clamp(0.0, h - block_h);
-        draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
+        fx::soft_shadow(px, py, pw, ph);
         draw_omen_preview(omen, px, py, pw, ph, cache);
         return;
     }
@@ -622,7 +619,7 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
     };
     let py = (rect.y + rect.h / 2.0 - ph / 2.0).clamp(0.0, h - ph);
 
-    draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
+    fx::soft_shadow(px, py, pw, ph);
     draw_card_preview(minion, px, py, pw, ph, cache);
 }
 
@@ -639,7 +636,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_mana_gem(frame.title.x, frame.title.y, gem);
     draw_text_centered(&inc.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
@@ -656,9 +653,10 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
 
 fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache) {
     for (omen, rect) in omens.iter().zip(rects.iter()) {
+        fx::soft_shadow(rect.x, rect.y, rect.w, rect.h);
         let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &omen.card.color, &omen.card.image_url, cache, WHITE);
         let gem = (rect.h * GEM_BOARD).min(rect.w * 0.4);
-        draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+        draw_mana_gem(frame.title.x, frame.title.y, gem);
         draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), WHITE);
         let name = fit_text(&omen.card.name, frame.text.w, 9.0);
         ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, BLACK);
@@ -704,7 +702,7 @@ fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_mana_gem(frame.title.x, frame.title.y, gem);
     draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
@@ -737,11 +735,11 @@ pub fn draw_omen_picker(card: &OmenCard, mx: f32, my: f32, cache: &TextureCache)
 
     for (i, rect) in layout::omen_pick_rects(w, h).iter().enumerate() {
         let hovered = rect.contains(Vec2::new(mx, my));
-        draw_rectangle(rect.x + 4.0, rect.y + 6.0, rect.w, rect.h, COL_DRAG_SHADOW);
+        fx::soft_shadow(rect.x, rect.y, rect.w, rect.h);
         let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &card.color, &card.image_url, cache, WHITE);
 
         let gem = frame.title.h;
-        draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+        draw_mana_gem(frame.title.x, frame.title.y, gem);
         draw_text_centered(&card.base_cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 16.0, WHITE);
         let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 13.0);
         ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 13.0, BLACK);
@@ -768,7 +766,7 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_mana_gem(frame.title.x, frame.title.y, gem);
     draw_text_centered(&card.base_cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
@@ -805,6 +803,7 @@ fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &Texture
 
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (CARD_W + CARD_GAP);
+        fx::soft_shadow(x, y, CARD_W, CARD_H);
         if face_up {
             let flip_cos = hand_flips.iter()
                 .find(|(id, _)| *id == card.entity_id())
@@ -857,13 +856,40 @@ fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
 }
 
 fn draw_hero(hero: &shared::types::Hero, x: f32, y: f32, is_self: bool) {
-    let color = if is_self { COL_SELF } else { COL_ENEMY };
-    draw_rectangle(x, y, HERO_W, HERO_H, color);
-    draw_rectangle_lines(x, y, HERO_W, HERO_H, 2.0, WHITE);
+    let (base, sheen, edge) = if is_self {
+        (Color::new(0.10, 0.16, 0.28, 1.0), Color::new(0.55, 0.75, 1.0, 0.14), Color::new(0.42, 0.62, 0.90, 1.0))
+    } else {
+        (Color::new(0.24, 0.09, 0.11, 1.0), Color::new(1.0, 0.60, 0.55, 0.14), Color::new(0.88, 0.36, 0.34, 1.0))
+    };
+    let r = 10.0;
+
+    fx::soft_shadow(x, y, HERO_W, HERO_H);
+    fx::fill_round_rect(x, y, HERO_W, HERO_H, r, base);
+    fx::fill_round_rect(x + 3.0, y + 3.0, HERO_W - 6.0, HERO_H * 0.5, r - 3.0, sheen);
+    fx::stroke_round_rect(x, y, HERO_W, HERO_H, r, 2.0, edge);
+
+    // hp pill overhangs the bottom edge, sized to the number
     let hp = hero.defence.to_string();
-    let dims = ui::measure(&hp, 24.0);
-    ui::text(&hp, x + HERO_W / 2.0 - dims.width / 2.0, y + HERO_H / 2.0 + 8.0, 24.0, WHITE);
-    ui::text("HP", x + 4.0, y + HERO_H - 5.0, 11.0, LIGHTGRAY);
+    let hd = ui::measure(&hp, 16.0);
+    let pw = (hd.width + 12.0).max(26.0);
+    let ph = 20.0;
+    let px = x + HERO_W / 2.0 - pw / 2.0;
+    let py = y + HERO_H - ph / 2.0 - 4.0;
+    fx::fill_round_rect(px, py, pw, ph, ph / 2.0, COL_DEF);
+    fx::stroke_round_rect(px, py, pw, ph, ph / 2.0, 1.5, Color::new(1.0, 0.85, 0.8, 0.8));
+    draw_text_centered(&hp, x + HERO_W / 2.0, py + 15.0, 16.0, WHITE);
+
+    if hero.attack > 0 {
+        let atk = hero.attack.to_string();
+        let ad = ui::measure(&atk, 14.0);
+        let aw = (ad.width + 10.0).max(22.0);
+        let ah = 18.0;
+        let ax = x - 6.0;
+        let ay = py + 1.0;
+        fx::fill_round_rect(ax, ay, aw, ah, ah / 2.0, COL_ATK);
+        fx::stroke_round_rect(ax, ay, aw, ah, ah / 2.0, 1.5, Color::new(1.0, 0.95, 0.7, 0.8));
+        draw_text_centered(&atk, ax + aw / 2.0, ay + 14.0, 14.0, WHITE);
+    }
 }
 
 fn draw_embers(current: i32, x: f32, y: f32) {
@@ -892,6 +918,14 @@ fn draw_mana(current: i32, max: i32, x: f32, y: f32) {
 fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
     let w = CARD_W;
     let h = CARD_H;
+    fx::soft_shadow(x, y, w, h);
+    // pile hint under the top card
+    if count > 1 {
+        for i in [2.0, 1.0] {
+            draw_rectangle(x + i * 2.5, y - i * 2.5, w, h, Color::new(0.06, 0.06, 0.11, 1.0));
+            draw_rectangle_lines(x + i * 2.5, y - i * 2.5, w, h, 1.0, Color::new(0.25, 0.13, 0.33, 1.0));
+        }
+    }
     // card back
     draw_rectangle(x, y, w, h, Color::new(0.08, 0.08, 0.14, 1.0));
     let border = if glow { Color::new(0.9, 0.85, 0.3, 1.0) } else { Color::new(0.35, 0.18, 0.45, 1.0) };
@@ -907,11 +941,17 @@ fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
     draw_text_centered(&count.to_string(), x + w / 2.0, y + h / 2.0 + 6.0, 20.0, WHITE);
 }
 
+fn draw_mana_gem(x: f32, y: f32, size: f32) {
+    let r = size * 0.25;
+    fx::fill_round_rect(x, y, size, size, r, COL_MANA);
+    fx::stroke_round_rect(x, y, size, size, r, 1.0, BLACK);
+}
+
 fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color, scale: f32) {
     let bw = 20.0 * scale;
     let bh = 18.0 * scale;
-    draw_rectangle(x - 2.0 * scale, y - 13.0 * scale, bw, bh, color);
-    draw_rectangle_lines(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 1.0, BLACK);
+    fx::fill_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, color);
+    fx::stroke_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, 1.0, BLACK);
     if scale > 0.6 {
         let font = (13.0 * scale).round();
         let s = val.to_string();
@@ -935,25 +975,30 @@ fn draw_end_turn_button(w: f32, mid: f32) {
     let by = mid + 14.0;
     let bw = 104.0;
     let bh = 36.0;
-    draw_rectangle(bx, by, bw, bh, Color::new(0.1, 0.55, 0.18, 1.0));
-    draw_rectangle_lines(bx, by, bw, bh, 1.5, GREEN);
+    button_base(bx, by, bw, bh, Color::new(0.10, 0.42, 0.17, 1.0), Color::new(0.35, 0.80, 0.42, 1.0));
     let label = "END TURN [E]";
     let d = ui::measure(label, 14.0);
     ui::text(label, bx + bw / 2.0 - d.width / 2.0, by + bh / 2.0 + 5.0, 14.0, WHITE);
 }
 
+fn button_base(x: f32, y: f32, w: f32, h: f32, fill: Color, border: Color) {
+    let r = 9.0;
+    fx::soft_shadow(x, y, w, h);
+    fx::fill_round_rect(x, y, w, h, r, fill);
+    fx::fill_round_rect(x + 2.0, y + 2.0, w - 4.0, h / 2.0 - 2.0, r - 2.0, Color::new(1.0, 1.0, 1.0, 0.08));
+    fx::stroke_round_rect(x, y, w, h, r, 1.5, border);
+}
+
 pub fn draw_button(label: &str, x: f32, y: f32, w: f32, h: f32) {
-    draw_rectangle(x, y, w, h, Color::new(0.18, 0.28, 0.48, 1.0));
-    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.38, 0.56, 0.82, 1.0));
+    button_base(x, y, w, h, Color::new(0.16, 0.26, 0.45, 1.0), Color::new(0.38, 0.56, 0.82, 1.0));
     let d = ui::measure(label, 17.0);
     ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 6.0, 17.0, WHITE);
 }
 
 pub fn draw_button_danger(label: &str, x: f32, y: f32, w: f32, h: f32) {
-    draw_rectangle(x, y, w, h, Color::new(0.35, 0.08, 0.08, 1.0));
-    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.70, 0.20, 0.20, 1.0));
+    button_base(x, y, w, h, Color::new(0.32, 0.08, 0.08, 1.0), Color::new(0.70, 0.22, 0.22, 1.0));
     let d = ui::measure(label, 15.0);
-    ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 15.0, Color::new(0.9, 0.6, 0.6, 1.0));
+    ui::text(label, x + w / 2.0 - d.width / 2.0, y + h / 2.0 + 5.0, 15.0, Color::new(0.95, 0.72, 0.70, 1.0));
 }
 
 // ── Deck Builder ──────────────────────────────────────────────────────────────
@@ -976,10 +1021,11 @@ fn draw_catalog_card(card: &Card, x: f32, y: f32, w: f32, h: f32, cache: &Textur
     let image_url = card_image_url(card);
     let cost = card_cost(card);
 
+    fx::soft_shadow(x, y, w, h);
     let frame = draw_card_frame(x, y, w, h, color, image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_mana_gem(frame.title.x, frame.title.y, gem);
     draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 10.0, WHITE);
 
     let name_fit = fit_text(name, frame.title.w - gem - 4.0, 9.0);
