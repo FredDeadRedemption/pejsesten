@@ -71,6 +71,20 @@ pub fn all() -> Vec<Case> {
         case("rules", "dead minions move to the graveyard", deaths_go_to_graveyard),
         case("rules", "end turn draws, refills mana and clears exhaustion", end_turn_upkeep),
         case("rules", "trading puts the card on the bottom and draws", trade_bottoms_and_draws),
+        // omens
+        case("omens", "the trigger picked at play time is the one armed", omen_arms_the_picked_trigger),
+        case("omens", "an omen played without a trigger is rejected", omen_needs_a_trigger),
+        case("omens", "the opponent never receives the armed trigger", omen_trigger_is_hidden_from_the_enemy),
+        case("omens", "an omen fires on its trigger and leaves the zone", omen_fires_and_is_consumed),
+        case("omens", "an omen ignores the triggers it was not armed on", omen_ignores_other_triggers),
+        case("omens", "the omen zone is capped", omen_zone_is_capped),
+        case("omens", "a friendly death fires the death omen", omen_fires_on_friendly_death),
+        case("omens", "an omen never fires another omen", omens_do_not_chain),
+        case("omens", "a quiet enemy turn fires the passive omen", omen_fires_on_a_quiet_turn),
+        case("omens", "attacking dodges the passive omen", attacking_dodges_the_passive_omen),
+        case("omens", "the third enemy minion fires the wide board omen", omen_fires_on_a_wide_board),
+        case("omens", "a watcher grows once per omen that resolves", omen_watcher_grows),
+        case("omens", "a watcher grows on the enemy's omens too", omen_watcher_grows_on_enemy_omens),
     ];
     cases.extend(auto_target_matrix());
     cases.extend(targeted_validation_matrix());
@@ -856,5 +870,260 @@ fn trade_bottoms_and_draws() -> Scenario {
     scn.expect("traded card left the hand", !scn.in_hand(Side::White, traded_id));
     scn.expect_eq("deck size unchanged", scn.deck_len(Side::White), 1);
     scn.expect_eq("trade cost a mana", scn.mana(Side::White), 2);
+    scn
+}
+
+// ── omens ───────────────────────────────────────────────────
+
+const WATCH_PLAY: [OmenTrigger; 3] = [
+    OmenTrigger::EnemyPlaysMinion,
+    OmenTrigger::EnemyPlaysIncantation,
+    OmenTrigger::EnemyEndsTurn,
+];
+
+const WATCH_PASSIVE: [OmenTrigger; 3] = [
+    OmenTrigger::EnemyEndsTurnWithoutAttacking,
+    OmenTrigger::EnemyAttacksHero,
+    OmenTrigger::EnemyPlaysIncantation,
+];
+
+fn bolt_enemy_hero(damage_amount: i32) -> Effect {
+    damage(spec(TargetMode::Auto, TargetSide::Enemy, EntityType::Hero), damage_amount)
+}
+
+fn omen_arms_the_picked_trigger() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Watcher", 0, WATCH_PLAY, vec![draw(1)]));
+    let mut scn = s.start("omen arms the picked trigger");
+
+    let ok = scn.play_omen(idx, 1);
+    scn.expect("play accepted", ok);
+    scn.expect_eq("zone holds the omen", scn.omens_len(Side::White), 1);
+    scn.expect_eq("armed on the second printed trigger", scn.armed_trigger(Side::White, 0), Some(WATCH_PLAY[1]));
+    scn
+}
+
+fn omen_needs_a_trigger() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Watcher", 0, WATCH_PLAY, vec![draw(1)]));
+    let mut scn = s.start("omen needs a trigger");
+
+    scn.expect_play("rejected without a trigger", idx, None, false);
+    scn.expect_eq("zone stays empty", scn.omens_len(Side::White), 0);
+    scn.expect_eq("card stays in hand", scn.hand_len(Side::White), 1);
+    scn
+}
+
+fn omen_trigger_is_hidden_from_the_enemy() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Watcher", 0, WATCH_PLAY, vec![draw(1)]));
+    let mut scn = s.start("omen trigger is hidden");
+
+    scn.play_omen(idx, 0);
+    scn.expect_eq("server knows the trigger", scn.armed_trigger(Side::White, 0), Some(WATCH_PLAY[0]));
+    scn.expect_eq("the enemy client does not", scn.armed_trigger_seen_by_enemy(Side::White, 0), None);
+    scn
+}
+
+fn omen_fires_and_is_consumed() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Reprisal", 0, WATCH_PLAY, vec![bolt_enemy_hero(4)]));
+    let grunt = s.in_hand(Side::Black, minion(2, "Grunt", 0, 1, 1));
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("omen fires and is consumed");
+
+    scn.play_omen(idx, 0);
+    scn.end_turn();
+    scn.expect_play("black plays a minion", grunt, None, true);
+    scn.expect_eq("the omen hit the enemy hero", scn.hp(Side::Black), 16);
+    scn.expect_eq("the zone is empty again", scn.omens_len(Side::White), 0);
+    scn
+}
+
+fn omen_ignores_other_triggers() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Reprisal", 0, WATCH_PLAY, vec![bolt_enemy_hero(4)]));
+    let grunt = s.in_hand(Side::Black, minion(2, "Grunt", 0, 1, 1));
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("omen ignores other triggers");
+
+    scn.play_omen(idx, 1); // watching incantations, not minions
+    scn.end_turn();
+    scn.expect_play("black plays a minion", grunt, None, true);
+    scn.expect_eq("the enemy hero is untouched", scn.hp(Side::Black), 20);
+    scn.expect_eq("the omen stays armed", scn.omens_len(Side::White), 1);
+    scn
+}
+
+fn omen_zone_is_capped() -> Scenario {
+    let mut s = Setup::new();
+    let mut indices = vec![];
+    for i in 0..=settings::MAX_OMENS {
+        indices.push(s.omen_in_hand(Side::White, omen(1 + i as u32, "Watcher", 0, WATCH_PLAY, vec![draw(1)])));
+    }
+    let mut scn = s.start("omen zone is capped");
+
+    // hand indices shift as cards leave, so the first slot is played over and over
+    for _ in 0..settings::MAX_OMENS {
+        scn.expect_play_omen("fits in the zone", 0, 0, true);
+    }
+    scn.expect_play_omen("one past the cap is rejected", 0, 0, false);
+    scn.expect_eq("zone holds the cap", scn.omens_len(Side::White), settings::MAX_OMENS);
+    scn
+}
+
+fn omen_fires_on_friendly_death() -> Scenario {
+    const WATCH_DEATH: [OmenTrigger; 3] = [
+        OmenTrigger::FriendlyMinionDies,
+        OmenTrigger::EnemyAttacksHero,
+        OmenTrigger::EnemyEndsTurn,
+    ];
+
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Last Rites", 0, WATCH_DEATH, vec![bolt_enemy_hero(3)]));
+    let victim = s.on_board(Side::White, minion(2, "Victim", 0, 1, 1));
+    let killer = s.on_board(Side::Black, minion(3, "Killer", 0, 4, 4));
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("omen fires on friendly death");
+
+    scn.play_omen(idx, 0);
+    scn.end_turn();
+    scn.expect_attack("black kills the minion", killer, victim, true);
+    scn.expect("the minion died", !scn.alive(victim));
+    scn.expect_eq("the death omen fired", scn.hp(Side::Black), 17);
+    scn.expect_eq("the zone is empty again", scn.omens_len(Side::White), 0);
+    scn
+}
+
+fn omens_do_not_chain() -> Scenario {
+    const WATCH_END: [OmenTrigger; 3] = [
+        OmenTrigger::EnemyEndsTurn,
+        OmenTrigger::EnemyPlaysMinion,
+        OmenTrigger::EnemyAttacksHero,
+    ];
+    const WATCH_DEATH: [OmenTrigger; 3] = [
+        OmenTrigger::FriendlyMinionDies,
+        OmenTrigger::EnemyPlaysMinion,
+        OmenTrigger::EnemyAttacksHero,
+    ];
+
+    let mut s = Setup::new();
+    let purge = s.omen_in_hand(
+        Side::White,
+        omen(1, "Purge", 0, WATCH_END, vec![damage(spec(TargetMode::Auto, TargetSide::Friendly, EntityType::Minion), 5)]),
+    );
+    s.omen_in_hand(Side::White, omen(2, "Last Rites", 0, WATCH_DEATH, vec![bolt_enemy_hero(3)]));
+    let victim = s.on_board(Side::White, minion(3, "Victim", 0, 1, 1));
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("omens do not chain");
+
+    scn.play_omen(purge, 0);
+    scn.play_omen(0, 0); // the purge left hand, so last rites sits at the front now
+    scn.end_turn();
+    scn.end_turn(); // black ends its turn, firing the purge
+
+    scn.expect("the purge killed its own minion", !scn.alive(victim));
+    scn.expect_eq("the death omen did not fire", scn.hp(Side::Black), 20);
+    scn.expect_eq("and is still armed", scn.omens_len(Side::White), 1);
+    scn
+}
+
+fn omen_fires_on_a_quiet_turn() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Stillness", 0, WATCH_PASSIVE, vec![bolt_enemy_hero(3)]));
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("omen fires on a quiet turn");
+
+    scn.play_omen(idx, 0);
+    scn.end_turn();
+    scn.expect_eq("white ending its own turn does not fire it", scn.omens_len(Side::White), 1);
+    scn.end_turn();
+    scn.expect_eq("the quiet enemy turn fired it", scn.hp(Side::Black), 17);
+    scn.expect_eq("and it left the zone", scn.omens_len(Side::White), 0);
+    scn
+}
+
+fn attacking_dodges_the_passive_omen() -> Scenario {
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Stillness", 0, WATCH_PASSIVE, vec![bolt_enemy_hero(3)]));
+    let raider = s.on_board(Side::Black, minion(2, "Raider", 0, 1, 1));
+    s.hp(Side::White, 20);
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("attacking dodges the passive omen");
+
+    scn.play_omen(idx, 0);
+    scn.end_turn();
+    let white_hero = scn.hero_id(Side::White);
+    scn.expect_attack("black swings at the hero", raider, white_hero, true);
+    scn.end_turn();
+    scn.expect_eq("the omen did not fire", scn.hp(Side::Black), 20);
+    scn.expect_eq("and is still armed", scn.omens_len(Side::White), 1);
+    scn
+}
+
+fn omen_fires_on_a_wide_board() -> Scenario {
+    const WATCH_WIDE: [OmenTrigger; 3] = [
+        OmenTrigger::EnemyBoardReachesThree,
+        OmenTrigger::EnemyEndsTurn,
+        OmenTrigger::FriendlyMinionDies,
+    ];
+
+    let mut s = Setup::new();
+    let idx = s.omen_in_hand(Side::White, omen(1, "Cull", 0, WATCH_WIDE, vec![bolt_enemy_hero(3)]));
+    s.on_board(Side::Black, minion(2, "One", 0, 1, 1));
+    let second = s.in_hand(Side::Black, minion(3, "Two", 0, 1, 1));
+    s.in_hand(Side::Black, minion(4, "Three", 0, 1, 1));
+    s.hp(Side::Black, 20);
+    let mut scn = s.start("omen fires on a wide board");
+
+    scn.play_omen(idx, 0);
+    scn.end_turn();
+    scn.expect_play("black plays a second minion", second, None, true);
+    scn.expect_eq("two minions leave it armed", scn.omens_len(Side::White), 1);
+    scn.expect_play("black plays a third", 0, None, true); // the second one left hand
+    scn.expect_eq("the third minion fired it", scn.hp(Side::Black), 17);
+    scn.expect_eq("and it left the zone", scn.omens_len(Side::White), 0);
+    scn
+}
+
+fn watcher(id: u32, name: &str) -> MinionCard {
+    minion(id, name, 0, 1, 2).does(Ability {
+        trigger: Trigger::OnOmenFired,
+        requirements: vec![],
+        effects: vec![buff(spec(TargetMode::SelfOnly, TargetSide::Friendly, EntityType::Minion), 1, 1)],
+    })
+}
+
+fn omen_watcher_grows() -> Scenario {
+    let mut s = Setup::new();
+    let augur = s.on_board(Side::White, watcher(1, "Augur"));
+    let first = s.omen_in_hand(Side::White, omen(2, "One", 0, WATCH_PASSIVE, vec![draw(1)]));
+    s.omen_in_hand(Side::White, omen(3, "Two", 0, WATCH_PASSIVE, vec![draw(1)]));
+    let mut scn = s.start("omen watcher grows");
+
+    scn.play_omen(first, 0);
+    scn.play_omen(0, 0); // the first one left hand
+    scn.expect_eq("still a 1/2 while the omens sit armed", scn.attack_of(augur), Some(1));
+
+    scn.end_turn();
+    scn.end_turn(); // black ends quietly, firing both omens
+    scn.expect_eq("attack grew once per omen", scn.attack_of(augur), Some(3));
+    scn.expect_eq("defence grew with it", scn.defence(augur), Some(4));
+    scn
+}
+
+fn omen_watcher_grows_on_enemy_omens() -> Scenario {
+    let mut s = Setup::new();
+    let augur = s.on_board(Side::White, watcher(1, "Augur"));
+    let theirs = s.omen_in_hand(Side::Black, omen(2, "Theirs", 0, WATCH_PASSIVE, vec![draw(1)]));
+    let mut scn = s.start("omen watcher grows on enemy omens");
+
+    scn.end_turn();
+    scn.expect_play_omen("black arms an omen", theirs, 0, true);
+    scn.end_turn();
+    scn.end_turn(); // white ends quietly, firing black's omen
+    scn.expect_eq("black's omen fired", scn.omens_len(Side::Black), 0);
+    scn.expect_eq("the watcher grew across the table", scn.attack_of(augur), Some(2));
+    scn.expect_eq("defence with it", scn.defence(augur), Some(3));
     scn
 }

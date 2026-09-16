@@ -32,6 +32,7 @@ struct InnerState {
 struct PlayCardData {
     index: usize,
     target: Option<u32>,
+    omen_trigger: Option<usize>,
 }
 
 #[derive(Deserialize)]
@@ -200,7 +201,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             if !validate_turn(&socket.id.to_string(), game) {
                 return;
             }
-            game.play_card(data.index, data.target);
+            game.play_card(data.index, data.target, data.omen_trigger);
             broadcast(&io, game).await;
         }
     });
@@ -319,7 +320,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
-    println!("Server running on port {port}");
+    println!("Server running on port {port} ({} settings)", settings::PROFILE);
     axum::serve(listener, app).await?;
     Ok(())
 }

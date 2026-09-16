@@ -19,8 +19,8 @@ use network::{NetworkClient, ServerEvent};
 use render::DragRender;
 use shared::types::{
     AttackData, Card, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
-    IncantationAttribute, MinionAttribute, MinionEntity, PlayerMetaData, Requirement, TargetMode,
-    ScenarioFrameInfo, TargetSide, TargetSpec,
+    MinionAttribute, MinionEntity, OmenCard, PlayerMetaData, Requirement,
+    TargetMode, ScenarioFrameInfo, TargetSide, TargetSpec,
 };
 use textures::TextureCache;
 
@@ -54,7 +54,7 @@ const USERNAME: &str = match option_env!("USERNAME") {
 };
 
 fn default_deck() -> Vec<u32> {
-    (1u32..=30).flat_map(|id| [id, id]).collect()
+    shared::cards::get_collectible_cards().iter().map(Card::id).flat_map(|id| [id, id]).collect()
 }
 
 enum Screen {
@@ -70,6 +70,13 @@ enum Screen {
 enum DragState {
     Card { index: usize },
     Minion { entity_id: u32 },
+}
+
+/// An omen dropped on the board waits here until its trigger is picked.
+struct OmenPick {
+    hand_index: usize,
+    entity_id: u32,
+    card: OmenCard,
 }
 
 fn window_conf() -> Conf {
@@ -93,6 +100,7 @@ async fn main() {
     let mut anims: Vec<BumpAnim> = vec![];
     let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
     let mut scenario: Option<ScenarioFrameInfo> = None;
+    let mut omen_pick: Option<OmenPick> = None;
     let mut glow_watcher = glow::Watcher::new();
 
     loop {
@@ -120,6 +128,18 @@ async fn main() {
                 }
                 ServerEvent::ScenarioFrame(info) => scenario = Some(info),
                 ServerEvent::Redirect => {}
+            }
+        }
+
+        if let Some(pick) = &omen_pick {
+            let still_there = match &screen {
+                Screen::Playing(state) => {
+                    state.self_board.hand.get(pick.hand_index).map(|c| c.entity_id()) == Some(pick.entity_id)
+                }
+                _ => false,
+            };
+            if !still_there {
+                omen_pick = None;
             }
         }
 
@@ -155,7 +175,7 @@ async fn main() {
         }
 
         // --- Input ---
-        handle_input(&mut screen, &mut net, &mut drag, &mut anims, &mut scenario, mx, my, w, h);
+        handle_input(&mut screen, &mut net, &mut drag, &mut anims, &mut scenario, &mut omen_pick, mx, my, w, h);
 
         // egui lays the deck builder out and consumes its input before anything is painted
         let deck_builder = match &mut screen {
@@ -243,6 +263,10 @@ async fn main() {
             }
         }
 
+        if let Some(pick) = &omen_pick {
+            render::draw_omen_picker(&pick.card, mx, my, &cache);
+        }
+
         if let Some(info) = &scenario {
             render::draw_scenario_banner(info);
         }
@@ -272,7 +296,7 @@ async fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
         .enumerate()
         .filter_map(|(i, card)| match card {
             Card::Minion(m) => shared::cards::instantiate_minion_by_id(m.id, i as u32).map(CardEntity::Minion),
-            Card::Incantation(_) => None,
+            Card::Incantation(_) | Card::Omen(_) => None,
         })
         .collect()
 }
@@ -376,20 +400,13 @@ fn ability_fires(
 ) -> bool {
     ability.requirements.iter().all(|r| match r {
         Requirement::Combo => state.cards_played_this_turn > 0,
-        Requirement::Quickdraw => match card {
-            CardEntity::Minion(m) => m.just_drawn,
-            CardEntity::Incantation(i) => i.just_drawn,
-        },
+        Requirement::Quickdraw => card.just_drawn(),
         Requirement::IsHolding { .. } => true,
     })
 }
 
 fn active_target_spec<'a>(card: &'a CardEntity, state: &GameStateClient) -> Option<&'a TargetSpec> {
-    let abilities = match card {
-        CardEntity::Minion(m) => &m.card.abilities,
-        CardEntity::Incantation(i) => &i.card.abilities,
-    };
-    for ability in abilities {
+    for ability in card.abilities() {
         if !ability_fires(ability, card, state) { continue; }
         for effect in &ability.effects {
             if let Some(spec) = target_spec_from_effect(effect) {
@@ -403,10 +420,7 @@ fn active_target_spec<'a>(card: &'a CardEntity, state: &GameStateClient) -> Opti
 }
 
 fn is_tradeable(card: &CardEntity) -> bool {
-    match card {
-        CardEntity::Minion(m) => m.card.attributes.contains(&MinionAttribute::Tradeable),
-        CardEntity::Incantation(i) => i.card.attributes.contains(&IncantationAttribute::Tradeable),
-    }
+    card.is_tradeable()
 }
 
 fn matches_conditions(minion: &MinionEntity, filters: &[Condition]) -> bool {
@@ -485,6 +499,14 @@ fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     for (m, r) in state.enemy_board.battlefield.iter().zip(enemy_rects.iter()) {
         if r.contains(mouse) { return Some(m.entity_id); }
     }
+    let self_omens = layout::self_omen_rects(state.self_board.omens.len(), h);
+    for (o, r) in state.self_board.omens.iter().zip(self_omens.iter()) {
+        if r.contains(mouse) { return Some(o.entity_id); }
+    }
+    let enemy_omens = layout::enemy_omen_rects(state.enemy_board.omens.len());
+    for (o, r) in state.enemy_board.omens.iter().zip(enemy_omens.iter()) {
+        if r.contains(mouse) { return Some(o.entity_id); }
+    }
     None
 }
 
@@ -528,6 +550,7 @@ fn handle_input(
     drag: &mut Option<DragState>,
     anims: &mut Vec<BumpAnim>,
     scenario: &mut Option<ScenarioFrameInfo>,
+    omen_pick: &mut Option<OmenPick>,
     mx: f32, my: f32,
     w: f32, h: f32,
 ) {
@@ -536,6 +559,22 @@ fn handle_input(
         if is_key_pressed(KeyCode::Escape) {
             *scenario = None;
             *screen = Screen::Lobby;
+        }
+        return;
+    }
+
+    // the omen picker is modal: nothing else on the board can be touched until it resolves
+    if let Some(pick) = omen_pick {
+        if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
+            *omen_pick = None;
+            return;
+        }
+        if is_mouse_button_released(MouseButton::Left) {
+            let rects = layout::omen_pick_rects(w, h);
+            if let Some(trigger) = rects.iter().position(|r| r.contains(Vec2::new(mx, my))) {
+                net.play_card(pick.hand_index, None, Some(trigger));
+                *omen_pick = None;
+            }
         }
         return;
     }
@@ -659,8 +698,19 @@ fn handle_input(
                                         }
                                     }
                                 } else if !layout::hand_zone_rect(w, h).contains(mouse) {
-                                    let target = find_target(mouse, state, w, h, &targets);
-                                    net.play_card(index, target);
+                                    match state.self_board.hand.get(index) {
+                                        Some(CardEntity::Omen(o)) => {
+                                            *omen_pick = Some(OmenPick {
+                                                hand_index: index,
+                                                entity_id: o.entity_id,
+                                                card: o.card.clone(),
+                                            });
+                                        }
+                                        _ => {
+                                            let target = find_target(mouse, state, w, h, &targets);
+                                            net.play_card(index, target, None);
+                                        }
+                                    }
                                 }
                             }
                             DragState::Minion { entity_id } => {

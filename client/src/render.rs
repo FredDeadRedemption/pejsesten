@@ -6,7 +6,7 @@ use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::glow;
 use crate::ui;
-use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, ScenarioFrameInfo};
+use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, OmenCard, OmenEntity, ScenarioFrameInfo};
 
 
 // mana gem as a fraction of card height, stat badge as a multiple of its base size
@@ -28,6 +28,8 @@ const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
 const COL_DRAG_SHADOW: Color = Color::new(0.0, 0.0, 0.0, 0.35);
+const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
+const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
 
 
 // ── Public entry points ────────────────────────────────────────────────────────
@@ -291,6 +293,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, true);
         draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
+        draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache);
         draw_hand(&board.hand, w, hand_y, true, cache, hand_flips, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y - 24.0);
@@ -303,6 +306,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, w - 100.0, hero_y, false);
         draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
+        draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len()), cache);
         draw_hand(&board.hand, w, hand_y, open_cards, cache, hand_flips, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y + 32.0);
@@ -391,6 +395,13 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
             i.cost,
             i.card.description.as_deref().unwrap_or(""),
         ),
+        CardEntity::Omen(o) => (
+            &o.card.color,
+            o.card.image_url.as_str(),
+            o.card.name.as_str(),
+            o.cost,
+            o.card.description.as_deref().unwrap_or(""),
+        ),
     };
 
     draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, description, cache, WHITE, scale, GEM_HAND, true);
@@ -400,7 +411,7 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         draw_stat_badge(m.attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
         draw_stat_badge(m.defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
     } else if scale > 0.6 {
-        let sl = "incantation";
+        let sl = if matches!(card, CardEntity::Omen(_)) { "omen" } else { "incantation" };
         let font = 10.0 * scale;
         let sd = ui::measure(sl, font);
         ui::text(sl, sx + scaled_w / 2.0 - sd.width / 2.0, y + h - 6.0, font, DARKGRAY);
@@ -556,9 +567,36 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
         .map(|(c, r)| (c, *r))
     {
         let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(0.0, w - pw);
-        let py = (rect.y - ph - 10.0).max(0.0);
+        // an omen hangs its trigger panel below the card, so the whole block has to clear the hand
+        let panel = match card {
+            CardEntity::Omen(o) => omen_panel_height(o) + 6.0,
+            _ => 0.0,
+        };
+        let py = (rect.y - ph - panel - 10.0).max(0.0);
         draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
         draw_card_entity_preview(card, px, py, pw, ph, cache);
+        return;
+    }
+
+    // Omens: the trigger panel hangs under the card, so the block is anchored to the side.
+    let omen = {
+        let rects = layout::self_omen_rects(state.self_board.omens.len(), h);
+        state.self_board.omens.iter().zip(rects)
+            .find(|(o, _)| o.entity_id == entity_id)
+            .map(|(o, r)| (o, r))
+    }.or_else(|| {
+        let rects = layout::enemy_omen_rects(state.enemy_board.omens.len());
+        state.enemy_board.omens.iter().zip(rects)
+            .find(|(o, _)| o.entity_id == entity_id)
+            .map(|(o, r)| (o, r))
+    });
+
+    if let Some((omen, rect)) = omen {
+        let block_h = ph + 6.0 + omen_panel_height(omen);
+        let px = rect.x + rect.w + 10.0;
+        let py = (rect.y + rect.h / 2.0 - block_h / 2.0).clamp(0.0, h - block_h);
+        draw_rectangle(px + 5.0, py + 8.0, pw, ph, Color::new(0.0, 0.0, 0.0, 0.55));
+        draw_omen_preview(omen, px, py, pw, ph, cache);
         return;
     }
 
@@ -592,6 +630,7 @@ fn draw_card_entity_preview(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, c
     match card {
         CardEntity::Minion(m) => draw_card_preview(m, x, y, w, h, cache),
         CardEntity::Incantation(i) => draw_incantation_preview(i, x, y, w, h, cache),
+        CardEntity::Omen(o) => draw_omen_preview(o, x, y, w, h, cache),
     }
 }
 
@@ -613,6 +652,115 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     let desc = card.description.as_deref().unwrap_or("");
     let desc_font = (frame.text.h * 0.20).round();
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
+}
+
+fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache) {
+    for (omen, rect) in omens.iter().zip(rects.iter()) {
+        let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &omen.card.color, &omen.card.image_url, cache, WHITE);
+        let gem = (rect.h * GEM_BOARD).min(rect.w * 0.4);
+        draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+        draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), WHITE);
+        let name = fit_text(&omen.card.name, frame.text.w, 9.0);
+        ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, BLACK);
+        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, COL_OMEN);
+    }
+}
+
+const OMEN_PANEL_W: f32 = 230.0;
+const OMEN_PANEL_FONT: f32 = 11.0;
+const OMEN_PANEL_LINE: f32 = 15.0;
+const OMEN_PANEL_PAD: f32 = 7.0;
+
+/// Your own omen shows what it is armed on; an enemy omen only narrows it to three.
+fn omen_panel_lines(omen: &OmenEntity) -> Vec<String> {
+    match omen.armed_trigger {
+        Some(t) => vec![format!("Armed: {}", t.label())],
+        None => {
+            let mut lines = vec!["Watching one of:".to_string()];
+            lines.extend(omen.card.triggers.iter().map(|t| format!("- {}", t.label())));
+            lines
+        }
+    }
+}
+
+fn omen_panel_height(omen: &OmenEntity) -> f32 {
+    omen_panel_lines(omen).len() as f32 * OMEN_PANEL_LINE + OMEN_PANEL_PAD * 2.0
+}
+
+fn draw_omen_panel(omen: &OmenEntity, x: f32, y: f32) {
+    let lines = omen_panel_lines(omen);
+    let h = lines.len() as f32 * OMEN_PANEL_LINE + OMEN_PANEL_PAD * 2.0;
+    draw_rectangle(x, y, OMEN_PANEL_W, h, COL_PANEL);
+    draw_rectangle_lines(x, y, OMEN_PANEL_W, h, 1.5, COL_OMEN);
+    for (i, line) in lines.iter().enumerate() {
+        let fitted = fit_text(line, OMEN_PANEL_W - OMEN_PANEL_PAD * 2.0, OMEN_PANEL_FONT);
+        let color = if i == 0 && omen.armed_trigger.is_none() { GRAY } else { WHITE };
+        ui::text(&fitted, x + OMEN_PANEL_PAD, y + OMEN_PANEL_PAD + (i as f32 + 0.8) * OMEN_PANEL_LINE, OMEN_PANEL_FONT, color);
+    }
+}
+
+fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
+    let card = &omen.card;
+    let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
+
+    let gem = frame.title.h;
+    draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+    draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
+
+    let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
+    ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
+
+    let sl = "omen";
+    let sd = ui::measure(sl, 14.0);
+    ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, frame.type_bar.y + frame.type_bar.h * 0.75, 14.0, DARKGRAY);
+
+    let desc = card.description.as_deref().unwrap_or("");
+    let desc_font = (frame.text.h * 0.20).round();
+    draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
+
+    draw_omen_panel(omen, x, y + h + 6.0);
+}
+
+/// Full-screen choice of which of the three printed triggers to arm.
+pub fn draw_omen_picker(card: &OmenCard, mx: f32, my: f32, cache: &TextureCache) {
+    let w = ui::size().x;
+    let h = ui::size().y;
+    draw_rectangle(0.0, 0.0, w, h, Color::new(0.0, 0.0, 0.0, 0.72));
+
+    let title = format!("{} - {}", card.name, strip_html(card.description.as_deref().unwrap_or("")).replace('\n', " "));
+    let td = ui::measure(&title, 26.0);
+    ui::text(&title, w / 2.0 - td.width / 2.0, h / 2.0 - layout::OMEN_PICK_H / 2.0 - 54.0, 26.0, WHITE);
+
+    let sub = "Choose the trigger. Your opponent sees the effect, never the trigger.";
+    let sd = ui::measure(sub, 16.0);
+    ui::text(sub, w / 2.0 - sd.width / 2.0, h / 2.0 - layout::OMEN_PICK_H / 2.0 - 28.0, 16.0, LIGHTGRAY);
+
+    for (i, rect) in layout::omen_pick_rects(w, h).iter().enumerate() {
+        let hovered = rect.contains(Vec2::new(mx, my));
+        draw_rectangle(rect.x + 4.0, rect.y + 6.0, rect.w, rect.h, COL_DRAG_SHADOW);
+        let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &card.color, &card.image_url, cache, WHITE);
+
+        let gem = frame.title.h;
+        draw_rectangle(frame.title.x, frame.title.y, gem, gem, COL_MANA);
+        draw_text_centered(&card.base_cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 16.0, WHITE);
+        let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 13.0);
+        ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 13.0, BLACK);
+
+        let sl = "omen";
+        let sd = ui::measure(sl, 11.0);
+        ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, frame.type_bar.y + frame.type_bar.h * 0.75, 11.0, DARKGRAY);
+
+        let label = card.triggers[i].label();
+        draw_wrapped_text(label, frame.text.x + 3.0, frame.text.y + 12.0, frame.text.w - 6.0, 11.0, BLACK);
+
+        if hovered {
+            draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 3.0, GOLD);
+        }
+    }
+
+    let footer = "[Esc] cancel";
+    let fd = ui::measure(footer, 16.0);
+    ui::text(footer, w / 2.0 - fd.width / 2.0, h / 2.0 + layout::OMEN_PICK_H / 2.0 + 34.0, 16.0, GRAY);
 }
 
 fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
@@ -842,7 +990,7 @@ fn draw_catalog_card(card: &Card, x: f32, y: f32, w: f32, h: f32, cache: &Textur
         draw_text_centered(&m.base_attack.to_string(), frame.type_bar.x + 8.0, label_y, 10.0, Color::new(0.8, 0.6, 0.1, 1.0));
         draw_text_centered(&m.base_defence.to_string(), frame.type_bar.right() - 8.0, label_y, 10.0, Color::new(0.8, 0.25, 0.25, 1.0));
     } else {
-        let sl = "spell";
+        let sl = if matches!(card, Card::Omen(_)) { "omen" } else { "spell" };
         let sd = ui::measure(sl, 8.0);
         ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, label_y, 8.0, DARKGRAY);
     }

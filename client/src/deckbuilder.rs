@@ -20,6 +20,14 @@ pub enum FilterType {
     All,
     Minions,
     Incantations,
+    Omens,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CardKind {
+    Minion,
+    Incantation,
+    Omen,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -53,7 +61,9 @@ pub struct DeckBuilderState {
 
 impl DeckBuilderState {
     pub fn new() -> Self {
-        let all_cards = shared::cards::get_collectible_cards();
+        // the catalog comes out of a HashMap, so without this the grid reshuffles every launch
+        let mut all_cards = shared::cards::get_collectible_cards();
+        all_cards.sort_by_key(|c| c.id());
         let filtered: Vec<usize> = (0..all_cards.len()).collect();
         let decks = decks::load();
         Self {
@@ -74,13 +84,14 @@ impl DeckBuilderState {
     pub fn apply_filter(&mut self) {
         let search_lo = self.search.to_lowercase();
         self.filtered = self.all_cards.iter().enumerate().filter_map(|(i, card)| {
-            let (name, color, is_minion) = card_meta(card);
+            let (name, color, kind) = card_meta(card);
             if !search_lo.is_empty() && !name.to_lowercase().contains(&search_lo) {
                 return None;
             }
             match &self.filter_type {
-                FilterType::Minions if !is_minion => return None,
-                FilterType::Incantations if is_minion => return None,
+                FilterType::Minions if kind != CardKind::Minion => return None,
+                FilterType::Incantations if kind != CardKind::Incantation => return None,
+                FilterType::Omens if kind != CardKind::Omen => return None,
                 _ => {}
             }
             match &self.filter_color {
@@ -223,16 +234,14 @@ impl DeckBuilderState {
 }
 
 pub fn card_id(card: &Card) -> u32 {
-    match card {
-        Card::Minion(m) => m.id,
-        Card::Incantation(i) => i.id,
-    }
+    card.id()
 }
 
-pub fn card_meta(card: &Card) -> (&str, &CardColor, bool) {
+pub fn card_meta(card: &Card) -> (&str, &CardColor, CardKind) {
     match card {
-        Card::Minion(m) => (m.name.as_str(), &m.color, true),
-        Card::Incantation(i) => (i.name.as_str(), &i.color, false),
+        Card::Minion(m) => (m.name.as_str(), &m.color, CardKind::Minion),
+        Card::Incantation(i) => (i.name.as_str(), &i.color, CardKind::Incantation),
+        Card::Omen(o) => (o.name.as_str(), &o.color, CardKind::Omen),
     }
 }
 
@@ -240,6 +249,7 @@ pub fn card_image_url(card: &Card) -> &str {
     match card {
         Card::Minion(m) => m.image_url.as_str(),
         Card::Incantation(i) => i.image_url.as_str(),
+        Card::Omen(o) => o.image_url.as_str(),
     }
 }
 
@@ -247,6 +257,7 @@ pub fn card_cost(card: &Card) -> i32 {
     match card {
         Card::Minion(m) => m.base_cost,
         Card::Incantation(i) => i.base_cost,
+        Card::Omen(o) => o.base_cost,
     }
 }
 

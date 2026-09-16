@@ -25,12 +25,14 @@ pub enum Race {
 pub enum Trigger {
     OnPlay,
     OnDeath,
+    OnOmenFired,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TargetMode {
     Targeted, // player must choose a target
     Auto,     // resolves automatically
+    SelfOnly, // the entity the ability sits on
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -156,10 +158,76 @@ pub struct IncantationCard {
     pub is_token: bool,
 }
 
+/// The event an omen watches for. Always read from the omen owner's side.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum OmenTrigger {
+    EnemyPlaysMinion,
+    EnemyPlaysIncantation,
+    EnemyAttacksHero,
+    EnemyAttacksMinion,
+    FriendlyMinionDies,
+    EnemyEndsTurn,
+    EnemyEndsTurnWithoutAttacking,
+    EnemyBoardReachesThree,
+}
+
+impl OmenTrigger {
+    pub fn label(&self) -> &'static str {
+        match self {
+            OmenTrigger::EnemyPlaysMinion => "After the enemy plays a minion",
+            OmenTrigger::EnemyPlaysIncantation => "After the enemy plays an incantation",
+            OmenTrigger::EnemyAttacksHero => "After your hero is attacked",
+            OmenTrigger::EnemyAttacksMinion => "After one of your minions is attacked",
+            OmenTrigger::FriendlyMinionDies => "After one of your minions dies",
+            OmenTrigger::EnemyEndsTurn => "When the enemy ends their turn",
+            OmenTrigger::EnemyEndsTurnWithoutAttacking => "When the enemy ends their turn without attacking",
+            OmenTrigger::EnemyBoardReachesThree => "After the enemy has three or more minions",
+        }
+    }
+}
+
+/// Effects are public card text, the armed trigger is not. They resolve on the
+/// opponent's turn, so every effect must be auto-targeted.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OmenCard {
+    pub id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    pub flavor_text: Option<String>,
+    pub color: Color,
+    pub base_cost: i32,
+    pub image_url: String,
+    pub effects: Vec<Effect>,
+    pub triggers: [OmenTrigger; 3],
+    pub is_token: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OmenEntity {
+    pub entity_id: u32,
+    pub cost: i32,
+    pub turns_in_hand: u32,
+    pub just_drawn: bool,
+    pub card: OmenCard,
+    // none in hand, and stripped before the opponent sees an armed one
+    pub armed_trigger: Option<OmenTrigger>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Card {
     Minion(MinionCard),
     Incantation(IncantationCard),
+    Omen(OmenCard),
+}
+
+impl Card {
+    pub fn id(&self) -> u32 {
+        match self {
+            Card::Minion(m) => m.id,
+            Card::Incantation(i) => i.id,
+            Card::Omen(o) => o.id,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,6 +259,7 @@ pub struct IncantationEntity {
 pub enum CardEntity {
     Minion(MinionEntity),
     Incantation(IncantationEntity),
+    Omen(OmenEntity),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -206,6 +275,7 @@ pub struct Board {
     pub hand: Vec<CardEntity>,
     pub graveyard: Vec<MinionEntity>,
     pub battlefield: Vec<MinionEntity>,
+    pub omens: Vec<OmenEntity>,
     pub hero: Hero,
     pub base_mana: i32,
     pub mana: i32,
@@ -221,6 +291,7 @@ pub struct GameStateServer {
     pub white_turn: bool,
     pub turn_count: u32,
     pub cards_played_this_turn: u32,
+    pub attacked_this_turn: bool,
     pub phase: GamePhase,
     pub mulligan_white_done: bool,
     pub mulligan_black_done: bool,
@@ -285,66 +356,77 @@ impl CardEntity {
         match self {
             CardEntity::Minion(m) => m.card.id,
             CardEntity::Incantation(i) => i.card.id,
+            CardEntity::Omen(o) => o.card.id,
         }
     }
     pub fn cost(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.cost,
             CardEntity::Incantation(i) => i.cost,
+            CardEntity::Omen(o) => o.cost,
         }
     }
     pub fn name(&self) -> &str {
         match self {
             CardEntity::Minion(m) => &m.card.name,
             CardEntity::Incantation(i) => &i.card.name,
+            CardEntity::Omen(o) => &o.card.name,
         }
     }
     pub fn cost_mut(&mut self) -> &mut i32 {
         match self {
             CardEntity::Minion(m) => &mut m.cost,
             CardEntity::Incantation(i) => &mut i.cost,
+            CardEntity::Omen(o) => &mut o.cost,
         }
     }
     pub fn base_cost(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.card.base_cost,
             CardEntity::Incantation(i) => i.card.base_cost,
+            CardEntity::Omen(o) => o.card.base_cost,
         }
     }
     pub fn entity_id(&self) -> u32 {
         match self {
             CardEntity::Minion(m) => m.entity_id,
             CardEntity::Incantation(i) => i.entity_id,
+            CardEntity::Omen(o) => o.entity_id,
         }
     }
     pub fn just_drawn(&self) -> bool {
         match self {
             CardEntity::Minion(m) => m.just_drawn,
             CardEntity::Incantation(i) => i.just_drawn,
+            CardEntity::Omen(o) => o.just_drawn,
         }
     }
     pub fn just_drawn_mut(&mut self) -> &mut bool {
         match self {
             CardEntity::Minion(m) => &mut m.just_drawn,
             CardEntity::Incantation(i) => &mut i.just_drawn,
+            CardEntity::Omen(o) => &mut o.just_drawn,
         }
     }
     pub fn turns_in_hand_mut(&mut self) -> &mut u32 {
         match self {
             CardEntity::Minion(m) => &mut m.turns_in_hand,
             CardEntity::Incantation(i) => &mut i.turns_in_hand,
+            CardEntity::Omen(o) => &mut o.turns_in_hand,
         }
     }
     pub fn abilities(&self) -> &[Ability] {
         match self {
             CardEntity::Minion(m) => &m.card.abilities,
             CardEntity::Incantation(i) => &i.card.abilities,
+            CardEntity::Omen(_) => &[],
         }
     }
     pub fn is_tradeable(&self) -> bool {
         match self {
             CardEntity::Minion(m) => m.card.attributes.contains(&MinionAttribute::Tradeable),
             CardEntity::Incantation(i) => i.card.attributes.contains(&IncantationAttribute::Tradeable),
+            CardEntity::Omen(_) => false,
         }
     }
 }

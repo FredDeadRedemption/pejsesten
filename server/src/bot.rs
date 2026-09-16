@@ -24,6 +24,11 @@ pub fn default_deck() -> Vec<u32> {
         15, 15, // Smite (2 cost, deal 2/4 targeted)
         11, 11, // Divine Power (4 cost, +4+4 targeted)
         13, 13, // Pot of Greed (3 cost, draw 1/2 with combo)
+        36, 36, // Augur (1 cost 1/2, grows on every omen that fires)
+        32,     // Grove Vigil (2 cost omen, +1+1 to own minions)
+        33,     // Ancestors Answer (2 cost omen, summon two wisps)
+        34,     // Chain Reaction (2 cost omen, 2 damage to enemy minions)
+        35,     // Salvage Protocol (1 cost omen, draw two)
     ]
 }
 
@@ -130,45 +135,77 @@ fn resolve_card_target(card: &CardEntity, bot_board: &Board, enemy_board: &Board
     None
 }
 
+fn card_effects(card: &CardEntity) -> Vec<&Effect> {
+    match card {
+        CardEntity::Omen(o) => o.card.effects.iter().collect(),
+        _ => card
+            .abilities()
+            .iter()
+            .filter(|a| a.trigger == Trigger::OnPlay)
+            .flat_map(|a| a.effects.iter())
+            .collect(),
+    }
+}
+
+/// Picks the trigger most likely to fire against the board in front of the bot.
+fn pick_omen_trigger(omen: &OmenEntity, bot_board: &Board, enemy_board: &Board) -> usize {
+    let enemy_has_minions = !enemy_board.battlefield.is_empty();
+    let bot_has_minions = !bot_board.battlefield.is_empty();
+
+    let likelihood = |t: &OmenTrigger| match t {
+        OmenTrigger::EnemyEndsTurn => 2,
+        OmenTrigger::EnemyPlaysMinion => 3,
+        OmenTrigger::EnemyPlaysIncantation => 2,
+        OmenTrigger::EnemyAttacksHero => if enemy_has_minions { 3 } else { 1 },
+        OmenTrigger::EnemyAttacksMinion => if enemy_has_minions && bot_has_minions { 3 } else { 1 },
+        OmenTrigger::FriendlyMinionDies => if bot_has_minions && enemy_has_minions { 3 } else { 1 },
+        OmenTrigger::EnemyEndsTurnWithoutAttacking => if enemy_has_minions { 1 } else { 3 },
+        OmenTrigger::EnemyBoardReachesThree => if enemy_board.battlefield.len() >= 2 { 3 } else { 1 },
+    };
+
+    let best = omen.card.triggers.iter().map(likelihood).max().unwrap_or(0);
+    let tied: Vec<usize> = omen.card.triggers.iter().enumerate()
+        .filter(|(_, t)| likelihood(t) == best)
+        .map(|(i, _)| i)
+        .collect();
+    // the bluff dies if the bot always arms the same slot, so ties break at random
+    tied[rand::random::<u32>() as usize % tied.len()]
+}
+
 fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) -> i32 {
     let mut score = -card.cost();
 
-    for ability in card.abilities() {
-        if ability.trigger != Trigger::OnPlay {
-            continue;
-        }
-        for effect in &ability.effects {
-            match effect {
-                Effect::Damage { damage, .. } => {
-                    score += damage * 2;
-                    if enemy_board.battlefield.is_empty() {
-                        score += 5;
-                    }
+    for effect in card_effects(card) {
+        match effect {
+            Effect::Damage { damage, .. } => {
+                score += damage * 2;
+                if enemy_board.battlefield.is_empty() {
+                    score += 5;
                 }
-                Effect::Buff { attack, defence, .. } => {
-                    score += (attack + defence) * 3 / 2;
-                    if bot_board.battlefield.is_empty() {
-                        score -= 5;
-                    }
+            }
+            Effect::Buff { attack, defence, .. } => {
+                score += (attack + defence) * 3 / 2;
+                if bot_board.battlefield.is_empty() {
+                    score -= 5;
                 }
-                Effect::Draw { draw_amount, .. } => {
-                    score += *draw_amount as i32 * 3;
+            }
+            Effect::Draw { draw_amount, .. } => {
+                score += *draw_amount as i32 * 3;
+            }
+            Effect::ReturnToHand { .. } => {
+                score += 2;
+            }
+            Effect::Summon { summon_amount, .. } => {
+                score += *summon_amount as i32 * 4;
+            }
+            Effect::Destroy { target_spec } => {
+                score += 15;
+                if bot_board.battlefield.is_empty() && matches!(target_spec.side, TargetSide::Friendly) {
+                    score -= 20;
                 }
-                Effect::ReturnToHand { .. } => {
-                    score += 2;
-                }
-                Effect::Summon { summon_amount, .. } => {
-                    score += *summon_amount as i32 * 4;
-                }
-                Effect::Destroy { target_spec } => {
-                    score += 15;
-                    if bot_board.battlefield.is_empty() && matches!(target_spec.side, TargetSide::Friendly) {
-                        score -= 20;
-                    }
-                }
-                Effect::Heal { heal, .. } => {
-                    score += heal;
-                }
+            }
+            Effect::Heal { heal, .. } => {
+                score += heal;
             }
         }
     }
@@ -177,6 +214,11 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
         if m.card.attributes.contains(&MinionAttribute::Charge) {
             score += 8;
         }
+    }
+
+    // an omen pays off a turn later at the earliest, and only if the trigger comes up
+    if matches!(card, CardEntity::Omen(_)) {
+        score /= 2;
     }
 
     score
@@ -237,22 +279,30 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
 
     // Phase 2: play cards in priority order, re-evaluate each iteration
     loop {
-        let play_action: Option<(usize, Option<u32>)> = {
+        let play_action: Option<(usize, Option<u32>, Option<usize>)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
             let board_full = bot_board.battlefield.len() >= settings::MAX_BOARD_SIZE;
+            let omens_full = bot_board.omens.len() >= settings::MAX_OMENS;
             bot_board.hand.iter().enumerate()
                 .filter(|(_, c)| c.cost() <= bot_board.mana)
                 .filter(|(_, c)| !(board_full && matches!(c, CardEntity::Minion(_))))
+                .filter(|(_, c)| !(omens_full && matches!(c, CardEntity::Omen(_))))
                 .max_by_key(|(_, c)| card_play_score(c, bot_board, enemy_board))
-                .map(|(idx, card)| (idx, resolve_card_target(card, bot_board, enemy_board)))
+                .map(|(idx, card)| {
+                    let trigger = match card {
+                        CardEntity::Omen(o) => Some(pick_omen_trigger(o, bot_board, enemy_board)),
+                        _ => None,
+                    };
+                    (idx, resolve_card_target(card, bot_board, enemy_board), trigger)
+                })
         };
 
-        let (idx, target) = match play_action {
+        let (idx, target, omen_trigger) = match play_action {
             Some(a) => a,
             None => break,
         };
 
-        if !game.play_card(idx, target) {
+        if !game.play_card(idx, target, omen_trigger) {
             break;
         }
 

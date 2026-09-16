@@ -12,7 +12,7 @@ pub mod runner;
 #[cfg(test)]
 mod tests;
 
-use crate::engine::{Game, IdGenerator, instantiate_incantation, instantiate_minion};
+use crate::engine::{Game, IdGenerator, instantiate_incantation, instantiate_minion, instantiate_omen};
 use crate::settings;
 use serde::Serialize;
 use shared::types::*;
@@ -56,6 +56,7 @@ impl Setup {
                 white_turn: true,
                 turn_count: 1,
                 cards_played_this_turn: 0,
+                attacked_this_turn: false,
                 phase: GamePhase::Playing,
                 mulligan_white_done: true,
                 mulligan_black_done: true,
@@ -70,6 +71,7 @@ impl Setup {
             hand: vec![],
             graveyard: vec![],
             battlefield: vec![],
+            omens: vec![],
             hero: Hero { entity_id: ids.next_id(), attack: 0, defence: settings::STARTING_HP },
             // cases that care about mana set it explicitly; the rest should not have to
             base_mana: settings::MAX_MANA,
@@ -116,6 +118,14 @@ impl Setup {
         let id = self.ids.next_id();
         let board = self.board_mut(side);
         board.hand.push(CardEntity::Incantation(instantiate_incantation(&card, id)));
+        board.hand.len() - 1
+    }
+
+    /// Adds an omen to hand. Returns its hand index.
+    pub fn omen_in_hand(&mut self, side: Side, card: OmenCard) -> usize {
+        let id = self.ids.next_id();
+        let board = self.board_mut(side);
+        board.hand.push(CardEntity::Omen(instantiate_omen(&card, id)));
         board.hand.len() - 1
     }
 
@@ -216,8 +226,15 @@ impl Scenario {
     // --- steps ---
 
     pub fn play(&mut self, index: usize, target: Option<u32>) -> bool {
-        let ok = self.game.play_card(index, target);
+        let ok = self.game.play_card(index, target, None);
         self.record(FrameKind::Action, format!("play hand[{index}] -> {}", ok), true);
+        ok
+    }
+
+    /// Plays an omen from hand, arming the trigger at `trigger` in its printed list.
+    pub fn play_omen(&mut self, index: usize, trigger: usize) -> bool {
+        let ok = self.game.play_card(index, None, Some(trigger));
+        self.record(FrameKind::Action, format!("play omen hand[{index}] trigger {trigger} -> {ok}"), true);
         ok
     }
 
@@ -241,6 +258,11 @@ impl Scenario {
     /// Runs a step and asserts in one go; keeps cases from tripping over borrow rules.
     pub fn expect_play(&mut self, what: &str, index: usize, target: Option<u32>, want: bool) {
         let got = self.play(index, target);
+        self.expect_eq(what, got, want);
+    }
+
+    pub fn expect_play_omen(&mut self, what: &str, index: usize, trigger: usize, want: bool) {
+        let got = self.play_omen(index, trigger);
         self.expect_eq(what, got, want);
     }
 
@@ -350,6 +372,22 @@ impl Scenario {
 
     pub fn deck_len(&self, side: Side) -> usize {
         self.board(side).deck.len()
+    }
+
+    pub fn omens_len(&self, side: Side) -> usize {
+        self.board(side).omens.len()
+    }
+
+    /// What an omen is actually watching, as the server sees it.
+    pub fn armed_trigger(&self, side: Side, index: usize) -> Option<OmenTrigger> {
+        self.board(side).omens.get(index).and_then(|o| o.armed_trigger)
+    }
+
+    /// The armed trigger as the opposing client would receive it.
+    pub fn armed_trigger_seen_by_enemy(&self, side: Side, index: usize) -> Option<OmenTrigger> {
+        let for_white = side == Side::Black;
+        let state = self.game.parse_client_state(for_white);
+        state.enemy_board.omens.get(index).and_then(|o| o.armed_trigger)
     }
 
     pub fn graveyard_len(&self, side: Side) -> usize {

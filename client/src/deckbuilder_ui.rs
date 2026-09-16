@@ -93,6 +93,7 @@ fn top_bar(ctx: &egui::Context, db: &mut DeckBuilderState, action: &mut Action) 
                 ("All", FilterType::All),
                 ("Minions", FilterType::Minions),
                 ("Incantations", FilterType::Incantations),
+                ("Omens", FilterType::Omens),
             ] {
                 dirty |= ui.selectable_value(&mut db.filter_type, value, label).changed();
             }

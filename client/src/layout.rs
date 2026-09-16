@@ -8,6 +8,11 @@ pub const MINION_W: f32 = 100.0;
 pub const MINION_H: f32 = 145.0;
 pub const MINION_GAP: f32 = 8.0;
 
+pub const OMEN_W: f32 = 64.0;
+pub const OMEN_H: f32 = 92.0;
+pub const OMEN_GAP: f32 = 8.0;
+const OMEN_MARGIN: f32 = 20.0;
+
 pub const HERO_W: f32 = 64.0;
 pub const HERO_H: f32 = 64.0;
 
@@ -32,6 +37,29 @@ pub fn self_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
 pub fn enemy_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
     let y = h / 2.0 - MINION_H - 18.0;
     centered_rects(count, MINION_W, MINION_H, MINION_GAP, w / 2.0, y)
+}
+
+/// Omens sit above their owner's hand, left of the centred minion rows.
+pub fn self_omen_rects(count: usize, h: f32) -> Vec<Rect> {
+    omen_rects(count, h - CARD_H - 10.0 - OMEN_H - 6.0)
+}
+
+pub fn enemy_omen_rects(count: usize) -> Vec<Rect> {
+    omen_rects(count, 10.0 + CARD_H + 6.0)
+}
+
+fn omen_rects(count: usize, y: f32) -> Vec<Rect> {
+    (0..count)
+        .map(|i| Rect::new(OMEN_MARGIN + i as f32 * (OMEN_W + OMEN_GAP), y, OMEN_W, OMEN_H))
+        .collect()
+}
+
+pub const OMEN_PICK_W: f32 = 150.0;
+pub const OMEN_PICK_H: f32 = 220.0;
+pub const OMEN_PICK_GAP: f32 = 24.0;
+
+pub fn omen_pick_rects(w: f32, h: f32) -> Vec<Rect> {
+    centered_rects(3, OMEN_PICK_W, OMEN_PICK_H, OMEN_PICK_GAP, w / 2.0, h / 2.0 - OMEN_PICK_H / 2.0)
 }
 
 pub fn self_hero_rect(w: f32, h: f32) -> Rect {

@@ -50,12 +50,24 @@ pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> Incantati
     }
 }
 
+pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
+    OmenEntity {
+        entity_id,
+        cost: c.base_cost,
+        turns_in_hand: 0,
+        just_drawn: false,
+        card: c.clone(),
+        armed_trigger: None,
+    }
+}
+
 pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
     deck.iter()
         .filter_map(|id| cards::get_card_by_id(*id))
         .map(|card| match card {
             Card::Minion(c) => CardEntity::Minion(instantiate_minion(c, ids.next_id())),
             Card::Incantation(c) => CardEntity::Incantation(instantiate_incantation(c, ids.next_id())),
+            Card::Omen(c) => CardEntity::Omen(instantiate_omen(c, ids.next_id())),
         })
         .collect()
 }
@@ -76,6 +88,15 @@ enum PlayerSide {
     Black,
 }
 
+impl PlayerSide {
+    fn other(self) -> Self {
+        match self {
+            PlayerSide::White => PlayerSide::Black,
+            PlayerSide::Black => PlayerSide::White,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct QueuedEffect {
     effect: Effect,
@@ -88,6 +109,8 @@ pub struct Game {
     pub state: GameStateServer,
     effect_queue: Vec<QueuedEffect>,
     ids: IdGenerator,
+    // omen effects must not arm further omens, or a death cascade chains the whole zone
+    omens_firing: bool,
     // summon looks here before the global card registry, so scenarios can summon cards that aren't in cards.rs
     summon_pool: HashMap<u32, MinionCard>,
 }
@@ -142,6 +165,7 @@ impl Game {
                     hand: white_hand,
                     graveyard: vec![],
                     battlefield: vec![],
+                    omens: vec![],
                     hero: Hero {
                         entity_id: ids.next_id(),
                         attack: 0,
@@ -156,6 +180,7 @@ impl Game {
                     hand: black_hand,
                     graveyard: vec![],
                     battlefield: vec![],
+                    omens: vec![],
                     hero: Hero {
                         entity_id: ids.next_id(),
                         attack: 0,
@@ -170,12 +195,14 @@ impl Game {
                 white_turn: true,
                 turn_count: 0,
                 cards_played_this_turn: 0,
+                attacked_this_turn: false,
                 phase: if settings::MULLIGAN { GamePhase::Mulligan } else { GamePhase::Playing },
                 mulligan_white_done: !settings::MULLIGAN,
                 mulligan_black_done: !settings::MULLIGAN,
             },
             effect_queue: vec![],
             ids: ids,
+            omens_firing: false,
             summon_pool: HashMap::new(),
         }
     }
@@ -186,7 +213,7 @@ impl Game {
     /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
     /// Caller owns id continuity: pass a generator already past the state's entity ids.
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
-        Game { state, effect_queue: vec![], ids, summon_pool: HashMap::new() }
+        Game { state, effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() }
     }
 
     /// Makes a card summonable by id without it existing in the global registry.
@@ -307,6 +334,11 @@ impl Game {
     fn resolve_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
         let mut refs = vec![];
 
+        if spec.target_mode == TargetMode::SelfOnly {
+            let own = self_id.and_then(|id| source.battlefield.iter().position(|m| m.entity_id == id));
+            return own.map(|i| vec![TargetRef::MinionSource(i)]).unwrap_or_default();
+        }
+
         if matches!(spec.entity_type, EntityType::Minion | EntityType::All) {
             if matches!(spec.side, TargetSide::Friendly | TargetSide::All) {
                 for (i, m) in source.battlefield.iter().enumerate() {
@@ -336,12 +368,16 @@ impl Game {
 
         match spec.target_mode {
             TargetMode::Targeted => refs.truncate(1),
-            TargetMode::Auto => {}
+            TargetMode::Auto | TargetMode::SelfOnly => {}
         }
         refs
     }
 
     fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<u32>, self_id: Option<u32>) -> Vec<TargetRef> {
+        if spec.target_mode == TargetMode::SelfOnly {
+            let (source, enemy) = self.boards_for(owner);
+            return Self::resolve_target_refs(spec, source, enemy, self_id);
+        }
         if let Some(id) = target_id {
             let target_ref = self.find_target_ref(id, owner);
             let (source, enemy) = self.boards_for(owner);
@@ -373,7 +409,7 @@ impl Game {
                 let source_board = self.source_board();
                 source_board.hand.iter().any(|c| match c {
                     CardEntity::Minion(m) => Self::filters_match(filters, m),
-                    CardEntity::Incantation(_) => false,
+                    CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
                 })
             }
         })
@@ -383,11 +419,11 @@ impl Game {
         requirements.iter().all(|r| match r {
             Condition::IsRace { race } => match card {
                 CardEntity::Minion(m) => m.card.races.contains(race),
-                CardEntity::Incantation(_) => false,
+                CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
             },
             Condition::HasAttribute { attribute } => match card {
                 CardEntity::Minion(m) => m.card.attributes.contains(attribute),
-                CardEntity::Incantation(_) => false,
+                CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
             },
         })
     }
@@ -434,6 +470,67 @@ impl Game {
         self.effect_queue.extend(to_queue);
     }
 
+    /// Minions that react to an omen resolving, on both boards whoever it belonged to.
+    fn fire_omen_watchers(&mut self) {
+        for side in [PlayerSide::White, PlayerSide::Black] {
+            let reactions: Vec<(u32, Effect)> = self
+                .source_board_for(side)
+                .battlefield
+                .iter()
+                .flat_map(|m| {
+                    let id = m.entity_id;
+                    m.card
+                        .abilities
+                        .iter()
+                        .filter(|a| a.trigger == Trigger::OnOmenFired)
+                        .flat_map(move |a| a.effects.iter().map(move |e| (id, e.clone())))
+                })
+                .collect();
+
+            for (id, effect) in reactions {
+                self.apply_effect(effect, side, None, Some(id));
+            }
+        }
+    }
+
+    /// A board can widen from a play or from a deathwish summon, so both paths check it.
+    fn fire_wide_board_omens(&mut self, actor: PlayerSide) {
+        if self.source_board_for(actor).battlefield.len() >= 3 {
+            self.fire_omens(OmenTrigger::EnemyBoardReachesThree, actor.other());
+        }
+    }
+
+    /// Resolves every armed omen of `owner` watching `trigger`. Omens are consumed when they fire.
+    fn fire_omens(&mut self, trigger: OmenTrigger, owner: PlayerSide) {
+        if self.omens_firing {
+            return;
+        }
+
+        let board = self.source_board_for_mut(owner);
+        let mut fired: Vec<OmenEntity> = vec![];
+        let mut i = 0;
+        while i < board.omens.len() {
+            if board.omens[i].armed_trigger == Some(trigger) {
+                fired.push(board.omens.remove(i));
+            } else {
+                i += 1;
+            }
+        }
+        if fired.is_empty() {
+            return;
+        }
+
+        self.omens_firing = true;
+        for omen in &fired {
+            for effect in &omen.card.effects {
+                self.apply_effect(effect.clone(), owner, None, None);
+            }
+            self.fire_omen_watchers();
+        }
+        self.check_for_deaths();
+        self.omens_firing = false;
+    }
+
     fn process_effect_queue(&mut self) {
         // drain one at a time so effects enqueued by effects are processed in order
         while !self.effect_queue.is_empty() {
@@ -445,6 +542,7 @@ impl Game {
     // --- Deaths (flattened loop instead of recursion) ---
 
     fn check_for_deaths(&mut self) {
+        let mut died: [bool; 2] = [false, false];
         loop {
             let mut any_died = false;
             let mut to_queue: Vec<QueuedEffect> = vec![];
@@ -457,6 +555,7 @@ impl Game {
                 while i < board.battlefield.len() {
                     if board.battlefield[i].defence <= 0 {
                         any_died = true;
+                        died[if white_is_board { 0 } else { 1 }] = true;
                         let dead = board.battlefield.remove(i);
 
                         for ability in &dead.card.abilities {
@@ -487,6 +586,12 @@ impl Game {
                 break;
             }
             self.process_effect_queue(); // process death triggers before checking again
+        }
+
+        for (side, lost) in [(PlayerSide::White, died[0]), (PlayerSide::Black, died[1])] {
+            if lost {
+                self.fire_omens(OmenTrigger::FriendlyMinionDies, side);
+            }
         }
     }
 
@@ -685,6 +790,12 @@ impl Game {
     // --- Public API ---
 
     pub fn end_turn(&mut self) {
+        let ender = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
+        self.fire_omens(OmenTrigger::EnemyEndsTurn, ender.other());
+        if !self.state.attacked_this_turn {
+            self.fire_omens(OmenTrigger::EnemyEndsTurnWithoutAttacking, ender.other());
+        }
+
         self.state.turn_count += 1;
         self.state.white_turn = !self.state.white_turn;
         let white_is_source = self.state.white_turn;
@@ -710,11 +821,12 @@ impl Game {
         }
 
         self.state.cards_played_this_turn = 0;
+        self.state.attacked_this_turn = false;
         //self.enqueue_trigger(Trigger::OnDraw);
         //self.process_effect_queue();
     }
 
-    pub fn play_card(&mut self, index: usize, target_id: Option<u32>) -> bool {
+    pub fn play_card(&mut self, index: usize, target_id: Option<u32>, omen_trigger: Option<usize>) -> bool {
         // Validate without consuming — clone card so mutable borrow can be released before check_requirements
         let card_clone = {
             let source_board = self.source_board_mut();
@@ -727,6 +839,16 @@ impl Game {
             }
             if matches!(card, CardEntity::Minion(_)) && source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                 return false;
+            }
+            if let CardEntity::Omen(o) = card {
+                if source_board.omens.len() >= settings::MAX_OMENS {
+                    return false;
+                }
+                // the trigger is picked at play time, so an omen without one is not a legal play
+                match omen_trigger {
+                    Some(i) if i < o.card.triggers.len() => {}
+                    _ => return false,
+                }
             }
             card.clone()
         };
@@ -780,6 +902,13 @@ impl Game {
             source_board.battlefield.push(minion);
         }
 
+        // Arm omen face down
+        if let CardEntity::Omen(mut omen) = consumed.clone() {
+            omen.armed_trigger = omen_trigger.map(|i| omen.card.triggers[i]);
+            let source_board = self.source_board_mut();
+            source_board.omens.push(omen);
+        }
+
         // Enqueue onPlay effects
         for ability in &abilities {
             if ability.trigger != Trigger::OnPlay {
@@ -809,6 +938,15 @@ impl Game {
         let source_board = self.source_board_mut();
         source_board.mana -= cost;
         self.state.cards_played_this_turn += 1;
+
+        match consumed {
+            CardEntity::Minion(_) => {
+                self.fire_omens(OmenTrigger::EnemyPlaysMinion, owner.other());
+                self.fire_wide_board_omens(owner);
+            }
+            CardEntity::Incantation(_) => self.fire_omens(OmenTrigger::EnemyPlaysIncantation, owner.other()),
+            CardEntity::Omen(_) => {}
+        }
         true
     }
 
@@ -904,7 +1042,15 @@ impl Game {
             }
         }
 
+        self.state.attacked_this_turn = true;
         self.check_for_deaths();
+        self.fire_wide_board_omens(owner);
+
+        match target_ref {
+            TargetRef::HeroEnemy => self.fire_omens(OmenTrigger::EnemyAttacksHero, owner.other()),
+            TargetRef::MinionEnemy(_) => self.fire_omens(OmenTrigger::EnemyAttacksMinion, owner.other()),
+            _ => {}
+        }
         true
     }
 
@@ -932,7 +1078,7 @@ impl Game {
     pub fn parse_client_state(&self, for_white: bool) -> GameStateClient {
         GameStateClient {
             self_board: if for_white { self.state.white.clone() } else { self.state.black.clone() },
-            enemy_board: if for_white { self.state.black.clone() } else { self.state.white.clone() },
+            enemy_board: Self::hide_armed_triggers(if for_white { &self.state.black } else { &self.state.white }),
             white_player_id: self.state.white_player_id.clone(),
             black_player_id: self.state.black_player_id.clone(),
             your_turn: for_white == self.state.white_turn,
@@ -945,6 +1091,15 @@ impl Game {
         }
     }
 
+    /// An omen's effect is public but its armed trigger is not.
+    fn hide_armed_triggers(board: &Board) -> Board {
+        let mut board = board.clone();
+        for omen in board.omens.iter_mut() {
+            omen.armed_trigger = None;
+        }
+        board
+    }
+
     /// Play affordances for a hand. Requirements are turn scoped, so off-turn hands get none.
     fn hand_hints(&self, for_white: bool) -> Vec<CardHint> {
         let board = if for_white { &self.state.white } else { &self.state.black };
@@ -953,8 +1108,11 @@ impl Game {
         }
 
         board.hand.iter().map(|card| {
-            let has_room = !matches!(card, CardEntity::Minion(_))
-                || board.battlefield.len() < settings::MAX_BOARD_SIZE;
+            let has_room = match card {
+                CardEntity::Minion(_) => board.battlefield.len() < settings::MAX_BOARD_SIZE,
+                CardEntity::Omen(_) => board.omens.len() < settings::MAX_OMENS,
+                CardEntity::Incantation(_) => true,
+            };
             CardHint {
                 playable: card.cost() <= board.mana && has_room,
                 condition_met: card.abilities().iter()

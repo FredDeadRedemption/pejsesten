@@ -14,10 +14,13 @@ fn main() {
         .expect("xtask always sits one level below the workspace root")
         .to_path_buf();
 
-    let result = match env::args().nth(1).as_deref() {
-        None | Some("native") => native(&root),
-        Some("web") => web(&root),
-        Some(task) => Err(format!("unknown task `{task}`, expected `native` or `web`")),
+    let args: Vec<String> = env::args().skip(1).collect();
+    let settings_prod = args.iter().any(|a| a == "--settings-prod");
+
+    let result = match args.iter().find(|a| !a.starts_with("--")).map(String::as_str) {
+        None | Some("native") => native(&root, settings_prod),
+        Some("web") => web(&root, settings_prod),
+        Some(task) => Err(format!("unknown task `{task}`, expected `native` or `web`, either with `--settings-prod`")),
     };
 
     if let Err(message) = result {
@@ -27,8 +30,8 @@ fn main() {
 }
 
 /// Native dev loop: server in the background, client in the foreground.
-fn native(root: &Path) -> Result<(), String> {
-    if !run(cargo(root, &["build", "-p", "server"])) {
+fn native(root: &Path, prod: bool) -> Result<(), String> {
+    if !run(cargo(root, &server_args("build", prod))) {
         return Err("server build failed".into());
     }
 
@@ -61,7 +64,7 @@ fn native(root: &Path) -> Result<(), String> {
 }
 
 /// Web dev loop: wasm bundle plus assets in dist/, served by the server.
-fn web(root: &Path) -> Result<(), String> {
+fn web(root: &Path, prod: bool) -> Result<(), String> {
     let wasm = &[
         "build",
         "-p",
@@ -98,7 +101,7 @@ fn web(root: &Path) -> Result<(), String> {
     let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     println!("\n→ http://localhost:{port}\n");
 
-    let mut server = cargo(root, &["run", "-p", "server"]);
+    let mut server = cargo(root, &server_args("run", prod));
     server.env("STATIC_DIR", "dist");
     match run(server) {
         true => Ok(()),
@@ -113,6 +116,14 @@ fn link(target: &Path, at: &Path) -> Result<(), String> {
         Err(e) => return Err(format!("{}: {e}", at.display())),
     }
     symlink(target, at).map_err(|e| format!("{}: {e}", at.display()))
+}
+
+fn server_args(subcommand: &'static str, prod: bool) -> Vec<&'static str> {
+    let mut args = vec![subcommand, "-p", "server"];
+    if prod {
+        args.extend(["--features", "settings-prod"]);
+    }
+    args
 }
 
 fn cargo(root: &Path, args: &[&str]) -> Command {

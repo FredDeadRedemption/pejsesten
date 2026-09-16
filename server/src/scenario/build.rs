@@ -42,6 +42,21 @@ pub fn incantation(id: u32, name: &str, cost: i32) -> IncantationCard {
     }
 }
 
+pub fn omen(id: u32, name: &str, cost: i32, triggers: [OmenTrigger; 3], effects: Vec<Effect>) -> OmenCard {
+    OmenCard {
+        id: SCENARIO_ID_BASE + id,
+        name: name.to_string(),
+        description: None,
+        flavor_text: None,
+        color: Color::White,
+        base_cost: cost,
+        image_url: String::new(),
+        effects,
+        triggers,
+        is_token: false,
+    }
+}
+
 pub trait MinionBuild: Sized {
     fn with(self, a: MinionAttribute) -> Self;
     fn of(self, r: Race) -> Self;
