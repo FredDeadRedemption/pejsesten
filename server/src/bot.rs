@@ -11,6 +11,7 @@ async fn broadcast(io: &SocketIo, game: &Game) {
 }
 
 pub const BOT_ID: &str = "bot";
+pub const HERO_ID: u32 = 3;
 
 pub fn default_deck() -> Vec<u32> {
     vec![

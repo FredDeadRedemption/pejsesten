@@ -33,6 +33,9 @@ impl TextureCache {
     }
 
     async fn load_board(&mut self, board: &Board) {
+        if !board.hero.card.image_url.is_empty() {
+            self.load(&board.hero.card.image_url).await;
+        }
         for card in board.hand.iter().chain(board.deck.iter()) {
             self.load_card_art(card).await;
         }
@@ -94,6 +97,7 @@ impl TextureCache {
                 Card::Minion(m) => m.image_url.as_str(),
                 Card::Incantation(i) => i.image_url.as_str(),
                 Card::Omen(o) => o.image_url.as_str(),
+                Card::Hero(h) => h.image_url.as_str(),
             };
             self.load_art(url).await;
         }

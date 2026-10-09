@@ -12,7 +12,7 @@ pub mod runner;
 #[cfg(test)]
 mod tests;
 
-use crate::engine::{Game, IdGenerator, instantiate_incantation, instantiate_minion, instantiate_omen};
+use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_incantation, instantiate_minion, instantiate_omen};
 use crate::settings;
 use serde::Serialize;
 use shared::types::*;
@@ -32,6 +32,15 @@ pub struct Frame {
     pub kind: FrameKind,
     pub ok: bool,
     pub state: GameStateServer,
+}
+
+fn default_hero() -> &'static HeroCard {
+    shared::cards::hero_or_default(shared::cards::DEFAULT_HERO_ID)
+}
+
+/// Hp both scenario boards start on, so cases can set up near the cap without naming a number.
+pub fn starting_hp() -> i32 {
+    settings::starting_hp(default_hero())
 }
 
 /// Build phase. White is always the acting player; `start` freezes the board and begins the run.
@@ -72,7 +81,7 @@ impl Setup {
             graveyard: vec![],
             battlefield: vec![],
             omens: vec![],
-            hero: Hero { entity_id: ids.next_id(), attack: 0, defence: settings::STARTING_HP },
+            hero: instantiate_hero(default_hero(), ids.next_id()),
             // cases that care about mana set it explicitly; the rest should not have to
             base_mana: settings::MAX_MANA,
             mana: settings::MAX_MANA,
@@ -400,6 +409,10 @@ impl Scenario {
 
     pub fn hand_cost(&self, side: Side, index: usize) -> Option<i32> {
         self.board(side).hand.get(index).map(|c| c.cost())
+    }
+
+    pub fn hand_entity_id(&self, side: Side, index: usize) -> Option<u32> {
+        self.board(side).hand.get(index).map(|c| c.entity_id())
     }
 
     // --- results ---

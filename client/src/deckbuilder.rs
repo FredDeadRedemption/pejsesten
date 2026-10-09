@@ -1,6 +1,6 @@
 use crate::clipboard;
 use crate::decks::{self, Deck};
-use shared::types::{Card, Color as CardColor};
+use shared::types::{Card, Color as CardColor, HeroCard};
 
 pub const MAX_DECK_CARDS: usize = 50;
 
@@ -28,6 +28,7 @@ pub enum CardKind {
     Minion,
     Incantation,
     Omen,
+    Hero,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,6 +45,7 @@ pub enum Panel {
 
 pub struct DeckBuilderState {
     pub all_cards: Vec<Card>,
+    pub heroes: Vec<HeroCard>,
     pub filtered: Vec<usize>,
     pub search: String,
     pub filter_type: FilterType,
@@ -52,6 +54,7 @@ pub struct DeckBuilderState {
     pub decks: Vec<Deck>,
     pub panel: Panel,
     pub editing_cards: Vec<u32>,
+    pub editing_hero: u32,
 
     // clipboard feedback timer
     pub clipboard_msg: Option<(String, f32)>,
@@ -68,6 +71,7 @@ impl DeckBuilderState {
         let decks = decks::load();
         Self {
             all_cards,
+            heroes: shared::cards::get_heroes(),
             filtered,
             search: String::new(),
             filter_type: FilterType::All,
@@ -75,6 +79,7 @@ impl DeckBuilderState {
             decks,
             panel: Panel::DeckList,
             editing_cards: vec![],
+            editing_hero: shared::cards::DEFAULT_HERO_ID,
             clipboard_msg: None,
             import_pending: false,
             textures_preloaded: false,
@@ -106,6 +111,7 @@ impl DeckBuilderState {
     pub fn open_new_deck(&mut self) {
         let name = random_deck_name();
         self.editing_cards = vec![];
+        self.editing_hero = shared::cards::DEFAULT_HERO_ID;
         self.panel = Panel::Editor { id: None, name };
     }
 
@@ -113,6 +119,7 @@ impl DeckBuilderState {
         if let Some(d) = self.decks.iter().find(|d| d.id == id) {
             let name = d.name.clone();
             self.editing_cards = d.cards.clone();
+            self.editing_hero = d.hero;
             self.panel = Panel::Editor { id: Some(id), name };
         }
     }
@@ -125,6 +132,7 @@ impl DeckBuilderState {
         let deck = Deck {
             id: id.unwrap_or_else(decks::now_id),
             name,
+            hero: self.editing_hero,
             cards: self.editing_cards.clone(),
         };
         let pos = self.decks.iter().position(|d| d.id == deck.id);
@@ -189,7 +197,7 @@ impl DeckBuilderState {
             Panel::Editor { id, name } => (*id, name.clone()),
             Panel::DeckList => return,
         };
-        let deck = Deck { id: id.unwrap_or_else(decks::now_id), name, cards: self.editing_cards.clone() };
+        let deck = Deck { id: id.unwrap_or_else(decks::now_id), name, hero: self.editing_hero, cards: self.editing_cards.clone() };
         clipboard::write(&decks::export_one(&deck));
         self.set_clipboard_msg("Deck copied!".to_string());
     }
@@ -242,6 +250,7 @@ pub fn card_meta(card: &Card) -> (&str, &CardColor, CardKind) {
         Card::Minion(m) => (m.name.as_str(), &m.color, CardKind::Minion),
         Card::Incantation(i) => (i.name.as_str(), &i.color, CardKind::Incantation),
         Card::Omen(o) => (o.name.as_str(), &o.color, CardKind::Omen),
+        Card::Hero(h) => (h.name.as_str(), &h.color, CardKind::Hero),
     }
 }
 
@@ -250,6 +259,7 @@ pub fn card_image_url(card: &Card) -> &str {
         Card::Minion(m) => m.image_url.as_str(),
         Card::Incantation(i) => i.image_url.as_str(),
         Card::Omen(o) => o.image_url.as_str(),
+        Card::Hero(h) => h.image_url.as_str(),
     }
 }
 
@@ -258,6 +268,7 @@ pub fn card_cost(card: &Card) -> i32 {
         Card::Minion(m) => m.base_cost,
         Card::Incantation(i) => i.base_cost,
         Card::Omen(o) => o.base_cost,
+        Card::Hero(_) => 0,
     }
 }
 
@@ -266,3 +277,6 @@ fn random_deck_name() -> String {
     RANDOM_NAMES[idx].to_string()
 }
 
+pub fn hero_label(hero: &HeroCard) -> String {
+    format!("{}  ({} hp)", hero.name, hero.base_hp)
+}

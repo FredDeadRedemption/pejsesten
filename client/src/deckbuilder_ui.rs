@@ -6,7 +6,7 @@ use egui_macroquad::egui;
 use macroquad::prelude::Rect;
 
 use crate::deckbuilder::{
-    card_cost, card_id, card_meta, ColorFilter, DeckBuilderState, FilterType, Panel,
+    card_cost, card_id, card_meta, hero_label, ColorFilter, DeckBuilderState, FilterType, Panel,
     MAX_DECK_CARDS,
 };
 use crate::ui;
@@ -185,6 +185,7 @@ fn editor(ui: &mut egui::Ui, db: &mut DeckBuilderState) {
     };
     ui.colored_label(color, format!("{total} / {MAX_DECK_CARDS} cards"));
 
+    hero_picker(ui, db);
     curve(ui, db);
     ui.separator();
 
@@ -241,6 +242,27 @@ fn editor(ui: &mut egui::Ui, db: &mut DeckBuilderState) {
         db.delete_deck();
     }
     status(ui, db);
+}
+
+fn hero_picker(ui: &mut egui::Ui, db: &mut DeckBuilderState) {
+    let selected = db
+        .heroes
+        .iter()
+        .find(|h| h.id == db.editing_hero)
+        .map(hero_label)
+        .unwrap_or_else(|| "pick a hero".to_string());
+
+    ui.horizontal(|ui| {
+        ui.label("Hero");
+        egui::ComboBox::from_id_salt("db_hero")
+            .selected_text(selected)
+            .width(ui.available_width())
+            .show_ui(ui, |ui| {
+                for hero in &db.heroes {
+                    ui.selectable_value(&mut db.editing_hero, hero.id, hero_label(hero));
+                }
+            });
+    });
 }
 
 /// Cards per mana cost, with everything at or above the cap folded into the last bar.

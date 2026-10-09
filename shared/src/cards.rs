@@ -17,12 +17,42 @@ pub fn get_collectible_cards() -> Vec<Card> {
             Card::Minion(m) => !m.is_token,
             Card::Incantation(i) => !i.is_token,
             Card::Omen(o) => !o.is_token,
+            Card::Hero(_) => false,
         })
         .collect()
 }
 
 pub fn get_all_cards() -> Vec<Card> {
     CARDS.values().cloned().collect()
+}
+
+/// Heroes sit in their own id band of the pool so the card ids stay contiguous.
+pub const DEFAULT_HERO_ID: u32 = 101;
+
+pub fn get_hero_by_id(id: u32) -> Option<&'static HeroCard> {
+    match get_card_by_id(id) {
+        Some(Card::Hero(h)) => Some(h),
+        _ => None,
+    }
+}
+
+/// Falls back to the default hero whenever an id is unknown, including the unset 0.
+pub fn hero_or_default(id: u32) -> &'static HeroCard {
+    get_hero_by_id(id)
+        .or_else(|| get_hero_by_id(DEFAULT_HERO_ID))
+        .expect("the default hero must be in the pool")
+}
+
+pub fn get_heroes() -> Vec<HeroCard> {
+    let mut heroes: Vec<HeroCard> = CARDS
+        .values()
+        .filter_map(|c| match c {
+            Card::Hero(h) => Some(h.clone()),
+            _ => None,
+        })
+        .collect();
+    heroes.sort_by_key(|h| h.id);
+    heroes
 }
 
 pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
@@ -41,7 +71,7 @@ pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEn
             just_drawn: false,
             card: c.clone(),
         }),
-        Card::Incantation(_) | Card::Omen(_) => None, // only minions can be summoned
+        Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None, // only minions can be summoned
     }
 }
 
@@ -912,5 +942,59 @@ pub fn build_cards() -> Vec<Card> {
             triggers: [OmenTrigger::EnemyEndsTurnWithoutAttacking, OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysIncantation],
             is_token: false,
         }),
+        // ── HEROES ───────────────────────────────────────────────
+        Card::Hero(HeroCard {
+            id: 101,
+            name: "The Magician".to_string(),
+            description: None,
+            flavor_text: Some("As above, so below, and both of them yours.".to_string()),
+            color: Color::White,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
+            id: 102,
+            name: "The High Priestess".to_string(),
+            description: None,
+            flavor_text: Some("She has already read the card you are about to draw.".to_string()),
+            color: Color::White,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
+            id: 103,
+            name: "The Hermit".to_string(),
+            description: None,
+            flavor_text: Some("One lamp, one road, no company.".to_string()),
+            color: Color::Black,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
+            id: 104,
+            name: "The Tower".to_string(),
+            description: None,
+            flavor_text: Some("Everything you built, and the ground it stood on.".to_string()),
+            color: Color::Black,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_hero_resolves() {
+        assert_eq!(hero_or_default(0).id, DEFAULT_HERO_ID);
+        assert_eq!(get_heroes().len(), 4);
+    }
+
+    #[test]
+    fn heroes_are_not_deck_cards() {
+        assert!(get_collectible_cards().iter().all(|c| !matches!(c, Card::Hero(_))));
+        assert!(get_heroes().iter().all(|h| h.id >= DEFAULT_HERO_ID));
+    }
 }

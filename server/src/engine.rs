@@ -61,13 +61,26 @@ pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
     }
 }
 
+pub fn instantiate_hero(c: &HeroCard, entity_id: u32) -> Hero {
+    let hp = settings::starting_hp(c);
+    Hero {
+        entity_id,
+        card: c.clone(),
+        attack: 0,
+        defence: hp,
+        max_defence: hp,
+    }
+}
+
 pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
     deck.iter()
         .filter_map(|id| cards::get_card_by_id(*id))
-        .map(|card| match card {
-            Card::Minion(c) => CardEntity::Minion(instantiate_minion(c, ids.next_id())),
-            Card::Incantation(c) => CardEntity::Incantation(instantiate_incantation(c, ids.next_id())),
-            Card::Omen(c) => CardEntity::Omen(instantiate_omen(c, ids.next_id())),
+        // a hero id in the deck list is not a card to draw, so it is dropped
+        .filter_map(|card| match card {
+            Card::Minion(c) => Some(CardEntity::Minion(instantiate_minion(c, ids.next_id()))),
+            Card::Incantation(c) => Some(CardEntity::Incantation(instantiate_incantation(c, ids.next_id()))),
+            Card::Omen(c) => Some(CardEntity::Omen(instantiate_omen(c, ids.next_id()))),
+            Card::Hero(_) => None,
         })
         .collect()
 }
@@ -129,69 +142,51 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
     }
 }
 
+/// Everything one player brings to a game, before the shuffle and the opening deal.
+pub struct PlayerSetup {
+    pub id: String,
+    pub hero: HeroCard,
+    pub deck: Vec<CardEntity>,
+}
+
 impl Game {
-    pub fn new(
-        player1_id: String,
-        player2_id: String,
-        is_player1_white: bool,
-        player1_deck: Vec<CardEntity>,
-        player2_deck: Vec<CardEntity>,
-        mut ids: IdGenerator,
-    ) -> Self {
+    pub fn new(player1: PlayerSetup, player2: PlayerSetup, is_player1_white: bool, mut ids: IdGenerator) -> Self {
         let mut rng = rand::rng();
 
-        let (mut white_deck, mut black_deck) = if is_player1_white {
-            (player1_deck, player2_deck)
-        } else {
-            (player2_deck, player1_deck)
-        };
+        let (mut white, mut black) = if is_player1_white { (player1, player2) } else { (player2, player1) };
 
-        white_deck.shuffle(&mut rng);
-        black_deck.shuffle(&mut rng);
+        white.deck.shuffle(&mut rng);
+        black.deck.shuffle(&mut rng);
 
-        let white_hand: Vec<CardEntity> = white_deck.drain(0..settings::STARTING_HAND_SIZE.min(white_deck.len())).collect();
-        let black_hand: Vec<CardEntity> = black_deck.drain(0..(settings::STARTING_HAND_SIZE + 1).min(black_deck.len())).collect();
-
-        let (white_player_id, black_player_id) = if is_player1_white {
-            (player1_id, player2_id)
-        } else {
-            (player2_id, player1_id)
-        };
+        let white_hand: Vec<CardEntity> = white.deck.drain(0..settings::STARTING_HAND_SIZE.min(white.deck.len())).collect();
+        let black_hand: Vec<CardEntity> = black.deck.drain(0..(settings::STARTING_HAND_SIZE + 1).min(black.deck.len())).collect();
 
         Game {
             state: GameStateServer {
                 white: Board {
-                    deck: white_deck,
+                    deck: white.deck,
                     hand: white_hand,
                     graveyard: vec![],
                     battlefield: vec![],
                     omens: vec![],
-                    hero: Hero {
-                        entity_id: ids.next_id(),
-                        attack: 0,
-                        defence: settings::STARTING_HP,
-                    },
+                    hero: instantiate_hero(&white.hero, ids.next_id()),
                     base_mana: settings::STARTING_MANA,
                     mana: settings::STARTING_MANA,
                     embers: settings::STARTING_EMBERS,
                 },
                 black: Board {
-                    deck: black_deck,
+                    deck: black.deck,
                     hand: black_hand,
                     graveyard: vec![],
                     battlefield: vec![],
                     omens: vec![],
-                    hero: Hero {
-                        entity_id: ids.next_id(),
-                        attack: 0,
-                        defence: settings::STARTING_HP,
-                    },
+                    hero: instantiate_hero(&black.hero, ids.next_id()),
                     base_mana: settings::STARTING_MANA - 1,
                     mana: settings::STARTING_MANA - 1,
                     embers: settings::STARTING_EMBERS,
                 },
-                white_player_id,
-                black_player_id,
+                white_player_id: white.id,
+                black_player_id: black.id,
                 white_turn: true,
                 turn_count: 0,
                 cards_played_this_turn: 0,
@@ -607,10 +602,12 @@ impl Game {
                         TargetRef::HeroSource => {
                             source.hero.attack += attack;
                             source.hero.defence += defence;
+                            source.hero.max_defence += defence;
                         }
                         TargetRef::HeroEnemy => {
                             enemy.hero.attack += attack;
                             enemy.hero.defence += defence;
+                            enemy.hero.max_defence += defence;
                         }
                         TargetRef::MinionSource(i) => {
                             source.battlefield[i].attack += attack;
@@ -631,8 +628,8 @@ impl Game {
                 for tr in refs {
                     let (source, enemy) = self.boards_for_mut(owner);
                     match tr {
-                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(settings::MAX_HP),
-                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(settings::MAX_HP),
+                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(source.hero.max_defence),
+                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(enemy.hero.max_defence),
                         TargetRef::MinionSource(i) => {
                             let m = &mut source.battlefield[i];
                             m.defence = (m.defence + heal).min(m.max_defence);
@@ -665,7 +662,7 @@ impl Game {
                 }
                 if lifesteal {
                     let (source, _) = self.boards_for_mut(owner);
-                    source.hero.defence = (source.hero.defence + damage * hit_count).min(settings::MAX_HP);
+                    source.hero.defence = (source.hero.defence + damage * hit_count).min(source.hero.max_defence);
                 }
             }
 
@@ -696,7 +693,10 @@ impl Game {
                                 }
                                 FollowUpEffect::Copy { copy_amount } => {
                                     for _ in 0..*copy_amount {
-                                        extra.push(card.clone());
+                                        let mut copy = card.clone();
+                                        // its own entity, or the two move and highlight as one
+                                        *copy.entity_id_mut() = self.ids.next_id();
+                                        extra.push(copy);
                                     }
                                 }
                             }
@@ -1029,7 +1029,7 @@ impl Game {
             }
 
             if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
-                source.hero.defence = (source.hero.defence + attacker_attack).min(settings::MAX_HP);
+                source.hero.defence = (source.hero.defence + attacker_attack).min(source.hero.max_defence);
             }
 
             let attacker_is_poisonous = source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Poisonous);

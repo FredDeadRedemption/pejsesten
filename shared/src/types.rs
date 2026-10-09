@@ -218,6 +218,7 @@ pub enum Card {
     Minion(MinionCard),
     Incantation(IncantationCard),
     Omen(OmenCard),
+    Hero(HeroCard),
 }
 
 impl Card {
@@ -226,6 +227,7 @@ impl Card {
             Card::Minion(m) => m.id,
             Card::Incantation(i) => i.id,
             Card::Omen(o) => o.id,
+            Card::Hero(h) => h.id,
         }
     }
 }
@@ -262,11 +264,26 @@ pub enum CardEntity {
     Omen(OmenEntity),
 }
 
+/// In the card pool like any other card, but never drawn and never in a zone:
+/// a hero only ever sits in the hero slot, and is picked when the deck is built.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeroCard {
+    pub id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    pub flavor_text: Option<String>,
+    pub color: Color,
+    pub image_url: String,
+    pub base_hp: i32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hero {
     pub entity_id: u32,
+    pub card: HeroCard,
     pub attack: i32,
     pub defence: i32,
+    pub max_defence: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -336,6 +353,7 @@ pub struct GameStateClient {
 pub struct PlayerMetaData {
     pub username: String,
     pub chosen_deck: Vec<u32>,
+    pub hero: u32,
     pub avatar: String,
 }
 
@@ -392,6 +410,13 @@ impl CardEntity {
             CardEntity::Minion(m) => m.entity_id,
             CardEntity::Incantation(i) => i.entity_id,
             CardEntity::Omen(o) => o.entity_id,
+        }
+    }
+    pub fn entity_id_mut(&mut self) -> &mut u32 {
+        match self {
+            CardEntity::Minion(m) => &mut m.entity_id,
+            CardEntity::Incantation(i) => &mut i.entity_id,
+            CardEntity::Omen(o) => &mut o.entity_id,
         }
     }
     pub fn just_drawn(&self) -> bool {

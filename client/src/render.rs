@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use std::collections::HashSet;
 
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
-use crate::layout::{self, CARD_GAP, CARD_H, CARD_W, HERO_H, HERO_W};
+use crate::layout::{self, CARD_H, CARD_W};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::fx;
 use crate::glow;
@@ -56,7 +56,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &state.hand_hints);
 
     if state.your_turn {
-        draw_end_turn_button(w, mid);
+        draw_end_turn_button(w, h);
         draw_drop_targets(state, drag, w, h);
     }
 
@@ -129,7 +129,7 @@ pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &Textur
     }
 }
 
-pub fn draw_lobby(username: &str) {
+pub fn draw_lobby(username: &str, deck_label: &str, hero_label: &str) {
     let w = ui::size().x;
     let h = ui::size().y;
 
@@ -139,7 +139,11 @@ pub fn draw_lobby(username: &str) {
 
     let user_label = format!("Playing as: {}", username);
     let ud = ui::measure(&user_label, 18.0);
-    ui::text(&user_label, w / 2.0 - ud.width / 2.0, h / 3.0 + 44.0, 18.0, LIGHTGRAY);
+    ui::text(&user_label, w / 2.0 - ud.width / 2.0, h / 3.0 + 36.0, 18.0, LIGHTGRAY);
+
+    draw_button(&format!("Deck: {}  [1]", deck_label), w / 2.0 - 115.0, h / 2.0 - 74.0, 230.0, 46.0);
+    let hd = ui::measure(hero_label, 15.0);
+    ui::text(hero_label, w / 2.0 - hd.width / 2.0, h / 2.0 - 10.0, 15.0, LIGHTGRAY);
 
     draw_button("Play vs Human  [H]", w / 2.0 - 115.0, h / 2.0, 230.0, 46.0);
     draw_button("Play vs Bot    [B]", w / 2.0 - 115.0, h / 2.0 + 62.0, 230.0, 46.0);
@@ -280,30 +284,25 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 // ── Board halves ──────────────────────────────────────────────────────────────
 
 fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)], open_cards: bool, hand_hints: &[CardHint]) {
-    let mid = h / 2.0;
     if is_self {
-        let hand_y = h - CARD_H - 10.0;
-        let hero_y = mid + 18.0;
         let mana_y = h - 22.0;
         let deck_r = layout::self_deck_rect(w, h);
 
-        draw_hero(&board.hero, w - 100.0, hero_y, true);
+        draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache);
         draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
         draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache);
-        draw_hand(&board.hand, w, hand_y, true, cache, hand_flips, hand_hints);
+        draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, hand_flips, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y - 24.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
     } else {
-        let hand_y = 10.0;
-        let hero_y = mid - HERO_H - 18.0;
         let mana_y = 18.0;
         let deck_r = layout::enemy_deck_rect(w, h);
 
-        draw_hero(&board.hero, w - 100.0, hero_y, false);
+        draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache);
         draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
         draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len()), cache);
-        draw_hand(&board.hand, w, hand_y, open_cards, cache, hand_flips, hand_hints);
+        draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, hand_flips, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
@@ -558,24 +557,24 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
     let ph = PREVIEW_H;
 
     // Hand cards: preview floats above the hovered card so it doesn't overlap the hand row.
-    let hand_rects = layout::hand_rects(state.self_board.hand.len(), w, h);
-    if let Some((card, rect)) = state.self_board.hand.iter().zip(hand_rects.iter())
+    let hand_slots = layout::hand_slots(state.self_board.hand.len(), w, h);
+    if let Some((card, rect)) = state.self_board.hand.iter().zip(hand_slots.iter())
         .find(|(c, _)| c.entity_id() == entity_id)
-        .map(|(c, r)| (c, *r))
+        .map(|(c, s)| (c, s.rect))
     {
-        let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(0.0, w - pw);
-        // an omen hangs its trigger panel below the card, so the whole block has to clear the hand
-        let panel = match card {
-            CardEntity::Omen(o) => omen_panel_height(o) + 6.0,
-            _ => 0.0,
+        // an omen puts its trigger panel beside the card, so the pair has to fit across
+        let block_w = match card {
+            CardEntity::Omen(_) => pw + 6.0 + OMEN_PANEL_W,
+            _ => pw,
         };
-        let py = (rect.y - ph - panel - 10.0).max(0.0);
+        let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(0.0, (w - block_w).max(0.0));
+        let py = (rect.y - ph - 10.0).max(0.0);
         fx::soft_shadow(px, py, pw, ph);
         draw_card_entity_preview(card, px, py, pw, ph, cache);
         return;
     }
 
-    // Omens: the trigger panel hangs under the card, so the block is anchored to the side.
+    // Omens: the preview and its trigger panel both sit to the right of the board omen.
     let omen = {
         let rects = layout::self_omen_rects(state.self_board.omens.len(), h);
         state.self_board.omens.iter().zip(rects)
@@ -589,9 +588,9 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
     });
 
     if let Some((omen, rect)) = omen {
-        let block_h = ph + 6.0 + omen_panel_height(omen);
-        let px = rect.x + rect.w + 10.0;
-        let py = (rect.y + rect.h / 2.0 - block_h / 2.0).clamp(0.0, h - block_h);
+        let block_w = pw + 6.0 + OMEN_PANEL_W;
+        let px = (rect.x + rect.w + 10.0).min((w - block_w).max(0.0));
+        let py = (rect.y + rect.h / 2.0 - ph / 2.0).clamp(0.0, h - ph);
         fx::soft_shadow(px, py, pw, ph);
         draw_omen_preview(omen, px, py, pw, ph, cache);
         return;
@@ -681,10 +680,6 @@ fn omen_panel_lines(omen: &OmenEntity) -> Vec<String> {
     }
 }
 
-fn omen_panel_height(omen: &OmenEntity) -> f32 {
-    omen_panel_lines(omen).len() as f32 * OMEN_PANEL_LINE + OMEN_PANEL_PAD * 2.0
-}
-
 fn draw_omen_panel(omen: &OmenEntity, x: f32, y: f32) {
     let lines = omen_panel_lines(omen);
     let h = lines.len() as f32 * OMEN_PANEL_LINE + OMEN_PANEL_PAD * 2.0;
@@ -716,7 +711,7 @@ fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &
     let desc_font = (frame.text.h * 0.20).round();
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 
-    draw_omen_panel(omen, x, y + h + 6.0);
+    draw_omen_panel(omen, x + w + 6.0, y);
 }
 
 /// Full-screen choice of which of the three printed triggers to arm.
@@ -795,28 +790,42 @@ fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cac
     }
 }
 
-fn draw_hand(hand: &[CardEntity], w: f32, y: f32, face_up: bool, cache: &TextureCache, hand_flips: &[(u32, f32)], hints: &[CardHint]) {
-    let count = hand.len() as f32;
-    let total = count * (CARD_W + CARD_GAP) - CARD_GAP;
-    let start_x = w / 2.0 - total / 2.0;
+fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cache: &TextureCache, hand_flips: &[(u32, f32)], hints: &[CardHint]) {
     let cfg = glow::current();
 
-    for (i, card) in hand.iter().enumerate() {
-        let x = start_x + i as f32 * (CARD_W + CARD_GAP);
-        fx::soft_shadow(x, y, CARD_W, CARD_H);
-        if face_up {
-            let flip_cos = hand_flips.iter()
-                .find(|(id, _)| *id == card.entity_id())
-                .map(|(_, v)| *v)
-                .unwrap_or(1.0);
-            if let Some(style) = hints.get(i).and_then(|h| glow_style(&cfg, h)) {
-                draw_glow(&cfg, &style, x, y, CARD_W, CARD_H, i as f32 * cfg.phase_step, flip_cos.clamp(0.0, 1.0));
+    // left to right, so each card overlaps the one before it
+    for (i, (card, slot)) in hand.iter().zip(slots).enumerate() {
+        let (x, y) = (slot.rect.x, slot.rect.y);
+        with_rotation(slot.center(), slot.rotation, || {
+            fx::soft_shadow(x, y, CARD_W, CARD_H);
+            if face_up {
+                let flip_cos = hand_flips.iter()
+                    .find(|(id, _)| *id == card.entity_id())
+                    .map(|(_, v)| *v)
+                    .unwrap_or(1.0);
+                if let Some(style) = hints.get(i).and_then(|h| glow_style(&cfg, h)) {
+                    draw_glow(&cfg, &style, x, y, CARD_W, CARD_H, i as f32 * cfg.phase_step, flip_cos.clamp(0.0, 1.0));
+                }
+                draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
+            } else {
+                draw_card_back(x, y, CARD_W, CARD_H);
             }
-            draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
-        } else {
-            draw_card_back(x, y, CARD_W, CARD_H);
-        }
+        });
     }
+}
+
+/// macroquad has no 2d transform of its own, so the gl model matrix is the way to tilt a card.
+fn with_rotation(pivot: Vec2, angle: f32, draw: impl FnOnce()) {
+    if angle == 0.0 {
+        draw();
+        return;
+    }
+    let m = Mat4::from_translation(pivot.extend(0.0))
+        * Mat4::from_rotation_z(angle)
+        * Mat4::from_translation(-pivot.extend(0.0));
+    unsafe { get_internal_gl() }.quad_gl.push_model_matrix(m);
+    draw();
+    unsafe { get_internal_gl() }.quad_gl.pop_model_matrix();
 }
 
 /// A met condition outranks plain affordability: it is the rarer thing to notice.
@@ -855,40 +864,37 @@ fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
     }
 }
 
-fn draw_hero(hero: &shared::types::Hero, x: f32, y: f32, is_self: bool) {
-    let (base, sheen, edge) = if is_self {
-        (Color::new(0.10, 0.16, 0.28, 1.0), Color::new(0.55, 0.75, 1.0, 0.14), Color::new(0.42, 0.62, 0.90, 1.0))
+/// The hero card. Same frame as any card, minus the mana gem: a hero has no cost.
+fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &TextureCache) {
+    let edge = if is_self {
+        Color::new(0.42, 0.62, 0.90, 1.0)
     } else {
-        (Color::new(0.24, 0.09, 0.11, 1.0), Color::new(1.0, 0.60, 0.55, 0.14), Color::new(0.88, 0.36, 0.34, 1.0))
+        Color::new(0.88, 0.36, 0.34, 1.0)
     };
-    let r = 10.0;
 
-    fx::soft_shadow(x, y, HERO_W, HERO_H);
-    fx::fill_round_rect(x, y, HERO_W, HERO_H, r, base);
-    fx::fill_round_rect(x + 3.0, y + 3.0, HERO_W - 6.0, HERO_H * 0.5, r - 3.0, sheen);
-    fx::stroke_round_rect(x, y, HERO_W, HERO_H, r, 2.0, edge);
+    fx::soft_shadow(r.x, r.y, r.w, r.h);
+    let frame = draw_card_frame(r.x, r.y, r.w, r.h, &hero.card.color, &hero.card.image_url, cache, WHITE);
 
-    // hp pill overhangs the bottom edge, sized to the number
-    let hp = hero.defence.to_string();
-    let hd = ui::measure(&hp, 16.0);
-    let pw = (hd.width + 12.0).max(26.0);
-    let ph = 20.0;
-    let px = x + HERO_W / 2.0 - pw / 2.0;
-    let py = y + HERO_H - ph / 2.0 - 4.0;
-    fx::fill_round_rect(px, py, pw, ph, ph / 2.0, COL_DEF);
-    fx::stroke_round_rect(px, py, pw, ph, ph / 2.0, 1.5, Color::new(1.0, 0.85, 0.8, 0.8));
-    draw_text_centered(&hp, x + HERO_W / 2.0, py + 15.0, 16.0, WHITE);
+    let name_font = 11.0;
+    let name = fit_text(&hero.card.name, (frame.title.w - 6.0).max(0.0), name_font);
+    ui::text(&name, frame.title.x + 3.0, frame.title.y + frame.title.h * 0.78, name_font, BLACK);
 
+    let flavor_font = (frame.text.h * 0.20).round().max(8.0);
+    draw_wrapped_text(
+        &strip_html(hero.card.flavor_text.as_deref().unwrap_or("")),
+        frame.text.x + 3.0,
+        frame.text.y + flavor_font,
+        (frame.text.w - 6.0).max(0.0),
+        flavor_font,
+        BLACK,
+    );
+
+    // side colour on the border, so own and enemy hero still read apart at a glance
+    draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, edge);
+
+    draw_stat_badge(hero.defence, r.x + r.w - 2.0 - 18.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
     if hero.attack > 0 {
-        let atk = hero.attack.to_string();
-        let ad = ui::measure(&atk, 14.0);
-        let aw = (ad.width + 10.0).max(22.0);
-        let ah = 18.0;
-        let ax = x - 6.0;
-        let ay = py + 1.0;
-        fx::fill_round_rect(ax, ay, aw, ah, ah / 2.0, COL_ATK);
-        fx::stroke_round_rect(ax, ay, aw, ah, ah / 2.0, 1.5, Color::new(1.0, 0.95, 0.7, 0.8));
-        draw_text_centered(&atk, ax + aw / 2.0, ay + 14.0, 14.0, WHITE);
+        draw_stat_badge(hero.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
     }
 }
 
@@ -970,15 +976,12 @@ fn draw_turn_indicator(state: &GameStateClient, w: f32, mid: f32) {
     ui::text(&turn, w / 2.0 - td.width / 2.0, mid + 12.0, 13.0, GRAY);
 }
 
-fn draw_end_turn_button(w: f32, mid: f32) {
-    let bx = w - 124.0;
-    let by = mid + 14.0;
-    let bw = 104.0;
-    let bh = 36.0;
-    button_base(bx, by, bw, bh, Color::new(0.10, 0.42, 0.17, 1.0), Color::new(0.35, 0.80, 0.42, 1.0));
+fn draw_end_turn_button(w: f32, h: f32) {
+    let r = layout::end_turn_rect(w, h);
+    button_base(r.x, r.y, r.w, r.h, Color::new(0.10, 0.42, 0.17, 1.0), Color::new(0.35, 0.80, 0.42, 1.0));
     let label = "END TURN [E]";
     let d = ui::measure(label, 14.0);
-    ui::text(label, bx + bw / 2.0 - d.width / 2.0, by + bh / 2.0 + 5.0, 14.0, WHITE);
+    ui::text(label, r.x + r.w / 2.0 - d.width / 2.0, r.y + r.h / 2.0 + 5.0, 14.0, WHITE);
 }
 
 fn button_base(x: f32, y: f32, w: f32, h: f32, fill: Color, border: Color) {

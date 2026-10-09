@@ -289,14 +289,14 @@ fn heal_caps_at_max_defence() -> Scenario {
 
 fn heal_caps_at_max_hp() -> Scenario {
     let mut s = Setup::new();
-    s.hp(Side::White, settings::MAX_HP - 1);
+    s.hp(Side::White, super::starting_hp() - 1);
     let card = s.spell_in_hand(
         Side::White,
         incantation(1, "Mend", 0).does(on_play(vec![heal(spec(TargetMode::Auto, TargetSide::Friendly, EntityType::Hero), 10)])),
     );
     let mut scn = s.start("hero heal cap");
     scn.play(card, None);
-    scn.expect_eq("hp", scn.hp(Side::White), settings::MAX_HP);
+    scn.expect_eq("hp", scn.hp(Side::White), super::starting_hp());
     scn
 }
 
@@ -349,6 +349,7 @@ fn draw_burns_at_full_hand() -> Scenario {
     scn.play(card, None);
     scn.expect_eq("hand did not exceed the cap", scn.hand_len(Side::White), settings::MAX_HAND_SIZE);
     scn.expect_eq("card left the deck", scn.deck_len(Side::White), 0);
+    scn.expect_eq("burned, not buried", scn.graveyard_len(Side::White), 0);
     scn
 }
 
@@ -399,6 +400,8 @@ fn draw_follow_up_copy() -> Scenario {
     let mut scn = s.start("draw copy");
     scn.play(card, None);
     scn.expect_eq("drawn card plus one copy", scn.hand_len(Side::White), 2);
+    let (original, copy) = (scn.hand_entity_id(Side::White, 0), scn.hand_entity_id(Side::White, 1));
+    scn.expect("the copy is its own entity", original != copy);
     scn
 }
 
