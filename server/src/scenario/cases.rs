@@ -53,6 +53,7 @@ pub fn all() -> Vec<Case> {
         case("attributes", "lifesteal heals nothing when a ward eats the hit", lifesteal_blocked_by_ward),
         case("attributes", "a harmless defender does not spend the attacker's ward", zero_attack_keeps_ward),
         case("attributes", "poisonous kills whatever it damages", poisonous_kills),
+        case("attributes", "poisonous cannot kill through a ward", poisonous_blocked_by_ward),
         case("attributes", "only tradeable cards can be traded", tradeable_gate),
         // triggers
         case("triggers", "fanfare fires when the minion is played", fanfare_fires),
@@ -660,6 +661,18 @@ fn poisonous_kills() -> Scenario {
     scn.attack(snake, big);
     scn.expect("colossus died", !scn.alive(big));
     scn.expect("snake lived", scn.alive(snake));
+    scn
+}
+
+fn poisonous_blocked_by_ward() -> Scenario {
+    let mut s = Setup::new();
+    let warded = s.on_board(Side::Black, minion(1, "Warded", 4, 0, 9).with(MinionAttribute::Ward));
+    let snake = s.on_board(Side::White, minion(2, "Snake", 2, 1, 3).with(MinionAttribute::Poisonous));
+    let mut scn = s.start("poisonous vs ward");
+    scn.attack(snake, warded);
+    scn.expect("warded minion lived", scn.alive(warded));
+    scn.expect_eq("defender undamaged", scn.defence(warded), Some(9));
+    scn.expect("ward is spent", !scn.has_ward(warded));
     scn
 }
 

@@ -1003,7 +1003,7 @@ impl Game {
             self.source_board_mut().hero.stats.heal(attacker_attack);
         }
 
-        if poisonous {
+        if poisonous && landed {
             if matches!(target_ref, TargetRef::MinionEnemy(_) | TargetRef::MinionSource(_)) {
                 self.stats_mut(owner, target_ref).defence = 0;
             }
