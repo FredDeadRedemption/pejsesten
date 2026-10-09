@@ -627,16 +627,17 @@ impl Game {
 
             Effect::Damage { target_spec, damage, lifesteal } => {
                 let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
-                let hit_count = refs.len() as i32;
+                let mut dealt = 0;
                 for tr in refs {
                     if self.absorb_ward(owner, tr) {
                         continue;
                     }
                     self.stats_mut(owner, tr).defence -= damage;
+                    dealt += damage;
                 }
                 if lifesteal {
                     let (source, _) = self.boards_for_mut(owner);
-                    source.hero.stats.heal(damage * hit_count);
+                    source.hero.stats.heal(dealt);
                 }
             }
 
@@ -973,11 +974,11 @@ impl Game {
         let attacker_attack = self.source_board().battlefield[attacker_idx].stats.attack;
 
         let attacker_ref = TargetRef::MinionSource(attacker_idx);
-        // a hero never strikes back, and a minion does even at 0 attack, which still eats a ward
+        // only a minion strikes back, and never itself
         let retaliation = match &target_ref {
-            TargetRef::MinionEnemy(i) => Some(self.enemy_board().battlefield[*i].stats.attack),
-            TargetRef::MinionSource(i) if *i != attacker_idx => Some(self.source_board().battlefield[*i].stats.attack),
-            _ => None,
+            TargetRef::MinionEnemy(i) => self.enemy_board().battlefield[*i].stats.attack,
+            TargetRef::MinionSource(i) if *i != attacker_idx => self.source_board().battlefield[*i].stats.attack,
+            _ => 0,
         };
         let attacker_attributes = &self.source_board().battlefield[attacker_idx].card.attributes;
         let lifesteal = attacker_attributes.contains(&MinionAttribute::Lifesteal);
@@ -989,16 +990,16 @@ impl Game {
             attacker.stealth_active = false;
         }
 
-        if !self.absorb_ward(owner, target_ref) {
+        let landed = !self.absorb_ward(owner, target_ref);
+        if landed {
             self.stats_mut(owner, target_ref).defence -= attacker_attack;
         }
-        if let Some(target_attack) = retaliation {
-            if !self.absorb_ward(owner, attacker_ref) {
-                self.stats_mut(owner, attacker_ref).defence -= target_attack;
-            }
+        // a harmless defender must not spend the attacker's ward
+        if retaliation > 0 && !self.absorb_ward(owner, attacker_ref) {
+            self.stats_mut(owner, attacker_ref).defence -= retaliation;
         }
 
-        if lifesteal {
+        if lifesteal && landed {
             self.source_board_mut().hero.stats.heal(attacker_attack);
         }
 

@@ -24,6 +24,7 @@ pub fn all() -> Vec<Case> {
         case("effects", "buff raises attack, defence and the heal ceiling", buff_raises_ceiling),
         case("effects", "damage reduces defence", damage_reduces_defence),
         case("effects", "damage with lifesteal heals once per entity hit", lifesteal_scales_with_hits),
+        case("effects", "damage with lifesteal skips a warded target", lifesteal_skips_warded_target),
         case("effects", "heal on a minion stops at max defence", heal_caps_at_max_defence),
         case("effects", "heal on a hero stops at max hp", heal_caps_at_max_hp),
         case("effects", "destroy ignores ward", destroy_ignores_ward),
@@ -49,6 +50,8 @@ pub fn all() -> Vec<Case> {
         case("attributes", "ward absorbs one instance of spell damage", ward_absorbs_spell),
         case("attributes", "ward absorbs combat damage", ward_absorbs_combat),
         case("attributes", "lifesteal heals the hero on attack", lifesteal_attribute_on_attack),
+        case("attributes", "lifesteal heals nothing when a ward eats the hit", lifesteal_blocked_by_ward),
+        case("attributes", "a harmless defender does not spend the attacker's ward", zero_attack_keeps_ward),
         case("attributes", "poisonous kills whatever it damages", poisonous_kills),
         case("attributes", "only tradeable cards can be traded", tradeable_gate),
         // triggers
@@ -264,6 +267,22 @@ fn lifesteal_scales_with_hits() -> Scenario {
     scn.play(card, None);
     // 2 damage across 2 minions heals 4
     scn.expect_eq("hero healed per hit", scn.hp(Side::White), 14);
+    scn
+}
+
+fn lifesteal_skips_warded_target() -> Scenario {
+    let mut s = Setup::new();
+    s.on_board(Side::Black, minion(1, "Warded", 1, 1, 5).with(MinionAttribute::Ward));
+    s.on_board(Side::Black, minion(2, "Plain", 1, 1, 5));
+    s.hp(Side::White, 10);
+    let card = s.spell_in_hand(
+        Side::White,
+        incantation(3, "Siphon", 0).does(on_play(vec![drain(spec(TargetMode::Auto, TargetSide::Enemy, EntityType::Minion), 2)])),
+    );
+    let mut scn = s.start("lifesteal past a ward");
+    scn.play(card, None);
+    // only the unwarded minion took damage, so only that hit heals
+    scn.expect_eq("hero healed for one hit", scn.hp(Side::White), 12);
     scn
 }
 
@@ -606,6 +625,30 @@ fn lifesteal_attribute_on_attack() -> Scenario {
     let mut scn = s.start("lifesteal attribute");
     scn.attack(vamp, prey);
     scn.expect_eq("healed for the attack", scn.hp(Side::White), 13);
+    scn
+}
+
+fn lifesteal_blocked_by_ward() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::White, 10);
+    let warded = s.on_board(Side::Black, minion(1, "Warded", 1, 0, 9).with(MinionAttribute::Ward));
+    let vamp = s.on_board(Side::White, minion(2, "Vampire", 3, 3, 3).with(MinionAttribute::Lifesteal));
+    let mut scn = s.start("lifesteal vs ward");
+    scn.attack(vamp, warded);
+    scn.expect("ward is spent", !scn.has_ward(warded));
+    scn.expect_eq("defender undamaged", scn.defence(warded), Some(9));
+    scn.expect_eq("no damage, no heal", scn.hp(Side::White), 10);
+    scn
+}
+
+fn zero_attack_keeps_ward() -> Scenario {
+    let mut s = Setup::new();
+    let prey = s.on_board(Side::Black, minion(1, "Prey", 1, 0, 9));
+    let attacker = s.on_board(Side::White, minion(2, "Warded", 2, 2, 2).with(MinionAttribute::Ward));
+    let mut scn = s.start("ward vs a harmless defender");
+    scn.attack(attacker, prey);
+    scn.expect("ward is intact", scn.has_ward(attacker));
+    scn.expect_eq("defender took the hit", scn.defence(prey), Some(7));
     scn
 }
 
