@@ -25,9 +25,7 @@ impl IdGenerator {
 
 pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
     MinionEntity {
-        attack: c.base_attack,
-        defence: c.base_defence,
-        max_defence: c.base_defence,
+        stats: Stats::new(c.base_attack, c.base_defence),
         ward_active: c.attributes.contains(&MinionAttribute::Ward),
         stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
         exhausted: false,
@@ -62,13 +60,10 @@ pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
 }
 
 pub fn instantiate_hero(c: &HeroCard, entity_id: u32) -> Hero {
-    let hp = settings::starting_hp(c);
     Hero {
         entity_id,
         card: c.clone(),
-        attack: 0,
-        defence: hp,
-        max_defence: hp,
+        stats: Stats::new(0, settings::starting_hp(c)),
     }
 }
 
@@ -87,7 +82,7 @@ pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TargetRef {
     HeroSource,
     HeroEnemy,
@@ -548,7 +543,7 @@ impl Game {
 
                 let mut i = 0;
                 while i < board.battlefield.len() {
-                    if board.battlefield[i].defence <= 0 {
+                    if board.battlefield[i].stats.defence <= 0 {
                         any_died = true;
                         died[if white_is_board { 0 } else { 1 }] = true;
                         let dead = board.battlefield.remove(i);
@@ -590,55 +585,43 @@ impl Game {
         }
     }
 
+    /// Every effect that moves numbers goes through here, so hero and minion cannot drift apart.
+    fn stats_mut(&mut self, owner: PlayerSide, tr: TargetRef) -> &mut Stats {
+        let (source, enemy) = self.boards_for_mut(owner);
+        match tr {
+            TargetRef::HeroSource => &mut source.hero.stats,
+            TargetRef::HeroEnemy => &mut enemy.hero.stats,
+            TargetRef::MinionSource(i) => &mut source.battlefield[i].stats,
+            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i].stats,
+        }
+    }
+
+    /// Ward eats one hit and breaks. A hero has none, so nothing is absorbed.
+    fn absorb_ward(&mut self, owner: PlayerSide, tr: TargetRef) -> bool {
+        let (source, enemy) = self.boards_for_mut(owner);
+        let minion = match tr {
+            TargetRef::MinionSource(i) => &mut source.battlefield[i],
+            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i],
+            TargetRef::HeroSource | TargetRef::HeroEnemy => return false,
+        };
+        let absorbed = minion.ward_active;
+        minion.ward_active = false;
+        absorbed
+    }
+
     // --- Apply effect ---
 
     fn apply_effect(&mut self, effect: Effect, owner: PlayerSide, target_id: Option<u32>, self_id: Option<u32>) {
         match effect {
             Effect::Buff { target_spec, attack, defence } => {
-                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
-                for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
-                    match tr {
-                        TargetRef::HeroSource => {
-                            source.hero.attack += attack;
-                            source.hero.defence += defence;
-                            source.hero.max_defence += defence;
-                        }
-                        TargetRef::HeroEnemy => {
-                            enemy.hero.attack += attack;
-                            enemy.hero.defence += defence;
-                            enemy.hero.max_defence += defence;
-                        }
-                        TargetRef::MinionSource(i) => {
-                            source.battlefield[i].attack += attack;
-                            source.battlefield[i].defence += defence;
-                            source.battlefield[i].max_defence += defence;
-                        }
-                        TargetRef::MinionEnemy(i) => {
-                            enemy.battlefield[i].attack += attack;
-                            enemy.battlefield[i].defence += defence;
-                            enemy.battlefield[i].max_defence += defence;
-                        }
-                    }
+                for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
+                    self.stats_mut(owner, tr).buff(attack, defence);
                 }
             }
 
             Effect::Heal { target_spec, heal } => {
-                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
-                for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
-                    match tr {
-                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(source.hero.max_defence),
-                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(enemy.hero.max_defence),
-                        TargetRef::MinionSource(i) => {
-                            let m = &mut source.battlefield[i];
-                            m.defence = (m.defence + heal).min(m.max_defence);
-                        }
-                        TargetRef::MinionEnemy(i) => {
-                            let m = &mut enemy.battlefield[i];
-                            m.defence = (m.defence + heal).min(m.max_defence);
-                        }
-                    }
+                for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
+                    self.stats_mut(owner, tr).heal(heal);
                 }
             }
 
@@ -646,23 +629,14 @@ impl Game {
                 let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
                 let hit_count = refs.len() as i32;
                 for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
-                    match tr {
-                        TargetRef::HeroSource => source.hero.defence -= damage,
-                        TargetRef::HeroEnemy => enemy.hero.defence -= damage,
-                        TargetRef::MinionSource(i) => {
-                            let m = &mut source.battlefield[i];
-                            if m.ward_active { m.ward_active = false; } else { m.defence -= damage; }
-                        }
-                        TargetRef::MinionEnemy(i) => {
-                            let m = &mut enemy.battlefield[i];
-                            if m.ward_active { m.ward_active = false; } else { m.defence -= damage; }
-                        }
+                    if self.absorb_ward(owner, tr) {
+                        continue;
                     }
+                    self.stats_mut(owner, tr).defence -= damage;
                 }
                 if lifesteal {
                     let (source, _) = self.boards_for_mut(owner);
-                    source.hero.defence = (source.hero.defence + damage * hit_count).min(source.hero.max_defence);
+                    source.hero.stats.heal(damage * hit_count);
                 }
             }
 
@@ -730,9 +704,9 @@ impl Game {
                         minion.exhausted = false;
                         minion.turns_on_board = 0;
                         minion.turns_in_hand = 0;
-                        minion.attack = minion.card.base_attack;
-                        minion.defence = minion.card.base_defence;
-                        minion.max_defence = minion.card.base_defence;
+                        minion.stats.attack = minion.card.base_attack;
+                        minion.stats.defence = minion.card.base_defence;
+                        minion.stats.max_defence = minion.card.base_defence;
                         minion.ward_active = minion.card.attributes.contains(&MinionAttribute::Ward);
                         minion.stealth_active = minion.card.attributes.contains(&MinionAttribute::Stealth);
 
@@ -756,8 +730,8 @@ impl Game {
 
                 for tr in refs {
                     match tr {
-                        TargetRef::MinionSource(i) => source.battlefield[i].defence = 0,
-                        TargetRef::MinionEnemy(i) => enemy.battlefield[i].defence = 0,
+                        TargetRef::MinionSource(i) => source.battlefield[i].stats.defence = 0,
+                        TargetRef::MinionEnemy(i) => enemy.battlefield[i].stats.defence = 0,
                         _ => {}
                     }
                 }
@@ -961,7 +935,7 @@ impl Game {
             return false;
         }
 
-        if self.source_board().battlefield[attacker_idx].attack <= 0 {
+        if self.source_board().battlefield[attacker_idx].stats.attack <= 0 {
             return false;
         }
 
@@ -996,49 +970,41 @@ impl Game {
             }
         }
 
-        let attacker_attack = self.source_board().battlefield[attacker_idx].attack;
+        let attacker_attack = self.source_board().battlefield[attacker_idx].stats.attack;
+
+        let attacker_ref = TargetRef::MinionSource(attacker_idx);
+        // a hero never strikes back, and a minion does even at 0 attack, which still eats a ward
+        let retaliation = match &target_ref {
+            TargetRef::MinionEnemy(i) => Some(self.enemy_board().battlefield[*i].stats.attack),
+            TargetRef::MinionSource(i) if *i != attacker_idx => Some(self.source_board().battlefield[*i].stats.attack),
+            _ => None,
+        };
+        let attacker_attributes = &self.source_board().battlefield[attacker_idx].card.attributes;
+        let lifesteal = attacker_attributes.contains(&MinionAttribute::Lifesteal);
+        let poisonous = attacker_attributes.contains(&MinionAttribute::Poisonous);
 
         {
-            let (source, enemy) = self.boards_mut();
-            source.battlefield[attacker_idx].exhausted = true;
-            source.battlefield[attacker_idx].stealth_active = false;
+            let attacker = &mut self.source_board_mut().battlefield[attacker_idx];
+            attacker.exhausted = true;
+            attacker.stealth_active = false;
+        }
 
-            match &target_ref {
-                TargetRef::HeroEnemy => enemy.hero.defence -= attacker_attack,
-                TargetRef::HeroSource => source.hero.defence -= attacker_attack,
-                TargetRef::MinionEnemy(i) => {
-                    let target_attack = enemy.battlefield[*i].attack;
-                    let target = &mut enemy.battlefield[*i];
-                    if target.ward_active { target.ward_active = false; } else { target.defence -= attacker_attack; }
-                    let attacker = &mut source.battlefield[attacker_idx];
-                    if attacker.ward_active { attacker.ward_active = false; } else { attacker.defence -= target_attack; }
-                }
-                TargetRef::MinionSource(i) => {
-                    let target_attack = source.battlefield[*i].attack;
-                    let attacker_attack_for_target = attacker_attack;
-                    if *i == attacker_idx {
-                        let m = &mut source.battlefield[*i];
-                        if m.ward_active { m.ward_active = false; } else { m.defence -= attacker_attack_for_target; }
-                    } else {
-                        let target = &mut source.battlefield[*i];
-                        if target.ward_active { target.ward_active = false; } else { target.defence -= attacker_attack_for_target; }
-                        let attacker = &mut source.battlefield[attacker_idx];
-                        if attacker.ward_active { attacker.ward_active = false; } else { attacker.defence -= target_attack; }
-                    }
-                }
+        if !self.absorb_ward(owner, target_ref) {
+            self.stats_mut(owner, target_ref).defence -= attacker_attack;
+        }
+        if let Some(target_attack) = retaliation {
+            if !self.absorb_ward(owner, attacker_ref) {
+                self.stats_mut(owner, attacker_ref).defence -= target_attack;
             }
+        }
 
-            if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
-                source.hero.defence = (source.hero.defence + attacker_attack).min(source.hero.max_defence);
-            }
+        if lifesteal {
+            self.source_board_mut().hero.stats.heal(attacker_attack);
+        }
 
-            let attacker_is_poisonous = source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Poisonous);
-            if attacker_is_poisonous {
-                match &target_ref {
-                    TargetRef::MinionEnemy(i) => enemy.battlefield[*i].defence = 0,
-                    TargetRef::MinionSource(i) => source.battlefield[*i].defence = 0,
-                    _ => {}
-                }
+        if poisonous {
+            if matches!(target_ref, TargetRef::MinionEnemy(_) | TargetRef::MinionSource(_)) {
+                self.stats_mut(owner, target_ref).defence = 0;
             }
         }
 

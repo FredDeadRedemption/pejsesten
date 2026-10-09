@@ -232,6 +232,32 @@ impl Card {
     }
 }
 
+/// What an effect can hit. Heroes and minions carry the same block so the rules are written once.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Stats {
+    pub attack: i32,
+    pub defence: i32,
+    pub max_defence: i32,
+}
+
+impl Stats {
+    pub fn new(attack: i32, defence: i32) -> Self {
+        Self { attack, defence, max_defence: defence }
+    }
+
+    /// stops at the ceiling, never above it
+    pub fn heal(&mut self, amount: i32) {
+        self.defence = (self.defence + amount).min(self.max_defence);
+    }
+
+    /// a buff lifts the ceiling along with the defence
+    pub fn buff(&mut self, attack: i32, defence: i32) {
+        self.attack += attack;
+        self.defence += defence;
+        self.max_defence += defence;
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MinionEntity {
     pub entity_id: u32,
@@ -240,9 +266,7 @@ pub struct MinionEntity {
     pub turns_on_board: u32,
     pub just_drawn: bool,
     pub card: MinionCard,
-    pub attack: i32,
-    pub defence: i32,
-    pub max_defence: i32,
+    pub stats: Stats,
     pub ward_active: bool,
     pub stealth_active: bool,
     pub exhausted: bool,
@@ -281,9 +305,7 @@ pub struct HeroCard {
 pub struct Hero {
     pub entity_id: u32,
     pub card: HeroCard,
-    pub attack: i32,
-    pub defence: i32,
-    pub max_defence: i32,
+    pub stats: Stats,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

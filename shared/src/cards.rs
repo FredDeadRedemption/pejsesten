@@ -58,9 +58,7 @@ pub fn get_heroes() -> Vec<HeroCard> {
 pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
     match get_card_by_id(card_id)? {
         Card::Minion(c) => Some(MinionEntity {
-            attack: c.base_attack,
-            defence: c.base_defence,
-            max_defence: c.base_defence,
+            stats: Stats::new(c.base_attack, c.base_defence),
             ward_active: c.attributes.contains(&MinionAttribute::Ward),
             stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
             exhausted: false,

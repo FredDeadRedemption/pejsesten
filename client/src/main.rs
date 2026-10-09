@@ -485,7 +485,7 @@ fn compute_targetable_ids(drag: &Option<DragState>, state: &GameStateClient) -> 
     match drag {
         DragState::Minion { entity_id } => {
             let attacker = state.self_board.battlefield.iter().find(|m| m.entity_id == *entity_id);
-            if attacker.map(|a| a.attack <= 0).unwrap_or(true) { return ids; }
+            if attacker.map(|a| a.stats.attack <= 0).unwrap_or(true) { return ids; }
             let attacker_stealthed = attacker.map(|a| a.stealth_active).unwrap_or(false);
             let can_hit_hero = attacker.map(|a| a.turns_on_board >= 1).unwrap_or(false);
             let any_guard = !attacker_stealthed && state.enemy_board.battlefield.iter().any(|m| {

@@ -403,8 +403,8 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
 
     if let CardEntity::Minion(m) = card {
         let badge = scale * BADGE_HAND;
-        draw_stat_badge(m.attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
-        draw_stat_badge(m.defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
+        draw_stat_badge(m.stats.attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
+        draw_stat_badge(m.stats.defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
     } else if scale > 0.6 {
         let sl = if matches!(card, CardEntity::Omen(_)) { "omen" } else { "incantation" };
         let font = 10.0 * scale;
@@ -442,8 +442,8 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
     };
     draw_rectangle_lines(x, y, w, h, 2.0, border);
 
-    draw_stat_badge(minion.attack, x + 2.0 + 2.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
-    draw_stat_badge(minion.defence, x + w - 2.0 - 18.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
+    draw_stat_badge(minion.stats.attack, x + 2.0 + 2.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
+    draw_stat_badge(minion.stats.defence, x + w - 2.0 - 18.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
 }
 
 fn draw_card_layers(
@@ -771,8 +771,8 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let desc_font = (frame.text.h * 0.20).round();
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 
-    draw_stat_badge(minion.attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0);
-    draw_stat_badge(minion.defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
+    draw_stat_badge(minion.stats.attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0);
+    draw_stat_badge(minion.stats.defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
 }
 
 fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, anim_offsets: &[(u32, Vec2)]) {
@@ -892,9 +892,9 @@ fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &Texture
     // side colour on the border, so own and enemy hero still read apart at a glance
     draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, edge);
 
-    draw_stat_badge(hero.defence, r.x + r.w - 2.0 - 18.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
-    if hero.attack > 0 {
-        draw_stat_badge(hero.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
+    draw_stat_badge(hero.stats.defence, r.x + r.w - 2.0 - 18.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
+    if hero.stats.attack > 0 {
+        draw_stat_badge(hero.stats.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
     }
 }
 

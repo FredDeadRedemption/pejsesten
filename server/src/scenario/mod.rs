@@ -152,7 +152,7 @@ impl Setup {
     }
 
     pub fn hp(&mut self, side: Side, hp: i32) -> &mut Self {
-        self.board_mut(side).hero.defence = hp;
+        self.board_mut(side).hero.stats.defence = hp;
         self
     }
 
@@ -336,11 +336,11 @@ impl Scenario {
 
     /// Defence of a minion on the battlefield, or `None` once it has left.
     pub fn defence(&self, id: u32) -> Option<i32> {
-        self.find(id).map(|m| m.defence)
+        self.find(id).map(|m| m.stats.defence)
     }
 
     pub fn attack_of(&self, id: u32) -> Option<i32> {
-        self.find(id).map(|m| m.attack)
+        self.find(id).map(|m| m.stats.attack)
     }
 
     pub fn has_ward(&self, id: u32) -> bool {
@@ -360,7 +360,7 @@ impl Scenario {
     }
 
     pub fn hp(&self, side: Side) -> i32 {
-        self.board(side).hero.defence
+        self.board(side).hero.stats.defence
     }
 
     pub fn mana(&self, side: Side) -> i32 {

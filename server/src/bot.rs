@@ -34,15 +34,15 @@ pub fn default_deck() -> Vec<u32> {
 }
 
 fn threat_score(m: &MinionEntity) -> i32 {
-    m.attack * 2 + m.defence
+    m.stats.attack * 2 + m.stats.defence
 }
 
 fn is_trade_lethal(attacker: &MinionEntity, defender: &MinionEntity) -> bool {
-    defender.attack >= attacker.defence
+    defender.stats.attack >= attacker.stats.defence
 }
 
 fn would_kill(attacker: &MinionEntity, defender: &MinionEntity) -> bool {
-    attacker.attack >= defender.defence
+    attacker.stats.attack >= defender.stats.defence
 }
 
 fn trade_score(attacker: &MinionEntity, defender: &MinionEntity) -> i32 {
@@ -63,7 +63,7 @@ fn can_go_lethal(minions: &[MinionEntity], enemy_board: &Board) -> bool {
     if enemy_board.battlefield.iter().any(|m| m.card.attributes.contains(&MinionAttribute::Guard)) {
         return false;
     }
-    minions.iter().filter(|m| !m.exhausted).map(|m| m.attack).sum::<i32>() >= enemy_board.hero.defence
+    minions.iter().filter(|m| !m.exhausted).map(|m| m.stats.attack).sum::<i32>() >= enemy_board.hero.stats.defence
 }
 
 fn filter_minions<'a>(minions: &'a [MinionEntity], filters: &[Condition]) -> Vec<&'a MinionEntity> {
@@ -78,7 +78,7 @@ fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effec
         Effect::Damage { target_spec, .. } => {
             let enemies = filter_minions(&enemy_board.battlefield, &target_spec.filters);
             if matches!(target_spec.side, TargetSide::Enemy | TargetSide::All) && !enemies.is_empty() {
-                let killable: Vec<&&MinionEntity> = enemies.iter().filter(|m| m.defence <= 4).collect();
+                let killable: Vec<&&MinionEntity> = enemies.iter().filter(|m| m.stats.defence <= 4).collect();
                 if !killable.is_empty() {
                     return killable.into_iter().max_by_key(|m| threat_score(m)).map(|m| m.entity_id);
                 }
@@ -104,7 +104,7 @@ fn pick_best_spell_target(bot_board: &Board, enemy_board: &Board, effect: &Effec
         }
         Effect::Buff { target_spec, .. } => {
             let friendly = filter_minions(&bot_board.battlefield, &target_spec.filters);
-            friendly.iter().max_by_key(|m| m.attack).map(|m| m.entity_id)
+            friendly.iter().max_by_key(|m| m.stats.attack).map(|m| m.entity_id)
         }
         Effect::ReturnToHand { target_spec, .. } => {
             let friendly = filter_minions(&bot_board.battlefield, &target_spec.filters);
