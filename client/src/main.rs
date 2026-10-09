@@ -1,6 +1,9 @@
 use macroquad::prelude::*;
 use std::collections::{HashMap, HashSet};
 
+#[macro_use]
+mod log;
+
 mod card3d;
 mod clipboard;
 mod deckbuilder;

@@ -234,7 +234,7 @@ impl DeckBuilderState {
                 self.set_clipboard_msg("Decks imported!".to_string());
             }
             Err(e) => {
-                eprintln!("[import] failed: {}", e);
+                log!("[import] failed: {}", e);
                 self.set_clipboard_msg("Import failed!".to_string());
             }
         }

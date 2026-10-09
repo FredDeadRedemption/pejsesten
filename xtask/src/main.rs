@@ -89,6 +89,7 @@ fn web(root: &Path, prod: bool) -> Result<(), String> {
         ("client/index.html", "index.html"),
         ("client/mq_js_bundle.js", "mq_js_bundle.js"),
         ("client/app_ws.js", "app_ws.js"),
+        ("client/app_log.js", "app_log.js"),
         ("client/app_storage.js", "app_storage.js"),
         ("client/app_location.js", "app_location.js"),
         ("client/static/favicon.png", "favicon.png"),

@@ -40,7 +40,7 @@ mod ws {
                     WsEvent::Message(_) => {}
                     WsEvent::Closed => self.is_open = false,
                     WsEvent::Error(e) => {
-                        eprintln!("[ws] error: {}", e);
+                        log!("[ws] error: {}", e);
                         self.is_open = false;
                     }
                 }
@@ -154,7 +154,13 @@ impl NetworkClient {
             let now_connected = self.ws.connected();
             if now_connected && !self.was_connected {
                 self.was_connected = true;
+                log!("[ws] open, sending namespace connect");
                 self.ws.send_text("40");
+            }
+            // there is no reconnect, so a drop is the end of the session and worth saying out loud
+            if !now_connected && self.was_connected {
+                self.was_connected = false;
+                log!("[ws] closed, the session is over");
             }
 
             let text = self.ws.try_recv()?;
@@ -176,6 +182,7 @@ impl NetworkClient {
             '4' => match chars.next()? {
                 '0' => {
                     self.state = SioState::Connected;
+                    log!("[ws] namespace connected");
                     None
                 }
                 '2' => {

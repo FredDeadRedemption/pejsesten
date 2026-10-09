@@ -85,7 +85,7 @@ impl TextureCache {
                 tex.set_filter(filter);
                 self.map.insert(key.to_string(), tex);
             }
-            Err(e) => eprintln!("[textures] failed to load {}: {}", path, e),
+            Err(e) => log!("[textures] failed to load {}: {}", path, e),
         }
     }
 

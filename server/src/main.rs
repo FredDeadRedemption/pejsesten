@@ -8,6 +8,7 @@ use serde::Deserialize;
 use socketioxide::{
     SocketIo,
     extract::{Data, SocketRef, State},
+    socket::DisconnectReason,
 };
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -310,10 +311,10 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
 
     socket.on_disconnect({
         let state = state.clone();
-        move |socket: SocketRef| async move {
+        move |socket: SocketRef, reason: DisconnectReason| async move {
             let mut inner = state.inner.lock().await;
             inner.queue.retain(|(id, _)| id != &socket.id.to_string());
-            println!("Disconnected: {}", socket.id);
+            println!("Disconnected: {} ({reason:?})", socket.id);
         }
     });
 }
