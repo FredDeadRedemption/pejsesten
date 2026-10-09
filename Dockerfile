@@ -1,5 +1,5 @@
 # Build wasm client
-FROM rust:1.87-slim AS wasm-builder
+FROM mirror.gcr.io/library/rust:1.87-slim AS wasm-builder
 WORKDIR /app
 RUN rustup target add wasm32-unknown-unknown
 # the lock pins versions that build on this image; a fresh resolve picks ones that do not
@@ -12,7 +12,7 @@ COPY server server
 RUN cargo build --locked --release -p client --target wasm32-unknown-unknown
 
 # Build server
-FROM rust:1.87-slim AS server-builder
+FROM mirror.gcr.io/library/rust:1.87-slim AS server-builder
 WORKDIR /app
 # the lock pins versions that build on this image; a fresh resolve picks ones that do not
 COPY Cargo.toml Cargo.lock ./
@@ -24,7 +24,7 @@ COPY server server
 RUN cargo build --locked --release -p server
 
 # Runtime
-FROM debian:bookworm-slim
+FROM mirror.gcr.io/library/debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=server-builder /app/target/release/server ./server
