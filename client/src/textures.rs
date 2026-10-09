@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient};
 
@@ -15,94 +15,86 @@ const MEDIA_ROOT: &str = match option_env!("MEDIA_ROOT") {
 
 pub struct TextureCache {
     map: HashMap<String, Texture2D>,
+    queue: VecDeque<(String, FilterMode)>,
 }
 
 impl TextureCache {
     pub fn new() -> Self {
-        Self { map: HashMap::new() }
+        Self { map: HashMap::new(), queue: VecDeque::new() }
     }
 
-    pub async fn preload_for_state(&mut self, state: &GameStateClient) {
-        self.load_frames().await;
-        self.load("cards/missing-texture.png").await;
-
-        // Art from all visible cards
+    /// Lines up what the state needs. Nothing is awaited: a card with no texture yet
+    /// draws as a plain panel, which beats a blank screen while the art is on the wire.
+    pub fn queue_for_state(&mut self, state: &GameStateClient) {
+        self.queue_frames();
+        self.queue("cards/missing-texture.png");
         for board in [&state.self_board, &state.enemy_board] {
-            self.load_board(board).await;
+            self.queue_board(board);
         }
     }
 
-    /// Only what is actually painted. The deck is always face down, and on wasm every
-    /// miss is a network round trip that blanks the screen while it resolves.
-    async fn load_board(&mut self, board: &Board) {
-        if !board.hero.card.image_url.is_empty() {
-            self.load(&board.hero.card.image_url).await;
-        }
-        for card in &board.hand {
-            self.load_card_art(card).await;
-        }
-        for minion in board.battlefield.iter().chain(board.graveyard.iter()) {
-            self.load_art(&minion.card.image_url).await;
-        }
-        for omen in &board.omens {
-            self.load_art(&omen.card.image_url).await;
+    pub fn queue_cards(&mut self, cards: &[Card]) {
+        self.queue_frames();
+        self.queue("cards/missing-texture.png");
+        for card in cards {
+            self.queue_art(card_image_url(card));
         }
     }
 
-    async fn load_card_art(&mut self, card: &CardEntity) {
-        let url = match card {
-            CardEntity::Minion(m) => &m.card.image_url,
-            CardEntity::Incantation(i) => &i.card.image_url,
-            CardEntity::Omen(o) => &o.card.image_url,
-        };
-        self.load_art(url).await;
-    }
-
-    async fn load_art(&mut self, image_url: &str) {
-        let key = if image_url.is_empty() {
-            "cards/missing-texture.png".to_string()
-        } else {
-            image_url.to_string()
-        };
-        self.load(&key).await;
-    }
-
-    async fn load_frames(&mut self) {
-        for color in [CardColor::White, CardColor::Black] {
-            self.load_filtered(frame_key(&color), FilterMode::Nearest).await;
-        }
-    }
-
-    async fn load(&mut self, key: &str) {
-        self.load_filtered(key, FilterMode::Linear).await
-    }
-
-    async fn load_filtered(&mut self, key: &str, filter: FilterMode) {
-        if self.map.contains_key(key) {
+    /// Loads one queued texture. Call it after drawing: the await costs the rest of the frame.
+    pub async fn pump(&mut self) {
+        let Some((key, filter)) = self.queue.pop_front() else {
             return;
-        }
+        };
         let path = format!("{}{}", MEDIA_ROOT, key);
         match load_texture(&path).await {
             Ok(tex) => {
                 tex.set_filter(filter);
-                self.map.insert(key.to_string(), tex);
+                self.map.insert(key, tex);
             }
+            // a miss is permanent, so it is dropped rather than retried every frame
             Err(e) => log!("[textures] failed to load {}: {}", path, e),
         }
     }
 
-    pub async fn preload_cards(&mut self, cards: &[Card]) {
-        self.load_frames().await;
-        self.load("cards/missing-texture.png").await;
-        for card in cards {
-            let url = match card {
-                Card::Minion(m) => m.image_url.as_str(),
-                Card::Incantation(i) => i.image_url.as_str(),
-                Card::Omen(o) => o.image_url.as_str(),
-                Card::Hero(h) => h.image_url.as_str(),
-            };
-            self.load_art(url).await;
+    /// Only what is actually painted. The deck is always face down, and on wasm every
+    /// miss is a network round trip.
+    fn queue_board(&mut self, board: &Board) {
+        if !board.hero.card.image_url.is_empty() {
+            self.queue(&board.hero.card.image_url);
         }
+        for card in &board.hand {
+            self.queue_art(card_entity_image_url(card));
+        }
+        for minion in board.battlefield.iter().chain(board.graveyard.iter()) {
+            self.queue_art(&minion.card.image_url);
+        }
+        for omen in &board.omens {
+            self.queue_art(&omen.card.image_url);
+        }
+    }
+
+    fn queue_art(&mut self, image_url: &str) {
+        if !image_url.is_empty() {
+            self.queue(image_url);
+        }
+    }
+
+    fn queue_frames(&mut self) {
+        for color in [CardColor::White, CardColor::Black] {
+            self.queue_filtered(frame_key(&color), FilterMode::Nearest);
+        }
+    }
+
+    fn queue(&mut self, key: &str) {
+        self.queue_filtered(key, FilterMode::Linear);
+    }
+
+    fn queue_filtered(&mut self, key: &str, filter: FilterMode) {
+        if self.map.contains_key(key) || self.queue.iter().any(|(k, _)| k == key) {
+            return;
+        }
+        self.queue.push_back((key.to_string(), filter));
     }
 
     pub fn frame(&self, color: &CardColor) -> Option<&Texture2D> {
@@ -151,4 +143,21 @@ pub fn draw_texture_cover(tex: &Texture2D, x: f32, y: f32, w: f32, h: f32, tint:
             ..Default::default()
         },
     );
+}
+
+fn card_entity_image_url(card: &CardEntity) -> &str {
+    match card {
+        CardEntity::Minion(m) => &m.card.image_url,
+        CardEntity::Incantation(i) => &i.card.image_url,
+        CardEntity::Omen(o) => &o.card.image_url,
+    }
+}
+
+fn card_image_url(card: &Card) -> &str {
+    match card {
+        Card::Minion(m) => &m.image_url,
+        Card::Incantation(i) => &i.image_url,
+        Card::Omen(o) => &o.image_url,
+        Card::Hero(h) => &h.image_url,
+    }
 }

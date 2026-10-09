@@ -16,15 +16,19 @@
     function register_plugin(importObject) {
         // Begins a "get" operation: returns byte-length of the stored value, or -1 if missing.
         // The value is cached until app_storage_get_take is called or the next get_len.
+        // an exception here would unwind into wasm and kill the app, and storage
+        // is blocked outright in some browser contexts
         importObject.env.app_storage_get_len = function (key_ptr, key_len) {
-            var key = read_str(key_ptr, key_len);
-            var v = localStorage.getItem(key);
-            if (v === null) {
-                pending_value = null;
+            pending_value = null;
+            try {
+                var v = localStorage.getItem(read_str(key_ptr, key_len));
+                if (v === null) return -1;
+                pending_value = new TextEncoder().encode(v);
+                return pending_value.length;
+            } catch (e) {
+                console.error('[app_storage] get failed:', e);
                 return -1;
             }
-            pending_value = new TextEncoder().encode(v);
-            return pending_value.length;
         };
 
         // Copies the cached value into buf_ptr.

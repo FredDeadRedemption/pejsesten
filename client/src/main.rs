@@ -164,7 +164,7 @@ async fn main() {
         while let Some(event) = net.poll() {
             match event {
                 ServerEvent::GameState(state) => {
-                    cache.preload_for_state(&state).await;
+                    cache.queue_for_state(&state);
                     screen = match state.phase {
                         GamePhase::Mulligan => {
                             let selected = match &screen {
@@ -202,7 +202,7 @@ async fn main() {
         if let Screen::DeckBuilder(db) = &mut screen {
             if !db.textures_preloaded && !db.all_cards.is_empty() {
                 let cards = db.all_cards.clone();
-                cache.preload_cards(&cards).await;
+                cache.queue_cards(&cards);
                 db.textures_preloaded = true;
             }
         }
@@ -220,7 +220,7 @@ async fn main() {
             let clicked = is_mouse_button_released(MouseButton::Left)
                 && layout::lobby_glow_test_rect(w, h).contains(Vec2::new(mx, my));
             if is_key_pressed(KeyCode::G) || clicked {
-                screen = Screen::GlowTest(load_glow_samples(&mut cache).await);
+                screen = Screen::GlowTest(load_glow_samples(&mut cache));
             }
         }
 
@@ -331,17 +331,20 @@ async fn main() {
         }
 
         next_frame().await;
+        // after the frame is on screen: the load suspends the loop, so anything
+        // drawn but not yet presented would be lost
+        cache.pump().await;
     }
 }
 
 /// Three minions off the top of the collectible pool, purely to have art under the glow.
-async fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
+fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
     let picks: Vec<Card> = shared::cards::get_collectible_cards()
         .into_iter()
         .filter(|c| matches!(c, Card::Minion(_)))
         .take(3)
         .collect();
-    cache.preload_cards(&picks).await;
+    cache.queue_cards(&picks);
 
     picks.iter()
         .enumerate()
