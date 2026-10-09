@@ -3,6 +3,10 @@ name = "server"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+# forces the prod tuning in a debug build; release builds use it anyway
+settings-prod = []
+
 [dependencies]
 shared = { path = "../shared" }
 serde = { version = "1", features = ["derive"] }

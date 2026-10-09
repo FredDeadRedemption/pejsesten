@@ -4,14 +4,7 @@ use crate::types::*;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-static CARDS: LazyLock<HashMap<u32, Card>> = LazyLock::new(|| build_cards().into_iter().map(|c| (card_id(&c), c)).collect());
-
-fn card_id(c: &Card) -> u32 {
-    match c {
-        Card::Minion(m) => m.id,
-        Card::Incantation(i) => i.id,
-    }
-}
+static CARDS: LazyLock<HashMap<u32, Card>> = LazyLock::new(|| build_cards().into_iter().map(|c| (c.id(), c)).collect());
 
 pub fn get_card_by_id(id: u32) -> Option<&'static Card> {
     CARDS.get(&id)
@@ -23,6 +16,8 @@ pub fn get_collectible_cards() -> Vec<Card> {
         .filter(|c| match c {
             Card::Minion(m) => !m.is_token,
             Card::Incantation(i) => !i.is_token,
+            Card::Omen(o) => !o.is_token,
+            Card::Hero(_) => false,
         })
         .collect()
 }
@@ -31,12 +26,39 @@ pub fn get_all_cards() -> Vec<Card> {
     CARDS.values().cloned().collect()
 }
 
+/// Heroes sit in their own id band of the pool so the card ids stay contiguous.
+pub const DEFAULT_HERO_ID: u32 = 101;
+
+pub fn get_hero_by_id(id: u32) -> Option<&'static HeroCard> {
+    match get_card_by_id(id) {
+        Some(Card::Hero(h)) => Some(h),
+        _ => None,
+    }
+}
+
+/// Falls back to the default hero whenever an id is unknown, including the unset 0.
+pub fn hero_or_default(id: u32) -> &'static HeroCard {
+    get_hero_by_id(id)
+        .or_else(|| get_hero_by_id(DEFAULT_HERO_ID))
+        .expect("the default hero must be in the pool")
+}
+
+pub fn get_heroes() -> Vec<HeroCard> {
+    let mut heroes: Vec<HeroCard> = CARDS
+        .values()
+        .filter_map(|c| match c {
+            Card::Hero(h) => Some(h.clone()),
+            _ => None,
+        })
+        .collect();
+    heroes.sort_by_key(|h| h.id);
+    heroes
+}
+
 pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
     match get_card_by_id(card_id)? {
         Card::Minion(c) => Some(MinionEntity {
-            attack: c.base_attack,
-            defence: c.base_defence,
-            max_defence: c.base_defence,
+            stats: Stats::new(c.base_attack, c.base_defence),
             ward_active: c.attributes.contains(&MinionAttribute::Ward),
             stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
             exhausted: false,
@@ -47,7 +69,7 @@ pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEn
             just_drawn: false,
             card: c.clone(),
         }),
-        Card::Incantation(_) => None, // Can't summon an incantation
+        Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None, // only minions can be summoned
     }
 }
 
@@ -807,5 +829,170 @@ pub fn build_cards() -> Vec<Card> {
             abilities: vec![],
             is_token: false,
         }),
+        Card::Minion(MinionCard {
+            id: 31,
+            color: Color::White,
+            name: "Wisp".to_string(),
+            description: None,
+            flavor_text: None,
+            base_cost: 1,
+            image_url: "".to_string(),
+            races: vec![],
+            base_attack: 1,
+            base_defence: 1,
+            attributes: vec![],
+            abilities: vec![],
+            is_token: true,
+        }),
+        Card::Minion(MinionCard {
+            id: 36,
+            color: Color::White,
+            name: "Augur".to_string(),
+            description: Some("Whenever an omen is triggered, gain +1 +1".to_string()),
+            flavor_text: Some("Signs do not care who sent them.".to_string()),
+            base_cost: 1,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            base_attack: 1,
+            base_defence: 2,
+            attributes: vec![],
+            abilities: vec![Ability {
+                trigger: Trigger::OnOmenFired,
+                requirements: vec![],
+                effects: vec![Effect::Buff {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::SelfOnly,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                    attack: 1,
+                    defence: 1,
+                }],
+            }],
+            is_token: false,
+        }),
+        // ── WHITE OMENS ──────────────────────────────────────────
+        Card::Omen(OmenCard {
+            id: 32,
+            color: Color::White,
+            name: "Grove Vigil".to_string(),
+            description: Some("Give all your minions +1 +1".to_string()),
+            flavor_text: Some("The forest keeps its own watch.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            effects: vec![Effect::Buff {
+                target_spec: TargetSpec {
+                    target_mode: TargetMode::Auto,
+                    side: TargetSide::Friendly,
+                    entity_type: EntityType::Minion,
+                    filters: vec![],
+                },
+                attack: 1,
+                defence: 1,
+            }],
+            triggers: [OmenTrigger::EnemyPlaysMinion, OmenTrigger::EnemyAttacksMinion, OmenTrigger::EnemyEndsTurn],
+            is_token: false,
+        }),
+        Card::Omen(OmenCard {
+            id: 33,
+            color: Color::White,
+            name: "Ancestors Answer".to_string(),
+            description: Some("<strong>Summon</strong> two 1/1 wisps".to_string()),
+            flavor_text: None,
+            base_cost: 2,
+            image_url: "".to_string(),
+            effects: vec![Effect::Summon { summon_amount: 2, minion_card_id: 31 }],
+            triggers: [OmenTrigger::FriendlyMinionDies, OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysIncantation],
+            is_token: false,
+        }),
+        // ── BLACK OMENS ──────────────────────────────────────────
+        Card::Omen(OmenCard {
+            id: 34,
+            color: Color::Black,
+            name: "Chain Reaction".to_string(),
+            description: Some("Deal 2 damage to all enemy minions".to_string()),
+            flavor_text: None,
+            base_cost: 2,
+            image_url: "".to_string(),
+            effects: vec![Effect::Damage {
+                target_spec: TargetSpec {
+                    target_mode: TargetMode::Auto,
+                    side: TargetSide::Enemy,
+                    entity_type: EntityType::Minion,
+                    filters: vec![],
+                },
+                damage: 2,
+                lifesteal: false,
+            }],
+            triggers: [OmenTrigger::EnemyBoardReachesThree, OmenTrigger::EnemyEndsTurn, OmenTrigger::FriendlyMinionDies],
+            is_token: false,
+        }),
+        Card::Omen(OmenCard {
+            id: 35,
+            color: Color::Black,
+            name: "Salvage Protocol".to_string(),
+            description: Some("Draw two cards".to_string()),
+            flavor_text: Some("Nothing is wasted. Nothing is spared.".to_string()),
+            base_cost: 1,
+            image_url: "".to_string(),
+            effects: vec![Effect::Draw { draw_amount: 2, follow_up: None }],
+            triggers: [OmenTrigger::EnemyEndsTurnWithoutAttacking, OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysIncantation],
+            is_token: false,
+        }),
+        // ── HEROES ───────────────────────────────────────────────
+        Card::Hero(HeroCard {
+            id: 101,
+            name: "The Magician".to_string(),
+            description: None,
+            flavor_text: Some("As above, so below, and both of them yours.".to_string()),
+            color: Color::White,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
+            id: 102,
+            name: "The High Priestess".to_string(),
+            description: None,
+            flavor_text: Some("She has already read the card you are about to draw.".to_string()),
+            color: Color::White,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
+            id: 103,
+            name: "The Hermit".to_string(),
+            description: None,
+            flavor_text: Some("One lamp, one road, no company.".to_string()),
+            color: Color::Black,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
+            id: 104,
+            name: "The Tower".to_string(),
+            description: None,
+            flavor_text: Some("Everything you built, and the ground it stood on.".to_string()),
+            color: Color::Black,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_hero_resolves() {
+        assert_eq!(hero_or_default(0).id, DEFAULT_HERO_ID);
+        assert_eq!(get_heroes().len(), 4);
+    }
+
+    #[test]
+    fn heroes_are_not_deck_cards() {
+        assert!(get_collectible_cards().iter().all(|c| !matches!(c, Card::Hero(_))));
+        assert!(get_heroes().iter().all(|h| h.id >= DEFAULT_HERO_ID));
+    }
 }

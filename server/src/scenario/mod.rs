@@ -12,7 +12,7 @@ pub mod runner;
 #[cfg(test)]
 mod tests;
 
-use crate::engine::{Game, IdGenerator, instantiate_incantation, instantiate_minion};
+use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_incantation, instantiate_minion, instantiate_omen};
 use crate::settings;
 use serde::Serialize;
 use shared::types::*;
@@ -32,6 +32,15 @@ pub struct Frame {
     pub kind: FrameKind,
     pub ok: bool,
     pub state: GameStateServer,
+}
+
+fn default_hero() -> &'static HeroCard {
+    shared::cards::hero_or_default(shared::cards::DEFAULT_HERO_ID)
+}
+
+/// Hp both scenario boards start on, so cases can set up near the cap without naming a number.
+pub fn starting_hp() -> i32 {
+    settings::starting_hp(default_hero())
 }
 
 /// Build phase. White is always the acting player; `start` freezes the board and begins the run.
@@ -56,6 +65,7 @@ impl Setup {
                 white_turn: true,
                 turn_count: 1,
                 cards_played_this_turn: 0,
+                attacked_this_turn: false,
                 phase: GamePhase::Playing,
                 mulligan_white_done: true,
                 mulligan_black_done: true,
@@ -70,7 +80,8 @@ impl Setup {
             hand: vec![],
             graveyard: vec![],
             battlefield: vec![],
-            hero: Hero { entity_id: ids.next_id(), attack: 0, defence: settings::STARTING_HP },
+            omens: vec![],
+            hero: instantiate_hero(default_hero(), ids.next_id()),
             // cases that care about mana set it explicitly; the rest should not have to
             base_mana: settings::MAX_MANA,
             mana: settings::MAX_MANA,
@@ -119,6 +130,14 @@ impl Setup {
         board.hand.len() - 1
     }
 
+    /// Adds an omen to hand. Returns its hand index.
+    pub fn omen_in_hand(&mut self, side: Side, card: OmenCard) -> usize {
+        let id = self.ids.next_id();
+        let board = self.board_mut(side);
+        board.hand.push(CardEntity::Omen(instantiate_omen(&card, id)));
+        board.hand.len() - 1
+    }
+
     /// Appends to the top of the deck; the first card added is the first drawn.
     pub fn in_deck(&mut self, side: Side, card: MinionCard) -> u32 {
         let id = self.ids.next_id();
@@ -133,7 +152,7 @@ impl Setup {
     }
 
     pub fn hp(&mut self, side: Side, hp: i32) -> &mut Self {
-        self.board_mut(side).hero.defence = hp;
+        self.board_mut(side).hero.stats.defence = hp;
         self
     }
 
@@ -216,8 +235,15 @@ impl Scenario {
     // --- steps ---
 
     pub fn play(&mut self, index: usize, target: Option<u32>) -> bool {
-        let ok = self.game.play_card(index, target);
+        let ok = self.game.play_card(index, target, None);
         self.record(FrameKind::Action, format!("play hand[{index}] -> {}", ok), true);
+        ok
+    }
+
+    /// Plays an omen from hand, arming the trigger at `trigger` in its printed list.
+    pub fn play_omen(&mut self, index: usize, trigger: usize) -> bool {
+        let ok = self.game.play_card(index, None, Some(trigger));
+        self.record(FrameKind::Action, format!("play omen hand[{index}] trigger {trigger} -> {ok}"), true);
         ok
     }
 
@@ -241,6 +267,11 @@ impl Scenario {
     /// Runs a step and asserts in one go; keeps cases from tripping over borrow rules.
     pub fn expect_play(&mut self, what: &str, index: usize, target: Option<u32>, want: bool) {
         let got = self.play(index, target);
+        self.expect_eq(what, got, want);
+    }
+
+    pub fn expect_play_omen(&mut self, what: &str, index: usize, trigger: usize, want: bool) {
+        let got = self.play_omen(index, trigger);
         self.expect_eq(what, got, want);
     }
 
@@ -305,11 +336,11 @@ impl Scenario {
 
     /// Defence of a minion on the battlefield, or `None` once it has left.
     pub fn defence(&self, id: u32) -> Option<i32> {
-        self.find(id).map(|m| m.defence)
+        self.find(id).map(|m| m.stats.defence)
     }
 
     pub fn attack_of(&self, id: u32) -> Option<i32> {
-        self.find(id).map(|m| m.attack)
+        self.find(id).map(|m| m.stats.attack)
     }
 
     pub fn has_ward(&self, id: u32) -> bool {
@@ -329,7 +360,7 @@ impl Scenario {
     }
 
     pub fn hp(&self, side: Side) -> i32 {
-        self.board(side).hero.defence
+        self.board(side).hero.stats.defence
     }
 
     pub fn mana(&self, side: Side) -> i32 {
@@ -352,6 +383,22 @@ impl Scenario {
         self.board(side).deck.len()
     }
 
+    pub fn omens_len(&self, side: Side) -> usize {
+        self.board(side).omens.len()
+    }
+
+    /// What an omen is actually watching, as the server sees it.
+    pub fn armed_trigger(&self, side: Side, index: usize) -> Option<OmenTrigger> {
+        self.board(side).omens.get(index).and_then(|o| o.armed_trigger)
+    }
+
+    /// The armed trigger as the opposing client would receive it.
+    pub fn armed_trigger_seen_by_enemy(&self, side: Side, index: usize) -> Option<OmenTrigger> {
+        let for_white = side == Side::Black;
+        let state = self.game.parse_client_state(for_white);
+        state.enemy_board.omens.get(index).and_then(|o| o.armed_trigger)
+    }
+
     pub fn graveyard_len(&self, side: Side) -> usize {
         self.board(side).graveyard.len()
     }
@@ -362,6 +409,10 @@ impl Scenario {
 
     pub fn hand_cost(&self, side: Side, index: usize) -> Option<i32> {
         self.board(side).hand.get(index).map(|c| c.cost())
+    }
+
+    pub fn hand_entity_id(&self, side: Side, index: usize) -> Option<u32> {
+        self.board(side).hand.get(index).map(|c| c.entity_id())
     }
 
     // --- results ---

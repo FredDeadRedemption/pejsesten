@@ -6,6 +6,7 @@ mod clipboard;
 mod deckbuilder;
 mod deckbuilder_ui;
 mod decks;
+mod fx;
 mod glow;
 mod layout;
 mod network;
@@ -15,12 +16,13 @@ mod ui;
 
 use card3d::Card3D;
 use deckbuilder::DeckBuilderState;
+use decks::Deck;
 use network::{NetworkClient, ServerEvent};
 use render::DragRender;
 use shared::types::{
     AttackData, Card, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
-    IncantationAttribute, MinionAttribute, MinionEntity, PlayerMetaData, Requirement, TargetMode,
-    ScenarioFrameInfo, TargetSide, TargetSpec,
+    MinionAttribute, MinionEntity, OmenCard, PlayerMetaData, Requirement,
+    TargetMode, ScenarioFrameInfo, TargetSide, TargetSpec,
 };
 use textures::TextureCache;
 
@@ -54,12 +56,57 @@ const USERNAME: &str = match option_env!("USERNAME") {
 };
 
 fn default_deck() -> Vec<u32> {
-    (1u32..=30).flat_map(|id| [id, id]).collect()
+    shared::cards::get_collectible_cards().iter().map(Card::id).flat_map(|id| [id, id]).collect()
+}
+
+/// Which built deck queues up next. Slot 0 is the dev deck, so the lobby works with no decks saved.
+struct Lobby {
+    decks: Vec<Deck>,
+    selected: usize,
+}
+
+impl Lobby {
+    fn load() -> Self {
+        Self { decks: decks::load(), selected: 0 }
+    }
+
+    fn cycle(&mut self) {
+        self.selected = (self.selected + 1) % (self.decks.len() + 1);
+    }
+
+    fn deck(&self) -> Option<&Deck> {
+        self.selected.checked_sub(1).and_then(|i| self.decks.get(i))
+    }
+
+    fn deck_label(&self) -> String {
+        match self.deck() {
+            Some(d) => format!("{} ({})", d.name, d.cards.len()),
+            None => "dev, all cards".to_string(),
+        }
+    }
+
+    fn hero_label(&self) -> String {
+        let hero = shared::cards::hero_or_default(self.hero_id());
+        format!("Hero: {} - {} hp", hero.name, hero.base_hp)
+    }
+
+    fn hero_id(&self) -> u32 {
+        self.deck().map(|d| d.hero).unwrap_or(shared::cards::DEFAULT_HERO_ID)
+    }
+
+    fn meta(&self) -> PlayerMetaData {
+        PlayerMetaData {
+            username: USERNAME.to_string(),
+            chosen_deck: self.deck().map(|d| d.cards.clone()).unwrap_or_else(default_deck),
+            hero: self.hero_id(),
+            avatar: String::new(),
+        }
+    }
 }
 
 enum Screen {
     Connecting,
-    Lobby,
+    Lobby(Lobby),
     Mulligan { state: GameStateClient, selected: Vec<usize> },
     Playing(GameStateClient),
     DeckBuilder(DeckBuilderState),
@@ -70,6 +117,13 @@ enum Screen {
 enum DragState {
     Card { index: usize },
     Minion { entity_id: u32 },
+}
+
+/// An omen dropped on the board waits here until its trigger is picked.
+struct OmenPick {
+    hand_index: usize,
+    entity_id: u32,
+    card: OmenCard,
 }
 
 fn window_conf() -> Conf {
@@ -93,6 +147,7 @@ async fn main() {
     let mut anims: Vec<BumpAnim> = vec![];
     let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
     let mut scenario: Option<ScenarioFrameInfo> = None;
+    let mut omen_pick: Option<OmenPick> = None;
     let mut glow_watcher = glow::Watcher::new();
 
     loop {
@@ -123,9 +178,21 @@ async fn main() {
             }
         }
 
+        if let Some(pick) = &omen_pick {
+            let still_there = match &screen {
+                Screen::Playing(state) => {
+                    state.self_board.hand.get(pick.hand_index).map(|c| c.entity_id()) == Some(pick.entity_id)
+                }
+                _ => false,
+            };
+            if !still_there {
+                omen_pick = None;
+            }
+        }
+
         if matches!(screen, Screen::Connecting) && !connected {
             connected = true;
-            screen = Screen::Lobby;
+            screen = Screen::Lobby(Lobby::load());
         }
 
         // Preload catalog textures once on entering deck builder
@@ -138,7 +205,7 @@ async fn main() {
         }
 
         // Enter card flip test from lobby (async load handled here so we can .await)
-        if matches!(screen, Screen::Lobby) {
+        if matches!(screen, Screen::Lobby(_)) {
             let clicked = is_mouse_button_released(MouseButton::Left)
                 && layout::lobby_card_flip_test_rect(w, h).contains(Vec2::new(mx, my));
             if is_key_pressed(KeyCode::T) || clicked {
@@ -146,7 +213,7 @@ async fn main() {
             }
         }
 
-        if matches!(screen, Screen::Lobby) {
+        if matches!(screen, Screen::Lobby(_)) {
             let clicked = is_mouse_button_released(MouseButton::Left)
                 && layout::lobby_glow_test_rect(w, h).contains(Vec2::new(mx, my));
             if is_key_pressed(KeyCode::G) || clicked {
@@ -155,7 +222,7 @@ async fn main() {
         }
 
         // --- Input ---
-        handle_input(&mut screen, &mut net, &mut drag, &mut anims, &mut scenario, mx, my, w, h);
+        handle_input(&mut screen, &mut net, &mut drag, &mut anims, &mut scenario, &mut omen_pick, mx, my, w, h);
 
         // egui lays the deck builder out and consumes its input before anything is painted
         let deck_builder = match &mut screen {
@@ -169,6 +236,7 @@ async fn main() {
         // --- Render ---
         clear_background(Color::from_rgba(12, 12, 20, 255));
         ui::set_ui_camera();
+        fx::draw_background(w, h);
 
         // Card flip test: tick + input handled here (needs &mut access)
         if let Screen::CardFlipTest(card) = &mut screen {
@@ -178,13 +246,13 @@ async fn main() {
                 card.flip();
             }
             if is_key_pressed(KeyCode::Escape) {
-                screen = Screen::Lobby;
+                screen = Screen::Lobby(Lobby::load());
             }
         }
 
         match &screen {
             Screen::Connecting => { show_mouse(true); render::draw_connecting(); }
-            Screen::Lobby => { show_mouse(true); render::draw_lobby(USERNAME); }
+            Screen::Lobby(lobby) => { show_mouse(true); render::draw_lobby(USERNAME, &lobby.deck_label(), &lobby.hero_label()); }
             Screen::Mulligan { state, selected } => { show_mouse(true); render::draw_mulligan(state, selected, &cache); }
             Screen::CardFlipTest(card) => {
                 show_mouse(true);
@@ -243,6 +311,10 @@ async fn main() {
             }
         }
 
+        if let Some(pick) = &omen_pick {
+            render::draw_omen_picker(&pick.card, mx, my, &cache);
+        }
+
         if let Some(info) = &scenario {
             render::draw_scenario_banner(info);
         }
@@ -251,7 +323,7 @@ async fn main() {
         if let Some(frame) = deck_builder {
             egui_macroquad::draw();
             if matches!(frame.action, deckbuilder_ui::Action::GoLobby) {
-                screen = Screen::Lobby;
+                screen = Screen::Lobby(Lobby::load());
             }
         }
 
@@ -272,7 +344,7 @@ async fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
         .enumerate()
         .filter_map(|(i, card)| match card {
             Card::Minion(m) => shared::cards::instantiate_minion_by_id(m.id, i as u32).map(CardEntity::Minion),
-            Card::Incantation(_) => None,
+            Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None,
         })
         .collect()
 }
@@ -376,20 +448,13 @@ fn ability_fires(
 ) -> bool {
     ability.requirements.iter().all(|r| match r {
         Requirement::Combo => state.cards_played_this_turn > 0,
-        Requirement::Quickdraw => match card {
-            CardEntity::Minion(m) => m.just_drawn,
-            CardEntity::Incantation(i) => i.just_drawn,
-        },
+        Requirement::Quickdraw => card.just_drawn(),
         Requirement::IsHolding { .. } => true,
     })
 }
 
 fn active_target_spec<'a>(card: &'a CardEntity, state: &GameStateClient) -> Option<&'a TargetSpec> {
-    let abilities = match card {
-        CardEntity::Minion(m) => &m.card.abilities,
-        CardEntity::Incantation(i) => &i.card.abilities,
-    };
-    for ability in abilities {
+    for ability in card.abilities() {
         if !ability_fires(ability, card, state) { continue; }
         for effect in &ability.effects {
             if let Some(spec) = target_spec_from_effect(effect) {
@@ -403,10 +468,7 @@ fn active_target_spec<'a>(card: &'a CardEntity, state: &GameStateClient) -> Opti
 }
 
 fn is_tradeable(card: &CardEntity) -> bool {
-    match card {
-        CardEntity::Minion(m) => m.card.attributes.contains(&MinionAttribute::Tradeable),
-        CardEntity::Incantation(i) => i.card.attributes.contains(&IncantationAttribute::Tradeable),
-    }
+    card.is_tradeable()
 }
 
 fn matches_conditions(minion: &MinionEntity, filters: &[Condition]) -> bool {
@@ -423,7 +485,7 @@ fn compute_targetable_ids(drag: &Option<DragState>, state: &GameStateClient) -> 
     match drag {
         DragState::Minion { entity_id } => {
             let attacker = state.self_board.battlefield.iter().find(|m| m.entity_id == *entity_id);
-            if attacker.map(|a| a.attack <= 0).unwrap_or(true) { return ids; }
+            if attacker.map(|a| a.stats.attack <= 0).unwrap_or(true) { return ids; }
             let attacker_stealthed = attacker.map(|a| a.stealth_active).unwrap_or(false);
             let can_hit_hero = attacker.map(|a| a.turns_on_board >= 1).unwrap_or(false);
             let any_guard = !attacker_stealthed && state.enemy_board.battlefield.iter().any(|m| {
@@ -473,9 +535,9 @@ fn compute_targetable_ids(drag: &Option<DragState>, state: &GameStateClient) -> 
 }
 
 fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> Option<u32> {
-    let hand_rects = layout::hand_rects(state.self_board.hand.len(), w, h);
-    for (c, r) in state.self_board.hand.iter().zip(hand_rects.iter()) {
-        if r.contains(mouse) { return Some(c.entity_id()); }
+    let hand_slots = layout::hand_slots(state.self_board.hand.len(), w, h);
+    if let Some(i) = hand_slots.iter().rposition(|s| s.contains(mouse)) {
+        if let Some(card) = state.self_board.hand.get(i) { return Some(card.entity_id()); }
     }
     let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
     for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
@@ -484,6 +546,14 @@ fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
     for (m, r) in state.enemy_board.battlefield.iter().zip(enemy_rects.iter()) {
         if r.contains(mouse) { return Some(m.entity_id); }
+    }
+    let self_omens = layout::self_omen_rects(state.self_board.omens.len(), h);
+    for (o, r) in state.self_board.omens.iter().zip(self_omens.iter()) {
+        if r.contains(mouse) { return Some(o.entity_id); }
+    }
+    let enemy_omens = layout::enemy_omen_rects(state.enemy_board.omens.len());
+    for (o, r) in state.enemy_board.omens.iter().zip(enemy_omens.iter()) {
+        if r.contains(mouse) { return Some(o.entity_id); }
     }
     None
 }
@@ -528,6 +598,7 @@ fn handle_input(
     drag: &mut Option<DragState>,
     anims: &mut Vec<BumpAnim>,
     scenario: &mut Option<ScenarioFrameInfo>,
+    omen_pick: &mut Option<OmenPick>,
     mx: f32, my: f32,
     w: f32, h: f32,
 ) {
@@ -535,29 +606,40 @@ fn handle_input(
     if scenario.is_some() {
         if is_key_pressed(KeyCode::Escape) {
             *scenario = None;
-            *screen = Screen::Lobby;
+            *screen = Screen::Lobby(Lobby::load());
+        }
+        return;
+    }
+
+    // the omen picker is modal: nothing else on the board can be touched until it resolves
+    if let Some(pick) = omen_pick {
+        if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
+            *omen_pick = None;
+            return;
+        }
+        if is_mouse_button_released(MouseButton::Left) {
+            let rects = layout::omen_pick_rects(w, h);
+            if let Some(trigger) = rects.iter().position(|r| r.contains(Vec2::new(mx, my))) {
+                net.play_card(pick.hand_index, None, Some(trigger));
+                *omen_pick = None;
+            }
         }
         return;
     }
 
     match screen {
-        Screen::Lobby => {
+        Screen::Lobby(lobby) => {
             let clicked = is_mouse_button_released(MouseButton::Left);
             let mouse = Vec2::new(mx, my);
 
+            if is_key_pressed(KeyCode::Key1) || (clicked && layout::lobby_deck_rect(w, h).contains(mouse)) {
+                lobby.cycle();
+            }
             if is_key_pressed(KeyCode::H) || (clicked && layout::lobby_queue_human_rect(w, h).contains(mouse)) {
-                net.queue_up(&PlayerMetaData {
-                    username: USERNAME.to_string(),
-                    chosen_deck: default_deck(),
-                    avatar: String::new(),
-                });
+                net.queue_up(&lobby.meta());
             }
             if is_key_pressed(KeyCode::B) || (clicked && layout::lobby_queue_bot_rect(w, h).contains(mouse)) {
-                net.queue_up_bot(&PlayerMetaData {
-                    username: USERNAME.to_string(),
-                    chosen_deck: default_deck(),
-                    avatar: String::new(),
-                });
+                net.queue_up_bot(&lobby.meta());
             }
             if is_key_pressed(KeyCode::R) || (clicked && layout::lobby_reset_rect(w, h).contains(mouse)) {
                 net.reset_server();
@@ -628,8 +710,8 @@ fn handle_input(
             // Start drag
             if is_mouse_button_pressed(MouseButton::Left) && drag.is_none() {
                 // Check hand cards first
-                let hand_rects = layout::hand_rects(state.self_board.hand.len(), w, h);
-                if let Some(idx) = hand_rects.iter().position(|r| r.contains(mouse)) {
+                let hand_slots = layout::hand_slots(state.self_board.hand.len(), w, h);
+                if let Some(idx) = hand_slots.iter().rposition(|s| s.contains(mouse)) {
                     *drag = Some(DragState::Card { index: idx });
                 } else {
                     // Check own battlefield minions
@@ -659,8 +741,19 @@ fn handle_input(
                                         }
                                     }
                                 } else if !layout::hand_zone_rect(w, h).contains(mouse) {
-                                    let target = find_target(mouse, state, w, h, &targets);
-                                    net.play_card(index, target);
+                                    match state.self_board.hand.get(index) {
+                                        Some(CardEntity::Omen(o)) => {
+                                            *omen_pick = Some(OmenPick {
+                                                hand_index: index,
+                                                entity_id: o.entity_id,
+                                                card: o.card.clone(),
+                                            });
+                                        }
+                                        _ => {
+                                            let target = find_target(mouse, state, w, h, &targets);
+                                            net.play_card(index, target, None);
+                                        }
+                                    }
                                 }
                             }
                             DragState::Minion { entity_id } => {
@@ -684,7 +777,7 @@ fn handle_input(
 
         Screen::GlowTest(_) => {
             if is_key_pressed(KeyCode::Escape) {
-                *screen = Screen::Lobby;
+                *screen = Screen::Lobby(Lobby::load());
             }
         }
 

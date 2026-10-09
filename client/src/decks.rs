@@ -5,7 +5,13 @@ use serde::{Deserialize, Serialize};
 pub struct Deck {
     pub id: u64,
     pub name: String,
+    #[serde(default = "default_hero")]
+    pub hero: u32,
     pub cards: Vec<u32>,
+}
+
+fn default_hero() -> u32 {
+    shared::cards::DEFAULT_HERO_ID
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -25,9 +25,7 @@ impl IdGenerator {
 
 pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
     MinionEntity {
-        attack: c.base_attack,
-        defence: c.base_defence,
-        max_defence: c.base_defence,
+        stats: Stats::new(c.base_attack, c.base_defence),
         ward_active: c.attributes.contains(&MinionAttribute::Ward),
         stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
         exhausted: false,
@@ -50,19 +48,41 @@ pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> Incantati
     }
 }
 
+pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
+    OmenEntity {
+        entity_id,
+        cost: c.base_cost,
+        turns_in_hand: 0,
+        just_drawn: false,
+        card: c.clone(),
+        armed_trigger: None,
+    }
+}
+
+pub fn instantiate_hero(c: &HeroCard, entity_id: u32) -> Hero {
+    Hero {
+        entity_id,
+        card: c.clone(),
+        stats: Stats::new(0, settings::starting_hp(c)),
+    }
+}
+
 pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
     deck.iter()
         .filter_map(|id| cards::get_card_by_id(*id))
-        .map(|card| match card {
-            Card::Minion(c) => CardEntity::Minion(instantiate_minion(c, ids.next_id())),
-            Card::Incantation(c) => CardEntity::Incantation(instantiate_incantation(c, ids.next_id())),
+        // a hero id in the deck list is not a card to draw, so it is dropped
+        .filter_map(|card| match card {
+            Card::Minion(c) => Some(CardEntity::Minion(instantiate_minion(c, ids.next_id()))),
+            Card::Incantation(c) => Some(CardEntity::Incantation(instantiate_incantation(c, ids.next_id()))),
+            Card::Omen(c) => Some(CardEntity::Omen(instantiate_omen(c, ids.next_id()))),
+            Card::Hero(_) => None,
         })
         .collect()
 }
 
 /// Identifies where an entity lives — used instead of references
 /// so we can find targets immutably, then mutate separately.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TargetRef {
     HeroSource,
     HeroEnemy,
@@ -74,6 +94,15 @@ enum TargetRef {
 enum PlayerSide {
     White,
     Black,
+}
+
+impl PlayerSide {
+    fn other(self) -> Self {
+        match self {
+            PlayerSide::White => PlayerSide::Black,
+            PlayerSide::Black => PlayerSide::White,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -88,6 +117,8 @@ pub struct Game {
     pub state: GameStateServer,
     effect_queue: Vec<QueuedEffect>,
     ids: IdGenerator,
+    // omen effects must not arm further omens, or a death cascade chains the whole zone
+    omens_firing: bool,
     // summon looks here before the global card registry, so scenarios can summon cards that aren't in cards.rs
     summon_pool: HashMap<u32, MinionCard>,
 }
@@ -106,76 +137,62 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
     }
 }
 
+/// Everything one player brings to a game, before the shuffle and the opening deal.
+pub struct PlayerSetup {
+    pub id: String,
+    pub hero: HeroCard,
+    pub deck: Vec<CardEntity>,
+}
+
 impl Game {
-    pub fn new(
-        player1_id: String,
-        player2_id: String,
-        is_player1_white: bool,
-        player1_deck: Vec<CardEntity>,
-        player2_deck: Vec<CardEntity>,
-        mut ids: IdGenerator,
-    ) -> Self {
+    pub fn new(player1: PlayerSetup, player2: PlayerSetup, is_player1_white: bool, mut ids: IdGenerator) -> Self {
         let mut rng = rand::rng();
 
-        let (mut white_deck, mut black_deck) = if is_player1_white {
-            (player1_deck, player2_deck)
-        } else {
-            (player2_deck, player1_deck)
-        };
+        let (mut white, mut black) = if is_player1_white { (player1, player2) } else { (player2, player1) };
 
-        white_deck.shuffle(&mut rng);
-        black_deck.shuffle(&mut rng);
+        white.deck.shuffle(&mut rng);
+        black.deck.shuffle(&mut rng);
 
-        let white_hand: Vec<CardEntity> = white_deck.drain(0..settings::STARTING_HAND_SIZE.min(white_deck.len())).collect();
-        let black_hand: Vec<CardEntity> = black_deck.drain(0..(settings::STARTING_HAND_SIZE + 1).min(black_deck.len())).collect();
-
-        let (white_player_id, black_player_id) = if is_player1_white {
-            (player1_id, player2_id)
-        } else {
-            (player2_id, player1_id)
-        };
+        let white_hand: Vec<CardEntity> = white.deck.drain(0..settings::STARTING_HAND_SIZE.min(white.deck.len())).collect();
+        let black_hand: Vec<CardEntity> = black.deck.drain(0..(settings::STARTING_HAND_SIZE + 1).min(black.deck.len())).collect();
 
         Game {
             state: GameStateServer {
                 white: Board {
-                    deck: white_deck,
+                    deck: white.deck,
                     hand: white_hand,
                     graveyard: vec![],
                     battlefield: vec![],
-                    hero: Hero {
-                        entity_id: ids.next_id(),
-                        attack: 0,
-                        defence: settings::STARTING_HP,
-                    },
+                    omens: vec![],
+                    hero: instantiate_hero(&white.hero, ids.next_id()),
                     base_mana: settings::STARTING_MANA,
                     mana: settings::STARTING_MANA,
                     embers: settings::STARTING_EMBERS,
                 },
                 black: Board {
-                    deck: black_deck,
+                    deck: black.deck,
                     hand: black_hand,
                     graveyard: vec![],
                     battlefield: vec![],
-                    hero: Hero {
-                        entity_id: ids.next_id(),
-                        attack: 0,
-                        defence: settings::STARTING_HP,
-                    },
+                    omens: vec![],
+                    hero: instantiate_hero(&black.hero, ids.next_id()),
                     base_mana: settings::STARTING_MANA - 1,
                     mana: settings::STARTING_MANA - 1,
                     embers: settings::STARTING_EMBERS,
                 },
-                white_player_id,
-                black_player_id,
+                white_player_id: white.id,
+                black_player_id: black.id,
                 white_turn: true,
                 turn_count: 0,
                 cards_played_this_turn: 0,
+                attacked_this_turn: false,
                 phase: if settings::MULLIGAN { GamePhase::Mulligan } else { GamePhase::Playing },
                 mulligan_white_done: !settings::MULLIGAN,
                 mulligan_black_done: !settings::MULLIGAN,
             },
             effect_queue: vec![],
             ids: ids,
+            omens_firing: false,
             summon_pool: HashMap::new(),
         }
     }
@@ -186,7 +203,7 @@ impl Game {
     /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
     /// Caller owns id continuity: pass a generator already past the state's entity ids.
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
-        Game { state, effect_queue: vec![], ids, summon_pool: HashMap::new() }
+        Game { state, effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() }
     }
 
     /// Makes a card summonable by id without it existing in the global registry.
@@ -307,6 +324,11 @@ impl Game {
     fn resolve_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
         let mut refs = vec![];
 
+        if spec.target_mode == TargetMode::SelfOnly {
+            let own = self_id.and_then(|id| source.battlefield.iter().position(|m| m.entity_id == id));
+            return own.map(|i| vec![TargetRef::MinionSource(i)]).unwrap_or_default();
+        }
+
         if matches!(spec.entity_type, EntityType::Minion | EntityType::All) {
             if matches!(spec.side, TargetSide::Friendly | TargetSide::All) {
                 for (i, m) in source.battlefield.iter().enumerate() {
@@ -336,12 +358,16 @@ impl Game {
 
         match spec.target_mode {
             TargetMode::Targeted => refs.truncate(1),
-            TargetMode::Auto => {}
+            TargetMode::Auto | TargetMode::SelfOnly => {}
         }
         refs
     }
 
     fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<u32>, self_id: Option<u32>) -> Vec<TargetRef> {
+        if spec.target_mode == TargetMode::SelfOnly {
+            let (source, enemy) = self.boards_for(owner);
+            return Self::resolve_target_refs(spec, source, enemy, self_id);
+        }
         if let Some(id) = target_id {
             let target_ref = self.find_target_ref(id, owner);
             let (source, enemy) = self.boards_for(owner);
@@ -373,7 +399,7 @@ impl Game {
                 let source_board = self.source_board();
                 source_board.hand.iter().any(|c| match c {
                     CardEntity::Minion(m) => Self::filters_match(filters, m),
-                    CardEntity::Incantation(_) => false,
+                    CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
                 })
             }
         })
@@ -383,11 +409,11 @@ impl Game {
         requirements.iter().all(|r| match r {
             Condition::IsRace { race } => match card {
                 CardEntity::Minion(m) => m.card.races.contains(race),
-                CardEntity::Incantation(_) => false,
+                CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
             },
             Condition::HasAttribute { attribute } => match card {
                 CardEntity::Minion(m) => m.card.attributes.contains(attribute),
-                CardEntity::Incantation(_) => false,
+                CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
             },
         })
     }
@@ -434,6 +460,67 @@ impl Game {
         self.effect_queue.extend(to_queue);
     }
 
+    /// Minions that react to an omen resolving, on both boards whoever it belonged to.
+    fn fire_omen_watchers(&mut self) {
+        for side in [PlayerSide::White, PlayerSide::Black] {
+            let reactions: Vec<(u32, Effect)> = self
+                .source_board_for(side)
+                .battlefield
+                .iter()
+                .flat_map(|m| {
+                    let id = m.entity_id;
+                    m.card
+                        .abilities
+                        .iter()
+                        .filter(|a| a.trigger == Trigger::OnOmenFired)
+                        .flat_map(move |a| a.effects.iter().map(move |e| (id, e.clone())))
+                })
+                .collect();
+
+            for (id, effect) in reactions {
+                self.apply_effect(effect, side, None, Some(id));
+            }
+        }
+    }
+
+    /// A board can widen from a play or from a deathwish summon, so both paths check it.
+    fn fire_wide_board_omens(&mut self, actor: PlayerSide) {
+        if self.source_board_for(actor).battlefield.len() >= 3 {
+            self.fire_omens(OmenTrigger::EnemyBoardReachesThree, actor.other());
+        }
+    }
+
+    /// Resolves every armed omen of `owner` watching `trigger`. Omens are consumed when they fire.
+    fn fire_omens(&mut self, trigger: OmenTrigger, owner: PlayerSide) {
+        if self.omens_firing {
+            return;
+        }
+
+        let board = self.source_board_for_mut(owner);
+        let mut fired: Vec<OmenEntity> = vec![];
+        let mut i = 0;
+        while i < board.omens.len() {
+            if board.omens[i].armed_trigger == Some(trigger) {
+                fired.push(board.omens.remove(i));
+            } else {
+                i += 1;
+            }
+        }
+        if fired.is_empty() {
+            return;
+        }
+
+        self.omens_firing = true;
+        for omen in &fired {
+            for effect in &omen.card.effects {
+                self.apply_effect(effect.clone(), owner, None, None);
+            }
+            self.fire_omen_watchers();
+        }
+        self.check_for_deaths();
+        self.omens_firing = false;
+    }
+
     fn process_effect_queue(&mut self) {
         // drain one at a time so effects enqueued by effects are processed in order
         while !self.effect_queue.is_empty() {
@@ -445,6 +532,7 @@ impl Game {
     // --- Deaths (flattened loop instead of recursion) ---
 
     fn check_for_deaths(&mut self) {
+        let mut died: [bool; 2] = [false, false];
         loop {
             let mut any_died = false;
             let mut to_queue: Vec<QueuedEffect> = vec![];
@@ -455,8 +543,9 @@ impl Game {
 
                 let mut i = 0;
                 while i < board.battlefield.len() {
-                    if board.battlefield[i].defence <= 0 {
+                    if board.battlefield[i].stats.defence <= 0 {
                         any_died = true;
+                        died[if white_is_board { 0 } else { 1 }] = true;
                         let dead = board.battlefield.remove(i);
 
                         for ability in &dead.card.abilities {
@@ -488,6 +577,36 @@ impl Game {
             }
             self.process_effect_queue(); // process death triggers before checking again
         }
+
+        for (side, lost) in [(PlayerSide::White, died[0]), (PlayerSide::Black, died[1])] {
+            if lost {
+                self.fire_omens(OmenTrigger::FriendlyMinionDies, side);
+            }
+        }
+    }
+
+    /// Every effect that moves numbers goes through here, so hero and minion cannot drift apart.
+    fn stats_mut(&mut self, owner: PlayerSide, tr: TargetRef) -> &mut Stats {
+        let (source, enemy) = self.boards_for_mut(owner);
+        match tr {
+            TargetRef::HeroSource => &mut source.hero.stats,
+            TargetRef::HeroEnemy => &mut enemy.hero.stats,
+            TargetRef::MinionSource(i) => &mut source.battlefield[i].stats,
+            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i].stats,
+        }
+    }
+
+    /// Ward eats one hit and breaks. A hero has none, so nothing is absorbed.
+    fn absorb_ward(&mut self, owner: PlayerSide, tr: TargetRef) -> bool {
+        let (source, enemy) = self.boards_for_mut(owner);
+        let minion = match tr {
+            TargetRef::MinionSource(i) => &mut source.battlefield[i],
+            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i],
+            TargetRef::HeroSource | TargetRef::HeroEnemy => return false,
+        };
+        let absorbed = minion.ward_active;
+        minion.ward_active = false;
+        absorbed
     }
 
     // --- Apply effect ---
@@ -495,72 +614,30 @@ impl Game {
     fn apply_effect(&mut self, effect: Effect, owner: PlayerSide, target_id: Option<u32>, self_id: Option<u32>) {
         match effect {
             Effect::Buff { target_spec, attack, defence } => {
-                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
-                for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
-                    match tr {
-                        TargetRef::HeroSource => {
-                            source.hero.attack += attack;
-                            source.hero.defence += defence;
-                        }
-                        TargetRef::HeroEnemy => {
-                            enemy.hero.attack += attack;
-                            enemy.hero.defence += defence;
-                        }
-                        TargetRef::MinionSource(i) => {
-                            source.battlefield[i].attack += attack;
-                            source.battlefield[i].defence += defence;
-                            source.battlefield[i].max_defence += defence;
-                        }
-                        TargetRef::MinionEnemy(i) => {
-                            enemy.battlefield[i].attack += attack;
-                            enemy.battlefield[i].defence += defence;
-                            enemy.battlefield[i].max_defence += defence;
-                        }
-                    }
+                for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
+                    self.stats_mut(owner, tr).buff(attack, defence);
                 }
             }
 
             Effect::Heal { target_spec, heal } => {
-                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
-                for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
-                    match tr {
-                        TargetRef::HeroSource => source.hero.defence = (source.hero.defence + heal).min(settings::MAX_HP),
-                        TargetRef::HeroEnemy => enemy.hero.defence = (enemy.hero.defence + heal).min(settings::MAX_HP),
-                        TargetRef::MinionSource(i) => {
-                            let m = &mut source.battlefield[i];
-                            m.defence = (m.defence + heal).min(m.max_defence);
-                        }
-                        TargetRef::MinionEnemy(i) => {
-                            let m = &mut enemy.battlefield[i];
-                            m.defence = (m.defence + heal).min(m.max_defence);
-                        }
-                    }
+                for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
+                    self.stats_mut(owner, tr).heal(heal);
                 }
             }
 
             Effect::Damage { target_spec, damage, lifesteal } => {
                 let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
-                let hit_count = refs.len() as i32;
+                let mut dealt = 0;
                 for tr in refs {
-                    let (source, enemy) = self.boards_for_mut(owner);
-                    match tr {
-                        TargetRef::HeroSource => source.hero.defence -= damage,
-                        TargetRef::HeroEnemy => enemy.hero.defence -= damage,
-                        TargetRef::MinionSource(i) => {
-                            let m = &mut source.battlefield[i];
-                            if m.ward_active { m.ward_active = false; } else { m.defence -= damage; }
-                        }
-                        TargetRef::MinionEnemy(i) => {
-                            let m = &mut enemy.battlefield[i];
-                            if m.ward_active { m.ward_active = false; } else { m.defence -= damage; }
-                        }
+                    if self.absorb_ward(owner, tr) {
+                        continue;
                     }
+                    self.stats_mut(owner, tr).defence -= damage;
+                    dealt += damage;
                 }
                 if lifesteal {
                     let (source, _) = self.boards_for_mut(owner);
-                    source.hero.defence = (source.hero.defence + damage * hit_count).min(settings::MAX_HP);
+                    source.hero.stats.heal(dealt);
                 }
             }
 
@@ -591,7 +668,10 @@ impl Game {
                                 }
                                 FollowUpEffect::Copy { copy_amount } => {
                                     for _ in 0..*copy_amount {
-                                        extra.push(card.clone());
+                                        let mut copy = card.clone();
+                                        // its own entity, or the two move and highlight as one
+                                        *copy.entity_id_mut() = self.ids.next_id();
+                                        extra.push(copy);
                                     }
                                 }
                             }
@@ -625,9 +705,9 @@ impl Game {
                         minion.exhausted = false;
                         minion.turns_on_board = 0;
                         minion.turns_in_hand = 0;
-                        minion.attack = minion.card.base_attack;
-                        minion.defence = minion.card.base_defence;
-                        minion.max_defence = minion.card.base_defence;
+                        minion.stats.attack = minion.card.base_attack;
+                        minion.stats.defence = minion.card.base_defence;
+                        minion.stats.max_defence = minion.card.base_defence;
                         minion.ward_active = minion.card.attributes.contains(&MinionAttribute::Ward);
                         minion.stealth_active = minion.card.attributes.contains(&MinionAttribute::Stealth);
 
@@ -651,8 +731,8 @@ impl Game {
 
                 for tr in refs {
                     match tr {
-                        TargetRef::MinionSource(i) => source.battlefield[i].defence = 0,
-                        TargetRef::MinionEnemy(i) => enemy.battlefield[i].defence = 0,
+                        TargetRef::MinionSource(i) => source.battlefield[i].stats.defence = 0,
+                        TargetRef::MinionEnemy(i) => enemy.battlefield[i].stats.defence = 0,
                         _ => {}
                     }
                 }
@@ -685,6 +765,12 @@ impl Game {
     // --- Public API ---
 
     pub fn end_turn(&mut self) {
+        let ender = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
+        self.fire_omens(OmenTrigger::EnemyEndsTurn, ender.other());
+        if !self.state.attacked_this_turn {
+            self.fire_omens(OmenTrigger::EnemyEndsTurnWithoutAttacking, ender.other());
+        }
+
         self.state.turn_count += 1;
         self.state.white_turn = !self.state.white_turn;
         let white_is_source = self.state.white_turn;
@@ -710,11 +796,12 @@ impl Game {
         }
 
         self.state.cards_played_this_turn = 0;
+        self.state.attacked_this_turn = false;
         //self.enqueue_trigger(Trigger::OnDraw);
         //self.process_effect_queue();
     }
 
-    pub fn play_card(&mut self, index: usize, target_id: Option<u32>) -> bool {
+    pub fn play_card(&mut self, index: usize, target_id: Option<u32>, omen_trigger: Option<usize>) -> bool {
         // Validate without consuming — clone card so mutable borrow can be released before check_requirements
         let card_clone = {
             let source_board = self.source_board_mut();
@@ -727,6 +814,16 @@ impl Game {
             }
             if matches!(card, CardEntity::Minion(_)) && source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                 return false;
+            }
+            if let CardEntity::Omen(o) = card {
+                if source_board.omens.len() >= settings::MAX_OMENS {
+                    return false;
+                }
+                // the trigger is picked at play time, so an omen without one is not a legal play
+                match omen_trigger {
+                    Some(i) if i < o.card.triggers.len() => {}
+                    _ => return false,
+                }
             }
             card.clone()
         };
@@ -780,6 +877,13 @@ impl Game {
             source_board.battlefield.push(minion);
         }
 
+        // Arm omen face down
+        if let CardEntity::Omen(mut omen) = consumed.clone() {
+            omen.armed_trigger = omen_trigger.map(|i| omen.card.triggers[i]);
+            let source_board = self.source_board_mut();
+            source_board.omens.push(omen);
+        }
+
         // Enqueue onPlay effects
         for ability in &abilities {
             if ability.trigger != Trigger::OnPlay {
@@ -809,6 +913,15 @@ impl Game {
         let source_board = self.source_board_mut();
         source_board.mana -= cost;
         self.state.cards_played_this_turn += 1;
+
+        match consumed {
+            CardEntity::Minion(_) => {
+                self.fire_omens(OmenTrigger::EnemyPlaysMinion, owner.other());
+                self.fire_wide_board_omens(owner);
+            }
+            CardEntity::Incantation(_) => self.fire_omens(OmenTrigger::EnemyPlaysIncantation, owner.other()),
+            CardEntity::Omen(_) => {}
+        }
         true
     }
 
@@ -823,7 +936,7 @@ impl Game {
             return false;
         }
 
-        if self.source_board().battlefield[attacker_idx].attack <= 0 {
+        if self.source_board().battlefield[attacker_idx].stats.attack <= 0 {
             return false;
         }
 
@@ -858,53 +971,53 @@ impl Game {
             }
         }
 
-        let attacker_attack = self.source_board().battlefield[attacker_idx].attack;
+        let attacker_attack = self.source_board().battlefield[attacker_idx].stats.attack;
+
+        let attacker_ref = TargetRef::MinionSource(attacker_idx);
+        // only a minion strikes back, and never itself
+        let retaliation = match &target_ref {
+            TargetRef::MinionEnemy(i) => self.enemy_board().battlefield[*i].stats.attack,
+            TargetRef::MinionSource(i) if *i != attacker_idx => self.source_board().battlefield[*i].stats.attack,
+            _ => 0,
+        };
+        let attacker_attributes = &self.source_board().battlefield[attacker_idx].card.attributes;
+        let lifesteal = attacker_attributes.contains(&MinionAttribute::Lifesteal);
+        let poisonous = attacker_attributes.contains(&MinionAttribute::Poisonous);
 
         {
-            let (source, enemy) = self.boards_mut();
-            source.battlefield[attacker_idx].exhausted = true;
-            source.battlefield[attacker_idx].stealth_active = false;
+            let attacker = &mut self.source_board_mut().battlefield[attacker_idx];
+            attacker.exhausted = true;
+            attacker.stealth_active = false;
+        }
 
-            match &target_ref {
-                TargetRef::HeroEnemy => enemy.hero.defence -= attacker_attack,
-                TargetRef::HeroSource => source.hero.defence -= attacker_attack,
-                TargetRef::MinionEnemy(i) => {
-                    let target_attack = enemy.battlefield[*i].attack;
-                    let target = &mut enemy.battlefield[*i];
-                    if target.ward_active { target.ward_active = false; } else { target.defence -= attacker_attack; }
-                    let attacker = &mut source.battlefield[attacker_idx];
-                    if attacker.ward_active { attacker.ward_active = false; } else { attacker.defence -= target_attack; }
-                }
-                TargetRef::MinionSource(i) => {
-                    let target_attack = source.battlefield[*i].attack;
-                    let attacker_attack_for_target = attacker_attack;
-                    if *i == attacker_idx {
-                        let m = &mut source.battlefield[*i];
-                        if m.ward_active { m.ward_active = false; } else { m.defence -= attacker_attack_for_target; }
-                    } else {
-                        let target = &mut source.battlefield[*i];
-                        if target.ward_active { target.ward_active = false; } else { target.defence -= attacker_attack_for_target; }
-                        let attacker = &mut source.battlefield[attacker_idx];
-                        if attacker.ward_active { attacker.ward_active = false; } else { attacker.defence -= target_attack; }
-                    }
-                }
-            }
+        let landed = !self.absorb_ward(owner, target_ref);
+        if landed {
+            self.stats_mut(owner, target_ref).defence -= attacker_attack;
+        }
+        // a harmless defender must not spend the attacker's ward
+        if retaliation > 0 && !self.absorb_ward(owner, attacker_ref) {
+            self.stats_mut(owner, attacker_ref).defence -= retaliation;
+        }
 
-            if source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Lifesteal) {
-                source.hero.defence = (source.hero.defence + attacker_attack).min(settings::MAX_HP);
-            }
+        if lifesteal && landed {
+            self.source_board_mut().hero.stats.heal(attacker_attack);
+        }
 
-            let attacker_is_poisonous = source.battlefield[attacker_idx].card.attributes.contains(&MinionAttribute::Poisonous);
-            if attacker_is_poisonous {
-                match &target_ref {
-                    TargetRef::MinionEnemy(i) => enemy.battlefield[*i].defence = 0,
-                    TargetRef::MinionSource(i) => source.battlefield[*i].defence = 0,
-                    _ => {}
-                }
+        if poisonous && landed {
+            if matches!(target_ref, TargetRef::MinionEnemy(_) | TargetRef::MinionSource(_)) {
+                self.stats_mut(owner, target_ref).defence = 0;
             }
         }
 
+        self.state.attacked_this_turn = true;
         self.check_for_deaths();
+        self.fire_wide_board_omens(owner);
+
+        match target_ref {
+            TargetRef::HeroEnemy => self.fire_omens(OmenTrigger::EnemyAttacksHero, owner.other()),
+            TargetRef::MinionEnemy(_) => self.fire_omens(OmenTrigger::EnemyAttacksMinion, owner.other()),
+            _ => {}
+        }
         true
     }
 
@@ -932,7 +1045,7 @@ impl Game {
     pub fn parse_client_state(&self, for_white: bool) -> GameStateClient {
         GameStateClient {
             self_board: if for_white { self.state.white.clone() } else { self.state.black.clone() },
-            enemy_board: if for_white { self.state.black.clone() } else { self.state.white.clone() },
+            enemy_board: Self::hide_armed_triggers(if for_white { &self.state.black } else { &self.state.white }),
             white_player_id: self.state.white_player_id.clone(),
             black_player_id: self.state.black_player_id.clone(),
             your_turn: for_white == self.state.white_turn,
@@ -945,6 +1058,15 @@ impl Game {
         }
     }
 
+    /// An omen's effect is public but its armed trigger is not.
+    fn hide_armed_triggers(board: &Board) -> Board {
+        let mut board = board.clone();
+        for omen in board.omens.iter_mut() {
+            omen.armed_trigger = None;
+        }
+        board
+    }
+
     /// Play affordances for a hand. Requirements are turn scoped, so off-turn hands get none.
     fn hand_hints(&self, for_white: bool) -> Vec<CardHint> {
         let board = if for_white { &self.state.white } else { &self.state.black };
@@ -953,8 +1075,11 @@ impl Game {
         }
 
         board.hand.iter().map(|card| {
-            let has_room = !matches!(card, CardEntity::Minion(_))
-                || board.battlefield.len() < settings::MAX_BOARD_SIZE;
+            let has_room = match card {
+                CardEntity::Minion(_) => board.battlefield.len() < settings::MAX_BOARD_SIZE,
+                CardEntity::Omen(_) => board.omens.len() < settings::MAX_OMENS,
+                CardEntity::Incantation(_) => true,
+            };
             CardHint {
                 playable: card.cost() <= board.mana && has_room,
                 condition_met: card.abilities().iter()

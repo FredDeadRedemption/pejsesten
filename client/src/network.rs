@@ -122,8 +122,8 @@ impl NetworkClient {
         self.emit("endTurn", Value::Null);
     }
 
-    pub fn play_card(&mut self, index: usize, target: Option<u32>) {
-        let data = serde_json::json!({ "index": index, "target": target });
+    pub fn play_card(&mut self, index: usize, target: Option<u32>, omen_trigger: Option<usize>) {
+        let data = serde_json::json!({ "index": index, "target": target, "omen_trigger": omen_trigger });
         self.emit("playCard", data);
     }
 

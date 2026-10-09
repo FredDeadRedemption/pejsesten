@@ -33,11 +33,17 @@ impl TextureCache {
     }
 
     async fn load_board(&mut self, board: &Board) {
+        if !board.hero.card.image_url.is_empty() {
+            self.load(&board.hero.card.image_url).await;
+        }
         for card in board.hand.iter().chain(board.deck.iter()) {
             self.load_card_art(card).await;
         }
         for minion in board.battlefield.iter().chain(board.graveyard.iter()) {
             self.load_art(&minion.card.image_url).await;
+        }
+        for omen in &board.omens {
+            self.load_art(&omen.card.image_url).await;
         }
     }
 
@@ -45,6 +51,7 @@ impl TextureCache {
         let url = match card {
             CardEntity::Minion(m) => &m.card.image_url,
             CardEntity::Incantation(i) => &i.card.image_url,
+            CardEntity::Omen(o) => &o.card.image_url,
         };
         self.load_art(url).await;
     }
@@ -89,6 +96,8 @@ impl TextureCache {
             let url = match card {
                 Card::Minion(m) => m.image_url.as_str(),
                 Card::Incantation(i) => i.image_url.as_str(),
+                Card::Omen(o) => o.image_url.as_str(),
+                Card::Hero(h) => h.image_url.as_str(),
             };
             self.load_art(url).await;
         }

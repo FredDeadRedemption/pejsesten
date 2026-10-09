@@ -22,10 +22,7 @@ fn every_scenario_passes() {
 fn scenario_cards_cannot_collide_with_the_real_pool() {
     let highest = shared::cards::get_all_cards()
         .iter()
-        .map(|c| match c {
-            shared::types::Card::Minion(m) => m.id,
-            shared::types::Card::Incantation(i) => i.id,
-        })
+        .map(|c| c.id())
         .max()
         .unwrap_or(0);
     assert!(highest < SCENARIO_ID_BASE, "cards.rs has reached the scenario id range");

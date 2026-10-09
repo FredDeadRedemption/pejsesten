@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
-use crate::engine::IdGenerator;
+use crate::engine::{IdGenerator, PlayerSetup};
 use shared::types::*;
 
 #[derive(Clone, Default)]
@@ -32,6 +32,7 @@ struct InnerState {
 struct PlayCardData {
     index: usize,
     target: Option<u32>,
+    omen_trigger: Option<usize>,
 }
 
 #[derive(Deserialize)]
@@ -89,11 +90,19 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 let (id2, meta2) = inner.queue.pop().unwrap();
 
                 let mut ids = IdGenerator::new();
-                let deck1 = crate::engine::deck_to_cards(&meta1.chosen_deck, &mut ids);
-                let deck2 = crate::engine::deck_to_cards(&meta2.chosen_deck, &mut ids);
+                let player1 = PlayerSetup {
+                    deck: crate::engine::deck_to_cards(&meta1.chosen_deck, &mut ids),
+                    hero: shared::cards::hero_or_default(meta1.hero).clone(),
+                    id: id1.clone(),
+                };
+                let player2 = PlayerSetup {
+                    deck: crate::engine::deck_to_cards(&meta2.chosen_deck, &mut ids),
+                    hero: shared::cards::hero_or_default(meta2.hero).clone(),
+                    id: id2.clone(),
+                };
 
                 let is_p1_white = rand::random::<bool>();
-                let game = Game::new(id1.clone(), id2.clone(), is_p1_white, deck1, deck2, ids);
+                let game = Game::new(player1, player2, is_p1_white, ids);
                 broadcast(&io, &game).await;
 
                 let url = format!(
@@ -131,12 +140,20 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             println!("starting bot game for {}", socket.id);
             let player_id = socket.id.to_string();
             let mut ids = IdGenerator::new();
-            let player_deck = crate::engine::deck_to_cards(&meta.chosen_deck, &mut ids);
-            let bot_deck = crate::engine::deck_to_cards(&bot::default_deck(), &mut ids);
+            let player = PlayerSetup {
+                deck: crate::engine::deck_to_cards(&meta.chosen_deck, &mut ids),
+                hero: shared::cards::hero_or_default(meta.hero).clone(),
+                id: player_id.clone(),
+            };
+            let robot = PlayerSetup {
+                deck: crate::engine::deck_to_cards(&bot::default_deck(), &mut ids),
+                hero: shared::cards::hero_or_default(bot::HERO_ID).clone(),
+                id: bot::BOT_ID.to_string(),
+            };
 
             // randomize who goes first (white always moves first in Game)
             let is_player_white = rand::random::<bool>();
-            let mut game = Game::new(player_id.clone(), bot::BOT_ID.to_string(), is_player_white, player_deck, bot_deck, ids);
+            let mut game = Game::new(player, robot, is_player_white, ids);
 
             // Bot instantly keeps its full hand
             game.submit_mulligan(bot::BOT_ID, vec![]);
@@ -200,7 +217,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             if !validate_turn(&socket.id.to_string(), game) {
                 return;
             }
-            game.play_card(data.index, data.target);
+            game.play_card(data.index, data.target, data.omen_trigger);
             broadcast(&io, game).await;
         }
     });
@@ -319,7 +336,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
-    println!("Server running on port {port}");
+    println!("Server running on port {port} ({} settings)", settings::PROFILE);
     axum::serve(listener, app).await?;
     Ok(())
 }
