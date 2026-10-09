@@ -32,11 +32,13 @@ impl TextureCache {
         }
     }
 
+    /// Only what is actually painted. The deck is always face down, and on wasm every
+    /// miss is a network round trip that blanks the screen while it resolves.
     async fn load_board(&mut self, board: &Board) {
         if !board.hero.card.image_url.is_empty() {
             self.load(&board.hero.card.image_url).await;
         }
-        for card in board.hand.iter().chain(board.deck.iter()) {
+        for card in &board.hand {
             self.load_card_art(card).await;
         }
         for minion in board.battlefield.iter().chain(board.graveyard.iter()) {

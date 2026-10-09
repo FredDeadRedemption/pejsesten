@@ -22,9 +22,14 @@
                 entry.ws = new WebSocket(url);
                 entry.ws.onopen = function () { entry.state = 1; };
                 entry.ws.onmessage = function (ev) {
-                    if (typeof ev.data === 'string') {
-                        entry.queue.push(ev.data);
+                    if (typeof ev.data !== 'string') return;
+                    // the heartbeat is answered here, not in rust: the frame loop stalls
+                    // on texture loads and stops entirely in a background tab
+                    if (ev.data === '2') {
+                        try { entry.ws.send('3'); } catch (e) { /* closing */ }
+                        return;
                     }
+                    entry.queue.push(ev.data);
                 };
                 entry.ws.onclose = function () { entry.state = 3; };
                 entry.ws.onerror = function () { entry.state = 3; };
