@@ -2,24 +2,26 @@
 FROM rust:1.87-slim AS wasm-builder
 WORKDIR /app
 RUN rustup target add wasm32-unknown-unknown
-COPY Cargo.toml ./
+# the lock pins versions that build on this image; a fresh resolve picks ones that do not
+COPY Cargo.toml Cargo.lock ./
 # a workspace member cargo must read even when it is not being built
 COPY xtask xtask
 COPY shared shared
 COPY client client
 COPY server server
-RUN cargo build --release -p client --target wasm32-unknown-unknown
+RUN cargo build --locked --release -p client --target wasm32-unknown-unknown
 
 # Build server
 FROM rust:1.87-slim AS server-builder
 WORKDIR /app
-COPY Cargo.toml ./
+# the lock pins versions that build on this image; a fresh resolve picks ones that do not
+COPY Cargo.toml Cargo.lock ./
 # a workspace member cargo must read even when it is not being built
 COPY xtask xtask
 COPY shared shared
 COPY client client
 COPY server server
-RUN cargo build --release -p server
+RUN cargo build --locked --release -p server
 
 # Runtime
 FROM debian:bookworm-slim
