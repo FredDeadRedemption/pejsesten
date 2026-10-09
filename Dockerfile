@@ -3,6 +3,8 @@ FROM rust:1.87-slim AS wasm-builder
 WORKDIR /app
 RUN rustup target add wasm32-unknown-unknown
 COPY Cargo.toml ./
+# a workspace member cargo must read even when it is not being built
+COPY xtask xtask
 COPY shared shared
 COPY client client
 COPY server server
@@ -12,6 +14,8 @@ RUN cargo build --release -p client --target wasm32-unknown-unknown
 FROM rust:1.87-slim AS server-builder
 WORKDIR /app
 COPY Cargo.toml ./
+# a workspace member cargo must read even when it is not being built
+COPY xtask xtask
 COPY shared shared
 COPY client client
 COPY server server
