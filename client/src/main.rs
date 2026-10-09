@@ -154,6 +154,7 @@ async fn main() {
     let mut glow_watcher = glow::Watcher::new();
 
     loop {
+        cache.pump();
         glow_watcher.tick(get_frame_time());
         let mouse = ui::mouse_ui();
         let (mx, my) = (mouse.x, mouse.y);
@@ -331,9 +332,6 @@ async fn main() {
         }
 
         next_frame().await;
-        // after the frame is on screen: the load suspends the loop, so anything
-        // drawn but not yet presented would be lost
-        cache.pump().await;
     }
 }
 

@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
+use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
+use std::rc::Rc;
 
 use shared::types::{Board, Card, CardEntity, Color as CardColor, GameStateClient};
 
@@ -13,14 +15,18 @@ const MEDIA_ROOT: &str = match option_env!("MEDIA_ROOT") {
     None => DEFAULT_MEDIA_ROOT,
 };
 
+/// Where the bytes land when the load finishes, whenever that is.
+type Slot = Rc<RefCell<Option<miniquad::fs::Response>>>;
+
 pub struct TextureCache {
     map: HashMap<String, Texture2D>,
     queue: VecDeque<(String, FilterMode)>,
+    loading: Option<(String, FilterMode, Slot)>,
 }
 
 impl TextureCache {
     pub fn new() -> Self {
-        Self { map: HashMap::new(), queue: VecDeque::new() }
+        Self { map: HashMap::new(), queue: VecDeque::new(), loading: None }
     }
 
     /// Lines up what the state needs. Nothing is awaited: a card with no texture yet
@@ -41,19 +47,42 @@ impl TextureCache {
         }
     }
 
-    /// Loads one queued texture. Call it after drawing: the await costs the rest of the frame.
-    pub async fn pump(&mut self) {
-        let Some((key, filter)) = self.queue.pop_front() else {
-            return;
-        };
-        let path = format!("{}{}", MEDIA_ROOT, key);
-        match load_texture(&path).await {
-            Ok(tex) => {
-                tex.set_filter(filter);
-                self.map.insert(key, tex);
+    /// Finishes one load and starts the next. Never suspends the frame loop: awaiting
+    /// a load costs the frame that was about to be presented, which reads as a black flash.
+    pub fn pump(&mut self) {
+        if let Some((key, filter, slot)) = self.loading.take() {
+            let arrived = slot.borrow_mut().take();
+            match arrived {
+                Some(response) => self.store(&key, filter, response),
+                None => self.loading = Some((key, filter, slot)),
             }
+        }
+
+        if self.loading.is_none() {
+            if let Some((key, filter)) = self.queue.pop_front() {
+                let slot: Slot = Rc::new(RefCell::new(None));
+                let sink = slot.clone();
+                miniquad::fs::load_file(&format!("{}{}", MEDIA_ROOT, key), move |response| {
+                    *sink.borrow_mut() = Some(response);
+                });
+                self.loading = Some((key, filter, slot));
+            }
+        }
+    }
+
+    fn store(&mut self, key: &str, filter: FilterMode, response: miniquad::fs::Response) {
+        let bytes = match response {
+            Ok(bytes) => bytes,
             // a miss is permanent, so it is dropped rather than retried every frame
-            Err(e) => log!("[textures] failed to load {}: {}", path, e),
+            Err(e) => return log!("[textures] cannot fetch {}: {:?}", key, e),
+        };
+        match Image::from_file_with_format(&bytes, None) {
+            Ok(image) => {
+                let texture = Texture2D::from_image(&image);
+                texture.set_filter(filter);
+                self.map.insert(key.to_string(), texture);
+            }
+            Err(e) => log!("[textures] cannot decode {}: {}", key, e),
         }
     }
 
