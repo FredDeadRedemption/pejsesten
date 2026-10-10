@@ -230,7 +230,7 @@ Keep it to three copies of the **same card**, not three of a race. Tighter, more
 - ⬜ Miniaturize (yes please)
 - ⬜ Quest (hard to implement, but is cool as fuck)
 - ⬜ Questline
-- ✅ Quickdraw
+- ✅ Quickdraw (fires on any card that arrived in hand this turn — drawn, bounced, or fetched by an effect)
 - ✅ Return to hand
 - ✅ Add copy to hand
 - ✅ Cost (n) less

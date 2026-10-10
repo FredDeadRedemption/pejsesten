@@ -63,6 +63,9 @@ pub fn all() -> Vec<Case> {
         case("requirements", "combo is off on the first card of the turn", combo_blocked),
         case("requirements", "combo is on after a card has been played", combo_allowed),
         case("requirements", "quickdraw only fires on a freshly drawn card", quickdraw_gate),
+        case("requirements", "quickdraw arms a card drawn mid turn", quickdraw_arms_a_mid_turn_draw),
+        case("requirements", "a bounced minion arrives armed again", quickdraw_rearms_on_bounce),
+        case("requirements", "a traded card arrives armed", quickdraw_arms_a_traded_card),
         case("requirements", "is holding checks the rest of the hand", is_holding_gate),
         // rules
         case("rules", "a card over your mana cannot be played", mana_gate),
@@ -783,12 +786,62 @@ fn quickdraw_gate() -> Scenario {
     ));
     let stale = s.spell_in_hand(Side::White, quick.clone());
     let fresh = s.spell_in_hand(Side::White, quick);
-    s.mark_just_drawn(Side::White, fresh);
+    s.mark_arrived_this_turn(Side::White, fresh);
     let mut scn = s.start("quickdraw");
     scn.play(stale, None);
     scn.expect_eq("stale card did nothing", scn.hp(Side::Black), 20);
     scn.play(fresh - 1, None);
     scn.expect_eq("fresh card fired", scn.hp(Side::Black), 17);
+    scn
+}
+
+fn quickdraw_arms_a_mid_turn_draw() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    let bolt = incantation(1, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(3)]), Requirement::Quickdraw));
+    s.spell_in_deck(Side::White, bolt);
+    let dig = s.spell_in_hand(Side::White, incantation(2, "Dig", 0).does(on_play(vec![draw(1)])));
+    let mut scn = s.start("quickdraw mid turn draw");
+    scn.play(dig, None);
+    scn.play(0, None);
+    scn.expect_eq("the drawn card was armed", scn.hp(Side::Black), 17);
+    scn
+}
+
+fn quickdraw_rearms_on_bounce() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    let scout = minion(1, "Scout", 0, 1, 1).does(requiring(on_play(vec![bolt_enemy_hero(3)]), Requirement::Quickdraw));
+    s.in_hand(Side::White, scout);
+    let scout_id = s.hand_entity_id(Side::White, 0);
+    let recall = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Recall", 0).does(on_play(vec![bounce(pick_friendly_minion(), None)])),
+    );
+    let mut scn = s.start("quickdraw bounce");
+    scn.play(0, None);
+    scn.expect_eq("the dealt card was not armed", scn.hp(Side::Black), 20);
+    scn.play(recall - 1, Some(scout_id));
+    scn.expect("back in hand", scn.in_hand(Side::White, scout_id));
+    scn.play(0, None);
+    scn.expect_eq("the bounced card came back armed", scn.hp(Side::Black), 17);
+    scn
+}
+
+fn quickdraw_arms_a_traded_card() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    s.mana(Side::White, 2);
+    let bolt = incantation(1, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(3)]), Requirement::Quickdraw));
+    s.spell_in_deck(Side::White, bolt);
+    let goods = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Goods", 0).with(IncantationAttribute::Tradeable),
+    );
+    let mut scn = s.start("quickdraw trade");
+    scn.expect_trade("traded away", goods, true);
+    scn.play(0, None);
+    scn.expect_eq("the traded card arrived armed", scn.hp(Side::Black), 17);
     scn
 }
 

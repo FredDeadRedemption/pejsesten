@@ -64,9 +64,8 @@ pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEn
             exhausted: false,
             entity_id,
             cost: c.base_cost,
-            turns_in_hand: 0,
             turns_on_board: 0,
-            just_drawn: false,
+            arrived_on_turn: None,
             card: c.clone(),
         }),
         Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None, // only minions can be summoned

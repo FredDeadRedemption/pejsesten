@@ -188,10 +188,11 @@ impl Setup {
         self
     }
 
-    /// Marks the hand card at `index` as just drawn, which is what Quickdraw keys off.
-    pub fn mark_just_drawn(&mut self, side: Side, index: usize) -> &mut Self {
+    /// Stamps the hand card at `index` as arrived this turn, which is what Quickdraw keys off.
+    pub fn mark_arrived_this_turn(&mut self, side: Side, index: usize) -> &mut Self {
+        let turn = self.state.turn_count;
         if let Some(c) = self.board_mut(side).hand.get_mut(index) {
-            *c.just_drawn_mut() = true;
+            *c.arrived_on_turn_mut() = Some(turn);
         }
         self
     }

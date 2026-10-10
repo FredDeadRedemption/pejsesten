@@ -31,9 +31,8 @@ pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
         exhausted: false,
         entity_id,
         cost: c.base_cost,
-        turns_in_hand: 0,
         turns_on_board: 0,
-        just_drawn: false,
+        arrived_on_turn: None,
         card: c.clone(),
     }
 }
@@ -42,8 +41,7 @@ pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> Incantati
     IncantationEntity {
         entity_id,
         cost: c.base_cost,
-        turns_in_hand: 0,
-        just_drawn: false,
+        arrived_on_turn: None,
         card: c.clone(),
     }
 }
@@ -52,8 +50,7 @@ pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
     OmenEntity {
         entity_id,
         cost: c.base_cost,
-        turns_in_hand: 0,
-        just_drawn: false,
+        arrived_on_turn: None,
         card: c.clone(),
         armed_trigger: None,
     }
@@ -394,7 +391,7 @@ impl Game {
     fn check_requirements(&self, requirements: &[Requirement], card: &CardEntity) -> bool {
         requirements.iter().all(|r| match r {
             Requirement::Combo => self.state.cards_played_this_turn > 0,
-            Requirement::Quickdraw => card.just_drawn(),
+            Requirement::Quickdraw => card.arrived_this_turn(self.state.turn_count),
             Requirement::IsHolding { filters } => {
                 let source_board = self.source_board();
                 source_board.hand.iter().any(|c| match c {
@@ -426,11 +423,13 @@ impl Game {
     }
 
     // cards that arrive at a full hand are burned
-    fn add_to_hand(board: &mut Board, cards: impl IntoIterator<Item = CardEntity>) {
-        for card in cards {
+    // `arrival` is None for the pre-game deal, Some(turn) for anything that lands during play
+    fn add_to_hand(board: &mut Board, arrival: Option<u32>, cards: impl IntoIterator<Item = CardEntity>) {
+        for mut card in cards {
             if board.hand.len() >= settings::MAX_HAND_SIZE {
                 return;
             }
+            *card.arrived_on_turn_mut() = arrival;
             board.hand.push(card);
         }
     }
@@ -681,13 +680,15 @@ impl Game {
                 }
 
                 // Step 3: push to hand
+                let turn = self.state.turn_count;
                 let source_board = self.source_board_for_mut(owner);
-                Self::add_to_hand(source_board, drawn);
+                Self::add_to_hand(source_board, Some(turn), drawn);
             }
 
             Effect::ReturnToHand { target_spec, cost_reduction } => {
                 let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
 
+                let turn = self.state.turn_count;
                 let (source, enemy) = self.boards_for_mut(owner);
 
                 for tr in refs.into_iter().rev() {
@@ -704,7 +705,6 @@ impl Game {
 
                         minion.exhausted = false;
                         minion.turns_on_board = 0;
-                        minion.turns_in_hand = 0;
                         minion.stats.attack = minion.card.base_attack;
                         minion.stats.defence = minion.card.base_defence;
                         minion.stats.max_defence = minion.card.base_defence;
@@ -713,10 +713,10 @@ impl Game {
 
                         match tr {
                             TargetRef::MinionSource(_) => {
-                                Self::add_to_hand(source, [CardEntity::Minion(minion)]);
+                                Self::add_to_hand(source, Some(turn), [CardEntity::Minion(minion)]);
                             }
                             TargetRef::MinionEnemy(_) => {
-                                Self::add_to_hand(enemy, [CardEntity::Minion(minion)]);
+                                Self::add_to_hand(enemy, Some(turn), [CardEntity::Minion(minion)]);
                             }
                             _ => {}
                         }
@@ -776,16 +776,10 @@ impl Game {
         let white_is_source = self.state.white_turn;
 
         {
+            let turn = self.state.turn_count;
             let source_board = self.source_board_mut();
-            for card in source_board.hand.iter_mut() {
-                *card.turns_in_hand_mut() += 1;
-                *card.just_drawn_mut() = false;
-            }
-            let mut drawn = Self::draw_cards(source_board, 1);
-            for card in drawn.iter_mut() {
-                *card.just_drawn_mut() = true;
-            }
-            Self::add_to_hand(source_board, drawn);
+            let drawn = Self::draw_cards(source_board, 1);
+            Self::add_to_hand(source_board, Some(turn), drawn);
             source_board.base_mana = (source_board.base_mana + 1).min(settings::MAX_MANA);
             source_board.mana = source_board.base_mana;
             source_board.embers = (source_board.embers + 1).min(settings::MAX_EMBERS);
@@ -1033,11 +1027,12 @@ impl Game {
             }
         }
 
+        let turn = self.state.turn_count;
         let source_board = self.source_board_mut();
         let card = source_board.hand.remove(index);
         source_board.deck.push(card);
         let drawn = Self::draw_cards(source_board, 1);
-        Self::add_to_hand(source_board, drawn);
+        Self::add_to_hand(source_board, Some(turn), drawn);
         source_board.mana -= 1;
         true
     }
@@ -1117,7 +1112,7 @@ impl Game {
         // Draw replacements first so they can't contain the returned cards
         let draw_count = cards_to_return.len();
         let new_cards: Vec<CardEntity> = board.deck.drain(0..draw_count.min(board.deck.len())).collect();
-        Self::add_to_hand(board, new_cards);
+        Self::add_to_hand(board, None, new_cards);
 
         // Shuffle returned cards back into the deck
         let mut rng = rand::rng();

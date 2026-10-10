@@ -206,8 +206,7 @@ pub struct OmenCard {
 pub struct OmenEntity {
     pub entity_id: u32,
     pub cost: i32,
-    pub turns_in_hand: u32,
-    pub just_drawn: bool,
+    pub arrived_on_turn: Option<u32>,
     pub card: OmenCard,
     // none in hand, and stripped before the opponent sees an armed one
     pub armed_trigger: Option<OmenTrigger>,
@@ -262,9 +261,8 @@ impl Stats {
 pub struct MinionEntity {
     pub entity_id: u32,
     pub cost: i32,
-    pub turns_in_hand: u32,
     pub turns_on_board: u32,
-    pub just_drawn: bool,
+    pub arrived_on_turn: Option<u32>,
     pub card: MinionCard,
     pub stats: Stats,
     pub ward_active: bool,
@@ -276,8 +274,7 @@ pub struct MinionEntity {
 pub struct IncantationEntity {
     pub entity_id: u32,
     pub cost: i32,
-    pub turns_in_hand: u32,
-    pub just_drawn: bool,
+    pub arrived_on_turn: Option<u32>,
     pub card: IncantationCard,
 }
 
@@ -441,26 +438,21 @@ impl CardEntity {
             CardEntity::Omen(o) => &mut o.entity_id,
         }
     }
-    pub fn just_drawn(&self) -> bool {
+    /// None for the cards the game deals before the first turn; they never arrived during play.
+    pub fn arrived_on_turn_mut(&mut self) -> &mut Option<u32> {
         match self {
-            CardEntity::Minion(m) => m.just_drawn,
-            CardEntity::Incantation(i) => i.just_drawn,
-            CardEntity::Omen(o) => o.just_drawn,
+            CardEntity::Minion(m) => &mut m.arrived_on_turn,
+            CardEntity::Incantation(i) => &mut i.arrived_on_turn,
+            CardEntity::Omen(o) => &mut o.arrived_on_turn,
         }
     }
-    pub fn just_drawn_mut(&mut self) -> &mut bool {
-        match self {
-            CardEntity::Minion(m) => &mut m.just_drawn,
-            CardEntity::Incantation(i) => &mut i.just_drawn,
-            CardEntity::Omen(o) => &mut o.just_drawn,
-        }
-    }
-    pub fn turns_in_hand_mut(&mut self) -> &mut u32 {
-        match self {
-            CardEntity::Minion(m) => &mut m.turns_in_hand,
-            CardEntity::Incantation(i) => &mut i.turns_in_hand,
-            CardEntity::Omen(o) => &mut o.turns_in_hand,
-        }
+    pub fn arrived_this_turn(&self, turn: u32) -> bool {
+        let arrived = match self {
+            CardEntity::Minion(m) => m.arrived_on_turn,
+            CardEntity::Incantation(i) => i.arrived_on_turn,
+            CardEntity::Omen(o) => o.arrived_on_turn,
+        };
+        arrived == Some(turn)
     }
     pub fn abilities(&self) -> &[Ability] {
         match self {

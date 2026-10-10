@@ -453,7 +453,7 @@ fn ability_fires(
 ) -> bool {
     ability.requirements.iter().all(|r| match r {
         Requirement::Combo => state.cards_played_this_turn > 0,
-        Requirement::Quickdraw => card.just_drawn(),
+        Requirement::Quickdraw => card.arrived_this_turn(state.turn_count),
         Requirement::IsHolding { .. } => true,
     })
 }
