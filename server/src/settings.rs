@@ -16,6 +16,9 @@ const DEV_BOT_DELAY_MS: u64 = 250;
 /// Pause between frames when the scenario catalogue is played back visually.
 pub const SCENARIO_FRAME_MS: u64 = 100;
 
+/// How long a game outlives a player's dropped socket, so a brief blip does not kill it.
+pub const DISCONNECT_GRACE_MS: u64 = 10_000;
+
 const PROD_HP_OVERRIDE: Option<i32> = None;
 const PROD_STARTING_MANA: i32 = 1;
 const PROD_MAX_MANA: i32 = 10;

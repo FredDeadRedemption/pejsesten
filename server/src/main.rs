@@ -7,9 +7,10 @@ use engine::Game;
 use serde::Deserialize;
 use socketioxide::{
     SocketIo,
-    extract::{Data, SocketRef, State},
+    extract::{Data, SocketRef, State, TryData},
     socket::DisconnectReason,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
@@ -27,7 +28,18 @@ struct ServerState {
 struct InnerState {
     game: Option<Game>,
     queue: Vec<(String, PlayerMetaData)>,
+    // open sockets per token; a second tab must not make closing the first look like leaving
+    sockets: HashMap<String, u32>,
 }
+
+/// Sent as socket.io auth on connect. The token is stored client side and outlives a reload.
+#[derive(Deserialize)]
+struct Auth {
+    token: String,
+}
+
+#[derive(Clone)]
+struct PlayerToken(String);
 
 #[derive(Deserialize)]
 struct PlayCardData {
@@ -52,12 +64,21 @@ struct MulliganData {
     indices: Vec<usize>,
 }
 
-fn validate_turn(socket_id: &str, game: &Game) -> bool {
+/// Player identity, which is the client's token and not the socket id, so it survives a reload.
+fn player_id(socket: &SocketRef) -> String {
+    socket.extensions.get::<PlayerToken>().map(|t| t.0).unwrap_or_else(|| socket.id.to_string())
+}
+
+fn is_player(player_id: &str, game: &Game) -> bool {
+    player_id == game.state.white_player_id || player_id == game.state.black_player_id
+}
+
+fn validate_turn(player_id: &str, game: &Game) -> bool {
     if game.state.phase != GamePhase::Playing {
         return false;
     }
     let s = &game.state;
-    (socket_id == s.white_player_id && s.white_turn) || (socket_id == s.black_player_id && !s.white_turn)
+    (player_id == s.white_player_id && s.white_turn) || (player_id == s.black_player_id && !s.white_turn)
 }
 
 async fn broadcast(io: &SocketIo, game: &Game) {
@@ -67,9 +88,23 @@ async fn broadcast(io: &SocketIo, game: &Game) {
     io.to(game.state.black_player_id.clone()).emit("newGameState", &black).await.ok();
 }
 
-async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: SocketIo) {
-    println!("Connected: {}", socket.id);
-    socket.join(socket.id.to_string());
+async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<ServerState>, io: SocketIo) {
+    let me = auth.map(|a| a.token).filter(|t| !t.is_empty()).unwrap_or_else(|| socket.id.to_string());
+    socket.extensions.insert(PlayerToken(me.clone()));
+    // the room is keyed by token, so a reconnected socket inherits the player's messages
+    socket.join(me.clone());
+    println!("Connected: {} (player {me})", socket.id);
+
+    {
+        let mut inner = state.inner.lock().await;
+        *inner.sockets.entry(me.clone()).or_insert(0) += 1;
+        if let Some(game) = inner.game.as_ref() {
+            if is_player(&me, game) {
+                println!("resuming game for {me}");
+                broadcast(&io, game).await;
+            }
+        }
+    }
 
     socket.on("queueUp", {
         let io = io.clone();
@@ -77,12 +112,13 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
         move |socket: SocketRef, Data::<PlayerMetaData>(meta)| async move {
             let mut inner = state.inner.lock().await;
 
-            if inner.queue.iter().any(|(id, _)| id == &socket.id.to_string()) {
+            let me = player_id(&socket);
+            if inner.queue.iter().any(|(id, _)| id == &me) {
                 println!("already in queue");
                 return;
             }
 
-            inner.queue.push((socket.id.to_string(), meta));
+            inner.queue.push((me, meta));
             println!("queue length: {}", inner.queue.len());
 
             if inner.queue.len() >= 2 && inner.game.is_none() {
@@ -123,7 +159,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
         let io = io.clone();
         move |socket: SocketRef| async move {
             println!("running scenario catalogue for {}", socket.id);
-            scenario::runner::run(io, socket.id.to_string()).await;
+            scenario::runner::run(io, player_id(&socket)).await;
         }
     });
 
@@ -139,12 +175,12 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
             }
 
             println!("starting bot game for {}", socket.id);
-            let player_id = socket.id.to_string();
+            let me = player_id(&socket);
             let mut ids = IdGenerator::new();
             let player = PlayerSetup {
                 deck: crate::engine::deck_to_cards(&meta.chosen_deck, &mut ids),
                 hero: shared::cards::hero_or_default(meta.hero).clone(),
-                id: player_id.clone(),
+                id: me.clone(),
             };
             let robot = PlayerSetup {
                 deck: crate::engine::deck_to_cards(&bot::default_deck(), &mut ids),
@@ -165,7 +201,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 rand::random::<u16>(),
                 std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()
             );
-            io.to(player_id).emit("redirect", &url).await.ok();
+            io.to(me).emit("redirect", &url).await.ok();
 
             inner.game = Some(game);
         }
@@ -182,7 +218,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                     Some(g) => g,
                     None => return,
                 };
-                if !validate_turn(&socket.id.to_string(), game) {
+                if !validate_turn(&player_id(&socket), game) {
                     return;
                 }
                 game.end_turn();
@@ -215,7 +251,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 Some(g) => g,
                 None => return,
             };
-            if !validate_turn(&socket.id.to_string(), game) {
+            if !validate_turn(&player_id(&socket), game) {
                 return;
             }
             game.play_card(data.index, data.target, data.omen_trigger);
@@ -232,7 +268,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 Some(g) => g,
                 None => return,
             };
-            if !validate_turn(&socket.id.to_string(), game) {
+            if !validate_turn(&player_id(&socket), game) {
                 return;
             }
             game.attack(AttackData {
@@ -252,7 +288,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                 Some(g) => g,
                 None => return,
             };
-            if !validate_turn(&socket.id.to_string(), game) {
+            if !validate_turn(&player_id(&socket), game) {
                 return;
             }
             game.trade_card(data.index);
@@ -271,7 +307,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
                     None => return,
                 };
                 let was_mulligan = game.state.phase == GamePhase::Mulligan;
-                game.submit_mulligan(&socket.id.to_string(), data.indices);
+                game.submit_mulligan(&player_id(&socket), data.indices);
                 broadcast(&io, game).await;
                 was_mulligan && game.state.phase == GamePhase::Playing && bot::is_bot_turn(game)
             };
@@ -294,7 +330,7 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
         let state = state.clone();
         move |socket: SocketRef| async move {
             let mut inner = state.inner.lock().await;
-            inner.queue.retain(|(id, _)| id != &socket.id.to_string());
+            inner.queue.retain(|(id, _)| id != &player_id(&socket));
             println!("Left queue: {}", socket.id);
         }
     });
@@ -312,9 +348,37 @@ async fn on_connect(socket: SocketRef, State(state): State<ServerState>, io: Soc
     socket.on_disconnect({
         let state = state.clone();
         move |socket: SocketRef, reason: DisconnectReason| async move {
-            let mut inner = state.inner.lock().await;
-            inner.queue.retain(|(id, _)| id != &socket.id.to_string());
-            println!("Disconnected: {} ({reason:?})", socket.id);
+            let me = player_id(&socket);
+            println!("Disconnected: {} (player {me}) ({reason:?})", socket.id);
+
+            let was_playing = {
+                let mut inner = state.inner.lock().await;
+                inner.queue.retain(|(id, _)| id != &me);
+                match inner.sockets.get_mut(&me) {
+                    Some(n) if *n > 1 => {
+                        *n -= 1;
+                        return;
+                    }
+                    _ => inner.sockets.remove(&me),
+                };
+                inner.game.as_ref().is_some_and(|g| is_player(&me, g))
+            };
+            if !was_playing {
+                return;
+            }
+
+            tokio::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_millis(settings::DISCONNECT_GRACE_MS)).await;
+                let mut inner = state.inner.lock().await;
+                if inner.sockets.contains_key(&me) {
+                    return;
+                }
+                // another game may hold the slot by now, and it is not this player's to destroy
+                if inner.game.as_ref().is_some_and(|g| is_player(&me, g)) {
+                    inner.game = None;
+                    println!("game destroyed: {me} did not return");
+                }
+            });
         }
     });
 }
@@ -325,8 +389,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (layer, io) = SocketIo::builder().with_state(state).build_layer();
 
     let io_clone = io.clone();
-    io.ns("/", move |socket: SocketRef, State(state): State<ServerState>| {
-        on_connect(socket, State(state), io_clone.clone())
+    io.ns("/", move |socket: SocketRef, TryData(auth): TryData<Auth>, State(state): State<ServerState>| {
+        on_connect(socket, auth.ok(), State(state), io_clone.clone())
     });
 
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "dist".to_string());

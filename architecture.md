@@ -14,6 +14,7 @@ pejsesten/
 │   ├── mq_js_bundle.js # macroquad's JS glue (vendored)
 │   ├── app_ws.js       # custom plugin: WebSocket
 │   ├── app_storage.js  # custom plugin: localStorage
+│   ├── app_session.js  # custom plugin: persistent player token
 │   └── static/         # card art, favicon
 ├── docs/               # design notes
 ├── xtask/              # dev launchers behind `cargo dev` and `cargo dev web`
@@ -68,7 +69,7 @@ A plugin is just two pieces:
 1. A JS file that defines extra functions and registers them via `miniquad_add_plugin(...)`. When the bundle instantiates the wasm, it calls each plugin's `register_plugin(importObject)` so they can add their entries to `importObject.env`.
 2. Rust code with `extern "C" fn` declarations that match those names.
 
-We have three custom plugins:
+We have these custom plugins:
 
 ### `app_ws.js` — WebSocket
 
@@ -93,6 +94,15 @@ Strings and byte buffers cross the JS/wasm boundary as `(ptr, len)` pairs into w
 | `app_storage_set`        | `fn(*const u8, u32, *const u8, u32)`                 | `localStorage.setItem(key, value)`        |
 
 Same pattern. The two-call get (peek length, then take) lets Rust allocate exactly the right buffer.
+
+### `app_session.js` — player identity
+
+| Import                      | Rust signature        | What it does                                        |
+|-----------------------------|-----------------------|-----------------------------------------------------|
+| `app_session_token_len`     | `fn() -> u32`         | Reads (or creates) the stored token, returns length |
+| `app_session_token_take`    | `fn(*mut u8) -> u32`  | Copies the token into the provided buffer           |
+
+16 random bytes from `crypto.getRandomValues`, hex encoded, kept in `localStorage` under `pejsesten.player_token`. Owns its own storage rather than going through `app_storage.js` because the create-if-missing step belongs next to the randomness. See "Session identity" below.
 
 ### `app_location.js` — page origin
 
@@ -152,6 +162,14 @@ Everything else in `network.rs` (and `main.rs`, deckbuilder, etc.) just calls `w
 
 The Rust client speaks raw socket.io v4 framing over a single WebSocket. The framing (e.g. `42["eventName",{...}]`) is hand-rolled in `client/src/network.rs::handle_message`. Server uses `socketioxide` to speak the same protocol. No JSON-RPC, no custom framing layer beyond what socket.io defines.
 
+### Session identity
+
+The client sends its player token as socket.io auth in the namespace-connect frame (`40{"token":"..."}`), so the server knows who a socket belongs to before any event arrives. That token — never the socket id — is the player id inside `Game`, and each socket joins a room named after it, so `broadcast` keeps working across a reconnect.
+
+A reload therefore lands back in the running game: the server replays `newGameState` on connect, and the client switches screens on any state it receives. When the last socket for a token closes, the game is kept for `settings::DISCONNECT_GRACE_MS` (10s) and then destroyed if nobody came back. Open tabs per token are counted, so closing a second tab is not mistaken for leaving.
+
+Whoever holds the token is the player — there is no account, no password, nothing stored server side. Good enough until there are real players and a database.
+
 Server URL is set via `option_env!("SERVER_URL")`, defaulting to `ws://localhost:3000`. In production it's baked at build time in the Dockerfile. The wasm and the socket.io server run on the **same origin** (one Railway service serving both), so no CORS gymnastics.
 
 ## Build & run
@@ -172,7 +190,7 @@ Plain `cargo run` still builds and runs the client alone (`default-members` in t
 cargo dev web
 ```
 
-Builds the wasm bundle, symlinks `client/index.html`, `mq_js_bundle.js`, `app_ws.js`, `app_storage.js`, `favicon.png`, the `media/` dir, and the wasm into `dist/`, then runs the server with `STATIC_DIR=dist`. Open `http://localhost:3000`. Iterate by rebuilding the wasm in another terminal — symlinks pick up the new artifact, just refresh the tab.
+Builds the wasm bundle, symlinks `client/index.html`, `mq_js_bundle.js`, the `app_*.js` plugins, `favicon.png`, the `media/` dir, and the wasm into `dist/`, then runs the server with `STATIC_DIR=dist`. Open `http://localhost:3000`. Iterate by rebuilding the wasm in another terminal — symlinks pick up the new artifact, just refresh the tab.
 
 WASM release rebuilds are 1.5–6 sec depending on what changed.
 

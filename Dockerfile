@@ -34,6 +34,7 @@ COPY client/mq_js_bundle.js ./dist/mq_js_bundle.js
 COPY client/app_ws.js ./dist/app_ws.js
 COPY client/app_log.js ./dist/app_log.js
 COPY client/app_storage.js ./dist/app_storage.js
+COPY client/app_session.js ./dist/app_session.js
 COPY client/app_location.js ./dist/app_location.js
 COPY client/static/favicon.png ./dist/favicon.png
 COPY client/static/media ./dist/media

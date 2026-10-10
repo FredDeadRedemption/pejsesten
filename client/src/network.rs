@@ -96,13 +96,14 @@ pub struct NetworkClient {
     ws: ws::WebSocket,
     state: SioState,
     was_connected: bool,
+    token: String,
 }
 
 impl NetworkClient {
     pub fn new(host: &str) -> Self {
         let url = format!("{}/socket.io/?EIO=4&transport=websocket", host);
         let ws = ws::WebSocket::connect(&url);
-        Self { ws, state: SioState::Connecting, was_connected: false }
+        Self { ws, state: SioState::Connecting, was_connected: false, token: crate::session::player_token() }
     }
 
     pub fn emit(&mut self, event: &str, data: Value) {
@@ -155,12 +156,14 @@ impl NetworkClient {
             if now_connected && !self.was_connected {
                 self.was_connected = true;
                 log!("[ws] open, sending namespace connect");
-                self.ws.send_text("40");
+                // the token rides along as socket.io auth, so the server knows us before any event
+                let auth = serde_json::json!({ "token": self.token });
+                self.ws.send_text(&format!("40{}", auth));
             }
-            // there is no reconnect, so a drop is the end of the session and worth saying out loud
+            // the socket does not reconnect by itself; a reload picks the game back up
             if !now_connected && self.was_connected {
                 self.was_connected = false;
-                log!("[ws] closed, the session is over");
+                log!("[ws] closed, reload to rejoin");
             }
 
             let text = self.ws.try_recv()?;

@@ -14,6 +14,7 @@ mod glow;
 mod layout;
 mod network;
 mod render;
+mod session;
 mod textures;
 mod ui;
 

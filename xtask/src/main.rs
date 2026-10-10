@@ -91,6 +91,7 @@ fn web(root: &Path, prod: bool) -> Result<(), String> {
         ("client/app_ws.js", "app_ws.js"),
         ("client/app_log.js", "app_log.js"),
         ("client/app_storage.js", "app_storage.js"),
+        ("client/app_session.js", "app_session.js"),
         ("client/app_location.js", "app_location.js"),
         ("client/static/favicon.png", "favicon.png"),
         ("client/static/media", "media"),
