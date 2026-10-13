@@ -55,19 +55,26 @@ pub fn get_heroes() -> Vec<HeroCard> {
     heroes
 }
 
+pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
+    MinionEntity {
+        stats: Stats::new(c.base_attack, c.base_defence),
+        damage: 0,
+        buff: Buff::default(),
+        doomed: false,
+        ward_active: c.attributes.contains(&MinionAttribute::Ward),
+        stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
+        exhausted: false,
+        entity_id,
+        cost: c.base_cost,
+        turns_on_board: 0,
+        arrived_on_turn: None,
+        card: c.clone(),
+    }
+}
+
 pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
     match get_card_by_id(card_id)? {
-        Card::Minion(c) => Some(MinionEntity {
-            stats: Stats::new(c.base_attack, c.base_defence),
-            ward_active: c.attributes.contains(&MinionAttribute::Ward),
-            stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
-            exhausted: false,
-            entity_id,
-            cost: c.base_cost,
-            turns_on_board: 0,
-            arrived_on_turn: None,
-            card: c.clone(),
-        }),
+        Card::Minion(c) => Some(instantiate_minion(c, entity_id)),
         Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None, // only minions can be summoned
     }
 }
@@ -955,6 +962,26 @@ pub fn build_cards() -> Vec<Card> {
                     follow_up: None,
                 }],
             }],
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 40,
+            color: Color::Black,
+            name: "Menagerie Keeper".to_string(),
+            description: Some("Your beasts have +1 +1".to_string()),
+            flavor_text: Some("Counts them twice. Sleeps with the keys.".to_string()),
+            base_cost: 4,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![PassiveEffect::Aura {
+                filters: vec![Condition::IsRace { race: Race::Beast }],
+                attack: 1,
+                defence: 1,
+            }],
+            base_attack: 2,
+            base_defence: 4,
+            attributes: vec![],
+            abilities: vec![],
             is_token: false,
         }),
         // ── TOKENS ───────────────────────────────────────────────

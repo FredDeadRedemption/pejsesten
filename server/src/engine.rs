@@ -5,6 +5,7 @@ use crate::settings;
 use rand::Rng;
 use rand::seq::SliceRandom;
 use shared::cards;
+use shared::cards::instantiate_minion;
 use shared::types::*;
 use std::collections::HashMap;
 
@@ -20,20 +21,6 @@ impl IdGenerator {
         let id = self.next;
         self.next += 1;
         id
-    }
-}
-
-pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
-    MinionEntity {
-        stats: Stats::new(c.base_attack, c.base_defence),
-        ward_active: c.attributes.contains(&MinionAttribute::Ward),
-        stealth_active: c.attributes.contains(&MinionAttribute::Stealth),
-        exhausted: false,
-        entity_id,
-        cost: c.base_cost,
-        turns_on_board: 0,
-        arrived_on_turn: None,
-        card: c.clone(),
     }
 }
 
@@ -57,10 +44,14 @@ pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
 }
 
 pub fn instantiate_hero(c: &HeroCard, entity_id: u32) -> Hero {
+    let hp = settings::starting_hp(c);
     Hero {
         entity_id,
         card: c.clone(),
-        stats: Stats::new(0, settings::starting_hp(c)),
+        base_hp: hp,
+        damage: 0,
+        buff: Buff::default(),
+        stats: Stats::new(0, hp),
     }
 }
 
@@ -203,7 +194,9 @@ impl Game {
     /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
     /// Caller owns id continuity: pass a generator already past the state's entity ids.
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
-        Game { state, effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() }
+        let mut game = Game { state, effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() };
+        game.refresh_stats();
+        game
     }
 
     /// Makes a card summonable by id without it existing in the global registry.
@@ -542,6 +535,7 @@ impl Game {
     fn check_for_deaths(&mut self) {
         let mut died: [bool; 2] = [false, false];
         loop {
+            self.refresh_stats();
             let mut any_died = false;
             let mut to_queue: Vec<QueuedEffect> = vec![];
 
@@ -551,7 +545,7 @@ impl Game {
 
                 let mut i = 0;
                 while i < board.battlefield.len() {
-                    if board.battlefield[i].stats.defence <= 0 {
+                    if board.battlefield[i].stats.defence <= 0 || board.battlefield[i].doomed {
                         any_died = true;
                         died[if white_is_board { 0 } else { 1 }] = true;
                         let dead = board.battlefield.remove(i);
@@ -593,14 +587,77 @@ impl Game {
         }
     }
 
-    /// Every effect that moves numbers goes through here, so hero and minion cannot drift apart.
-    fn stats_mut(&mut self, owner: PlayerSide, tr: TargetRef) -> &mut Stats {
+    // --- Stats ---
+
+    /// Damage taken. Every effect that moves numbers goes through here or [`Self::buff_mut`],
+    /// so hero and minion cannot drift apart.
+    fn damage_mut(&mut self, owner: PlayerSide, tr: TargetRef) -> &mut i32 {
         let (source, enemy) = self.boards_for_mut(owner);
         match tr {
-            TargetRef::HeroSource => &mut source.hero.stats,
-            TargetRef::HeroEnemy => &mut enemy.hero.stats,
-            TargetRef::MinionSource(i) => &mut source.battlefield[i].stats,
-            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i].stats,
+            TargetRef::HeroSource => &mut source.hero.damage,
+            TargetRef::HeroEnemy => &mut enemy.hero.damage,
+            TargetRef::MinionSource(i) => &mut source.battlefield[i].damage,
+            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i].damage,
+        }
+    }
+
+    fn buff_mut(&mut self, owner: PlayerSide, tr: TargetRef) -> &mut Buff {
+        let (source, enemy) = self.boards_for_mut(owner);
+        match tr {
+            TargetRef::HeroSource => &mut source.hero.buff,
+            TargetRef::HeroEnemy => &mut enemy.hero.buff,
+            TargetRef::MinionSource(i) => &mut source.battlefield[i].buff,
+            TargetRef::MinionEnemy(i) => &mut enemy.battlefield[i].buff,
+        }
+    }
+
+    fn heal(&mut self, owner: PlayerSide, tr: TargetRef, amount: i32) {
+        let damage = self.damage_mut(owner, tr);
+        *damage = (*damage - amount).max(0);
+    }
+
+    /// A hero cannot be destroyed, only brought to zero.
+    fn doom(&mut self, owner: PlayerSide, tr: TargetRef) {
+        let (source, enemy) = self.boards_for_mut(owner);
+        match tr {
+            TargetRef::MinionSource(i) => source.battlefield[i].doomed = true,
+            TargetRef::MinionEnemy(i) => enemy.battlefield[i].doomed = true,
+            TargetRef::HeroSource | TargetRef::HeroEnemy => {}
+        }
+    }
+
+    /// What a minion gets from the auras on its own board, itself included when it matches.
+    fn aura_for(board: &Board, minion: &MinionEntity) -> Buff {
+        let mut total = Buff::default();
+        for passive in board.battlefield.iter().flat_map(|m| m.card.passives.iter()) {
+            if let PassiveEffect::Aura { filters, attack, defence } = passive {
+                if Self::filters_match(filters, minion) {
+                    total.attack += attack;
+                    total.defence += defence;
+                }
+            }
+        }
+        total
+    }
+
+    /// Rebuilds the derived stats of everything in play. Cards in hand and deck keep the
+    /// printed numbers they were minted with.
+    fn refresh_stats(&mut self) {
+        for side in [PlayerSide::White, PlayerSide::Black] {
+            let board = self.source_board_for(side);
+            let auras: Vec<Buff> = board.battlefield.iter().map(|m| Self::aura_for(board, m)).collect();
+
+            let board = self.source_board_for_mut(side);
+            for (minion, aura) in board.battlefield.iter_mut().zip(auras) {
+                minion.stats.attack = minion.card.base_attack + minion.buff.attack + aura.attack;
+                minion.stats.max_defence = minion.card.base_defence + minion.buff.defence + aura.defence;
+                minion.stats.defence = minion.stats.max_defence - minion.damage;
+            }
+
+            let hero = &mut board.hero;
+            hero.stats.attack = hero.buff.attack;
+            hero.stats.max_defence = hero.base_hp + hero.buff.defence;
+            hero.stats.defence = hero.stats.max_defence - hero.damage;
         }
     }
 
@@ -623,13 +680,15 @@ impl Game {
         match effect {
             Effect::Buff { target_spec, attack, defence } => {
                 for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
-                    self.stats_mut(owner, tr).buff(attack, defence);
+                    let buff = self.buff_mut(owner, tr);
+                    buff.attack += attack;
+                    buff.defence += defence;
                 }
             }
 
             Effect::Heal { target_spec, heal } => {
                 for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
-                    self.stats_mut(owner, tr).heal(heal);
+                    self.heal(owner, tr, heal);
                 }
             }
 
@@ -640,12 +699,11 @@ impl Game {
                     if self.absorb_ward(owner, tr) {
                         continue;
                     }
-                    self.stats_mut(owner, tr).defence -= damage;
+                    *self.damage_mut(owner, tr) += damage;
                     dealt += damage;
                 }
                 if lifesteal {
-                    let (source, _) = self.boards_for_mut(owner);
-                    source.hero.stats.heal(dealt);
+                    self.heal(owner, TargetRef::HeroSource, dealt);
                 }
             }
 
@@ -714,9 +772,10 @@ impl Game {
 
                         minion.exhausted = false;
                         minion.turns_on_board = 0;
-                        minion.stats.attack = minion.card.base_attack;
-                        minion.stats.defence = minion.card.base_defence;
-                        minion.stats.max_defence = minion.card.base_defence;
+                        minion.damage = 0;
+                        minion.buff = Buff::default();
+                        minion.doomed = false;
+                        minion.stats = Stats::new(minion.card.base_attack, minion.card.base_defence);
                         minion.ward_active = minion.card.attributes.contains(&MinionAttribute::Ward);
                         minion.stealth_active = minion.card.attributes.contains(&MinionAttribute::Stealth);
 
@@ -739,11 +798,7 @@ impl Game {
                 let (source, enemy) = self.boards_for_mut(owner);
 
                 for tr in refs {
-                    match tr {
-                        TargetRef::MinionSource(i) => source.battlefield[i].stats.defence = 0,
-                        TargetRef::MinionEnemy(i) => enemy.battlefield[i].stats.defence = 0,
-                        _ => {}
-                    }
+                    self.doom(owner, tr);
                 }
             }
 
@@ -1012,21 +1067,19 @@ impl Game {
 
         let landed = !self.absorb_ward(owner, target_ref);
         if landed {
-            self.stats_mut(owner, target_ref).defence -= attacker_attack;
+            *self.damage_mut(owner, target_ref) += attacker_attack;
         }
         // a harmless defender must not spend the attacker's ward
         if retaliation > 0 && !self.absorb_ward(owner, attacker_ref) {
-            self.stats_mut(owner, attacker_ref).defence -= retaliation;
+            *self.damage_mut(owner, attacker_ref) += retaliation;
         }
 
         if lifesteal && landed {
-            self.source_board_mut().hero.stats.heal(attacker_attack);
+            self.heal(owner, TargetRef::HeroSource, attacker_attack);
         }
 
         if poisonous && landed {
-            if matches!(target_ref, TargetRef::MinionEnemy(_) | TargetRef::MinionSource(_)) {
-                self.stats_mut(owner, target_ref).defence = 0;
-            }
+            self.doom(owner, target_ref);
         }
 
         self.state.attacked_this_turn = true;

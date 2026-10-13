@@ -145,9 +145,10 @@ pub enum MinionAttribute {
 
 /// Changes how another effect resolves while its minion is on the board. It never resolves
 /// itself, so it has no trigger; anything that reacts to an event is an Ability instead.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PassiveEffect {
     QuickdrawTriggersTwice,
+    Aura { filters: Vec<Condition>, attack: i32, defence: i32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -261,6 +262,7 @@ impl Card {
 }
 
 /// What an effect can hit. Heroes and minions carry the same block so the rules are written once.
+/// Derived from base, buffs, auras and damage taken; the engine rebuilds it, nothing else writes it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stats {
     pub attack: i32,
@@ -272,18 +274,13 @@ impl Stats {
     pub fn new(attack: i32, defence: i32) -> Self {
         Self { attack, defence, max_defence: defence }
     }
+}
 
-    /// stops at the ceiling, never above it
-    pub fn heal(&mut self, amount: i32) {
-        self.defence = (self.defence + amount).min(self.max_defence);
-    }
-
-    /// a buff lifts the ceiling along with the defence
-    pub fn buff(&mut self, attack: i32, defence: i32) {
-        self.attack += attack;
-        self.defence += defence;
-        self.max_defence += defence;
-    }
+/// A permanent change to an entity's numbers. Auras are not stored here; they are recomputed.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Buff {
+    pub attack: i32,
+    pub defence: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -294,6 +291,10 @@ pub struct MinionEntity {
     pub arrived_on_turn: Option<u32>,
     pub card: MinionCard,
     pub stats: Stats,
+    pub damage: i32,
+    pub buff: Buff,
+    // destroy and poison kill outright, and derived defence cannot be zeroed to say so
+    pub doomed: bool,
     pub ward_active: bool,
     pub stealth_active: bool,
     pub exhausted: bool,
@@ -331,6 +332,10 @@ pub struct HeroCard {
 pub struct Hero {
     pub entity_id: u32,
     pub card: HeroCard,
+    // the settings profile can override the card, so a hero carries its own starting hp
+    pub base_hp: i32,
+    pub damage: i32,
+    pub buff: Buff,
     pub stats: Stats,
 }
 

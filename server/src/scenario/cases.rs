@@ -26,6 +26,7 @@ pub fn all() -> Vec<Case> {
         case("effects", "damage with lifesteal heals once per entity hit", lifesteal_scales_with_hits),
         case("effects", "damage with lifesteal skips a warded target", lifesteal_skips_warded_target),
         case("effects", "heal on a minion stops at max defence", heal_caps_at_max_defence),
+        case("effects", "a buff lifts a damaged minion without healing it", buff_does_not_undo_damage),
         case("effects", "heal on a hero stops at max hp", heal_caps_at_max_hp),
         case("effects", "destroy ignores ward", destroy_ignores_ward),
         case("effects", "draw moves cards from the top of the deck", draw_takes_from_top),
@@ -64,6 +65,8 @@ pub fn all() -> Vec<Case> {
         // passives
         case("passives", "a board passive doubles a quickdraw ability", passive_doubles_quickdraw),
         case("passives", "a board passive leaves other abilities alone", passive_only_doubles_quickdraw),
+        case("passives", "an aura lifts stats while its source lives", aura_lifts_stats),
+        case("passives", "losing an aura kills what it held up", aura_loss_kills_what_it_held_up),
         // requirements
         case("requirements", "combo is off on the first card of the turn", combo_blocked),
         case("requirements", "combo is on after a card has been played", combo_allowed),
@@ -947,6 +950,58 @@ fn reverse_deck_recovers_a_traded_card() -> Scenario {
     scn.play(0, None);
     scn.play(0, None);
     scn.expect("the traded card came back on top", scn.in_hand(Side::White, goods_id));
+    scn
+}
+
+fn aura_lifts_stats() -> Scenario {
+    let mut s = Setup::new();
+    let keeper = minion(1, "Keeper", 0, 2, 2).passive(PassiveEffect::Aura {
+        filters: vec![Condition::IsRace { race: Race::Beast }],
+        attack: 1,
+        defence: 1,
+    });
+    let keeper_id = s.on_board(Side::White, keeper);
+    let hound_id = s.on_board(Side::White, minion(2, "Hound", 0, 2, 2).of(Race::Beast));
+    let kill = s.spell_in_hand(Side::White, incantation(3, "Kill", 0).does(on_play(vec![destroy(pick_friendly_minion())])));
+    let mut scn = s.start("aura");
+    scn.expect_eq("the aura is on from the start", scn.attack_of(hound_id), Some(3));
+    scn.expect_eq("defence is lifted too", scn.defence(hound_id), Some(3));
+    scn.play(kill, Some(keeper_id));
+    scn.expect_eq("the source left and took its attack with it", scn.attack_of(hound_id), Some(2));
+    scn.expect_eq("defence fell back to base", scn.defence(hound_id), Some(2));
+    scn
+}
+
+fn aura_loss_kills_what_it_held_up() -> Scenario {
+    let mut s = Setup::new();
+    let keeper = minion(1, "Keeper", 0, 2, 2).passive(PassiveEffect::Aura {
+        filters: vec![Condition::IsRace { race: Race::Beast }],
+        attack: 0,
+        defence: 2,
+    });
+    let keeper_id = s.on_board(Side::White, keeper);
+    let cub_id = s.on_board(Side::White, minion(2, "Cub", 0, 1, 1).of(Race::Beast));
+    s.damaged(Side::White, cub_id, 2);
+    let kill = s.spell_in_hand(Side::White, incantation(3, "Kill", 0).does(on_play(vec![destroy(pick_friendly_minion())])));
+    let mut scn = s.start("aura loss");
+    scn.expect_eq("the cub stands on the aura", scn.defence(cub_id), Some(1));
+    scn.play(kill, Some(keeper_id));
+    scn.expect("the cub died with the aura", !scn.alive(cub_id));
+    scn
+}
+
+fn buff_does_not_undo_damage() -> Scenario {
+    let mut s = Setup::new();
+    let bear_id = s.on_board(Side::White, minion(1, "Bear", 0, 3, 3));
+    s.damaged(Side::White, bear_id, 2);
+    let pump = s.spell_in_hand(Side::White, incantation(2, "Pump", 0).does(on_play(vec![buff(pick_friendly_minion(), 0, 2)])));
+    let mend = s.spell_in_hand(Side::White, incantation(3, "Mend", 0).does(on_play(vec![heal(pick_friendly_minion(), 10)])));
+    let mut scn = s.start("buff keeps the damage");
+    scn.expect_eq("damaged to start", scn.defence(bear_id), Some(1));
+    scn.play(pump, Some(bear_id));
+    scn.expect_eq("the buff lifted it but the damage stayed", scn.defence(bear_id), Some(3));
+    scn.play(mend - 1, Some(bear_id));
+    scn.expect_eq("healing stops at the raised ceiling", scn.defence(bear_id), Some(5));
     scn
 }
 

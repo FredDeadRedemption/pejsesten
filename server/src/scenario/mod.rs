@@ -12,7 +12,8 @@ pub mod runner;
 #[cfg(test)]
 mod tests;
 
-use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_incantation, instantiate_minion, instantiate_omen};
+use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_incantation, instantiate_omen};
+use shared::cards::instantiate_minion;
 use crate::settings;
 use serde::Serialize;
 use shared::types::*;
@@ -152,8 +153,19 @@ impl Setup {
         id
     }
 
+    /// Damage already on a minion that is on the board.
+    pub fn damaged(&mut self, side: Side, id: u32, damage: i32) -> &mut Self {
+        if let Some(m) = self.board_mut(side).battlefield.iter_mut().find(|m| m.entity_id == id) {
+            m.damage = damage;
+            m.stats.defence = m.stats.max_defence - damage;
+        }
+        self
+    }
+
     pub fn hp(&mut self, side: Side, hp: i32) -> &mut Self {
-        self.board_mut(side).hero.stats.defence = hp;
+        let hero = &mut self.board_mut(side).hero;
+        hero.damage = (hero.base_hp - hp).max(0);
+        hero.stats.defence = hero.base_hp - hero.damage;
         self
     }
 
@@ -212,11 +224,12 @@ impl Setup {
     }
 
     pub fn start(self, name: &str) -> Scenario {
-        let opening = self.state.clone();
         let mut game = Game::from_state(self.state, self.ids);
         for card in self.summonable {
             game.register_summonable(card);
         }
+        // after the game is built, so the opening frame already shows auras
+        let opening = game.state.clone();
         Scenario {
             name: name.to_string(),
             frames: vec![Frame { label: "setup".to_string(), kind: FrameKind::Setup, ok: true, state: opening }],
