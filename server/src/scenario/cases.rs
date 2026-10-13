@@ -39,6 +39,8 @@ pub fn all() -> Vec<Case> {
         case("effects", "returning an enemy minion puts it in the enemy hand", bounce_enemy_goes_to_enemy_hand),
         case("effects", "summon mints from the scenario pool", summon_from_pool),
         case("effects", "summon stops at a full board", summon_stops_at_full_board),
+        case("effects", "reversing the deck flips the draw order", reverse_deck_flips_draw_order),
+        case("effects", "a reverse brings a traded card back to the top", reverse_deck_recovers_a_traded_card),
         // attributes
         case("attributes", "charge attacks a minion the turn it lands", charge_can_trade_immediately),
         case("attributes", "charge still cannot reach the hero that turn", charge_cannot_hit_hero),
@@ -59,6 +61,9 @@ pub fn all() -> Vec<Case> {
         case("triggers", "fanfare fires when the minion is played", fanfare_fires),
         case("triggers", "deathwish fires when the minion dies", deathwish_fires),
         case("triggers", "a deathwish that kills fires the next deathwish", deathwish_chains),
+        // passives
+        case("passives", "a board passive doubles a quickdraw ability", passive_doubles_quickdraw),
+        case("passives", "a board passive leaves other abilities alone", passive_only_doubles_quickdraw),
         // requirements
         case("requirements", "combo is off on the first card of the turn", combo_blocked),
         case("requirements", "combo is on after a card has been played", combo_allowed),
@@ -67,6 +72,8 @@ pub fn all() -> Vec<Case> {
         case("requirements", "a bounced minion arrives armed again", quickdraw_rearms_on_bounce),
         case("requirements", "a traded card arrives armed", quickdraw_arms_a_traded_card),
         case("requirements", "is holding checks the rest of the hand", is_holding_gate),
+        case("requirements", "only a quickdraw that fires raises the counter", counter_counts_quickdraw_plays),
+        case("requirements", "a counter gate opens once the tally is reached", counter_gate),
         // rules
         case("rules", "a card over your mana cannot be played", mana_gate),
         case("rules", "playing a card spends its mana", mana_is_spent),
@@ -842,6 +849,104 @@ fn quickdraw_arms_a_traded_card() -> Scenario {
     scn.expect_trade("traded away", goods, true);
     scn.play(0, None);
     scn.expect_eq("the traded card arrived armed", scn.hp(Side::Black), 17);
+    scn
+}
+
+fn passive_doubles_quickdraw() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    s.on_board(Side::White, minion(1, "Ringmaster", 0, 1, 1).passive(PassiveEffect::QuickdrawTriggersTwice));
+    let bolt = incantation(2, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(3)]), Requirement::Quickdraw));
+    let fresh = s.spell_in_hand(Side::White, bolt);
+    s.mark_arrived_this_turn(Side::White, fresh);
+    let mut scn = s.start("quickdraw doubled");
+    scn.play(fresh, None);
+    scn.expect_eq("the quickdraw fired twice", scn.hp(Side::Black), 14);
+    scn.expect_eq("and counted once", scn.counter(Side::White, Counter::QuickdrawsPlayed), 1);
+    scn
+}
+
+fn passive_only_doubles_quickdraw() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    s.on_board(Side::White, minion(1, "Ringmaster", 0, 1, 1).passive(PassiveEffect::QuickdrawTriggersTwice));
+    let bolt = s.spell_in_hand(Side::White, incantation(2, "Bolt", 0).does(on_play(vec![bolt_enemy_hero(3)])));
+    let mut scn = s.start("passive leaves others alone");
+    scn.play(bolt, None);
+    scn.expect_eq("a plain ability fired once", scn.hp(Side::Black), 17);
+    scn
+}
+
+fn counter_counts_quickdraw_plays() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    let bolt = incantation(1, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(1)]), Requirement::Quickdraw));
+    let armed = s.spell_in_hand(Side::White, bolt.clone());
+    let stale = s.spell_in_hand(Side::White, bolt);
+    let plain = s.spell_in_hand(Side::White, incantation(2, "Plain", 0).does(on_play(vec![bolt_enemy_hero(1)])));
+    s.mark_arrived_this_turn(Side::White, armed);
+    s.mark_arrived_this_turn(Side::White, plain);
+    let mut scn = s.start("quickdraw counter");
+    scn.play(armed, None);
+    scn.expect_eq("the armed quickdraw counted", scn.counter(Side::White, Counter::QuickdrawsPlayed), 1);
+    scn.play(stale - 1, None);
+    scn.expect_eq("a quickdraw that did not fire counted nothing", scn.counter(Side::White, Counter::QuickdrawsPlayed), 1);
+    scn.play(plain - 2, None);
+    scn.expect_eq("a card without quickdraw counted nothing", scn.counter(Side::White, Counter::QuickdrawsPlayed), 1);
+    scn
+}
+
+fn counter_gate() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    s.counter(Side::White, Counter::QuickdrawsPlayed, 1);
+    let finale = minion(1, "Finale", 0, 1, 1).does(requiring(
+        on_play(vec![bolt_enemy_hero(7)]),
+        Requirement::CounterAtLeast { counter: Counter::QuickdrawsPlayed, amount: 2 },
+    ));
+    s.in_hand(Side::White, finale.clone());
+    let bolt = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(1)]), Requirement::Quickdraw)),
+    );
+    s.mark_arrived_this_turn(Side::White, bolt);
+    s.in_hand(Side::White, finale);
+    let mut scn = s.start("counter gate");
+    scn.play(0, None);
+    scn.expect_eq("below the tally nothing fired", scn.hp(Side::Black), 20);
+    scn.play(0, None);
+    scn.expect_eq("the quickdraw raised the tally", scn.counter(Side::White, Counter::QuickdrawsPlayed), 2);
+    scn.play(0, None);
+    scn.expect_eq("at the tally the gated ability fired", scn.hp(Side::Black), 12);
+    scn
+}
+
+fn reverse_deck_flips_draw_order() -> Scenario {
+    let mut s = Setup::new();
+    s.in_deck(Side::White, minion(1, "Top", 0, 1, 1));
+    let bottom = s.in_deck(Side::White, minion(2, "Bottom", 0, 1, 1));
+    let flip = s.spell_in_hand(Side::White, incantation(3, "Flip", 0).does(on_play(vec![reverse_deck()])));
+    let dig = s.spell_in_hand(Side::White, incantation(4, "Dig", 0).does(on_play(vec![draw(1)])));
+    let mut scn = s.start("reverse deck");
+    scn.play(flip, None);
+    scn.play(dig - 1, None);
+    scn.expect("the bottom card was drawn", scn.in_hand(Side::White, bottom));
+    scn
+}
+
+fn reverse_deck_recovers_a_traded_card() -> Scenario {
+    let mut s = Setup::new();
+    s.in_deck(Side::White, minion(1, "Filler", 0, 1, 1));
+    s.in_deck(Side::White, minion(2, "Filler", 0, 1, 1));
+    let goods = s.spell_in_hand(Side::White, incantation(3, "Goods", 0).with(IncantationAttribute::Tradeable));
+    let goods_id = s.hand_entity_id(Side::White, goods);
+    s.spell_in_hand(Side::White, incantation(4, "Flip", 0).does(on_play(vec![reverse_deck()])));
+    s.spell_in_hand(Side::White, incantation(5, "Dig", 0).does(on_play(vec![draw(1)])));
+    let mut scn = s.start("reverse after trade");
+    scn.expect_trade("traded to the bottom", goods, true);
+    scn.play(0, None);
+    scn.play(0, None);
+    scn.expect("the traded card came back on top", scn.in_hand(Side::White, goods_id));
     scn
 }
 

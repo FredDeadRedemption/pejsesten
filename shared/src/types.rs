@@ -68,6 +68,26 @@ pub enum Requirement {
     Combo,
     Quickdraw,
     IsHolding { filters: Vec<Condition> },
+    CounterAtLeast { counter: Counter, amount: u32 },
+}
+
+/// A tally kept for the whole game on the board that owns it.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum Counter {
+    QuickdrawsPlayed,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Counters {
+    pub quickdraws_played: u32,
+}
+
+impl Counters {
+    pub fn get(&self, counter: Counter) -> u32 {
+        match counter {
+            Counter::QuickdrawsPlayed => self.quickdraws_played,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -102,6 +122,7 @@ pub enum Effect {
     ReturnToHand { target_spec: TargetSpec, cost_reduction: Option<i32> },
     Destroy { target_spec: TargetSpec },
     Summon { minion_card_id: u32, summon_amount: usize },
+    ReverseDeck,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,6 +141,13 @@ pub enum MinionAttribute {
     Poisonous,
     Ward,
     Stealth,
+}
+
+/// Changes how another effect resolves while its minion is on the board. It never resolves
+/// itself, so it has no trigger; anything that reacts to an event is an Ability instead.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum PassiveEffect {
+    QuickdrawTriggersTwice,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -141,6 +169,7 @@ pub struct MinionCard {
     pub base_defence: i32,
     pub races: Vec<Race>,
     pub attributes: Vec<MinionAttribute>,
+    pub passives: Vec<PassiveEffect>,
     pub is_token: bool,
 }
 
@@ -316,6 +345,7 @@ pub struct Board {
     pub base_mana: i32,
     pub mana: i32,
     pub embers: i32,
+    pub counters: Counters,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

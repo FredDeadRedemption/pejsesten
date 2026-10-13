@@ -23,6 +23,7 @@ pub fn minion(id: u32, name: &str, cost: i32, attack: i32, defence: i32) -> Mini
         base_defence: defence,
         races: vec![],
         attributes: vec![],
+        passives: vec![],
         is_token: false,
     }
 }
@@ -61,6 +62,7 @@ pub trait MinionBuild: Sized {
     fn with(self, a: MinionAttribute) -> Self;
     fn of(self, r: Race) -> Self;
     fn does(self, a: Ability) -> Self;
+    fn passive(self, p: PassiveEffect) -> Self;
 }
 
 impl MinionBuild for MinionCard {
@@ -74,6 +76,10 @@ impl MinionBuild for MinionCard {
     }
     fn does(mut self, a: Ability) -> Self {
         self.abilities.push(a);
+        self
+    }
+    fn passive(mut self, p: PassiveEffect) -> Self {
+        self.passives.push(p);
         self
     }
 }
@@ -167,6 +173,10 @@ pub fn draw_then(draw_amount: usize, follow_up: FollowUpAbility) -> Effect {
 
 pub fn bounce(target_spec: TargetSpec, cost_reduction: Option<i32>) -> Effect {
     Effect::ReturnToHand { target_spec, cost_reduction }
+}
+
+pub fn reverse_deck() -> Effect {
+    Effect::ReverseDeck
 }
 
 pub fn summon(card: &MinionCard, summon_amount: usize) -> Effect {

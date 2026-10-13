@@ -442,7 +442,7 @@ fn target_spec_from_effect(effect: &Effect) -> Option<&TargetSpec> {
         Effect::Heal { target_spec, .. } => Some(target_spec),
         Effect::ReturnToHand { target_spec, .. } => Some(target_spec),
         Effect::Destroy { target_spec, .. } => Some(target_spec),
-        Effect::Draw { .. } | Effect::Summon { .. } => None,
+        Effect::Draw { .. } | Effect::Summon { .. } | Effect::ReverseDeck => None,
     }
 }
 
@@ -455,6 +455,7 @@ fn ability_fires(
         Requirement::Combo => state.cards_played_this_turn > 0,
         Requirement::Quickdraw => card.arrived_this_turn(state.turn_count),
         Requirement::IsHolding { .. } => true,
+        Requirement::CounterAtLeast { counter, amount } => state.self_board.counters.get(*counter) >= *amount,
     })
 }
 

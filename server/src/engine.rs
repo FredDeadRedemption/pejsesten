@@ -131,6 +131,7 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
         Effect::Destroy { target_spec } => Some(target_spec),
         Effect::Draw { .. } => None,
         Effect::Summon { .. } => None,
+        Effect::ReverseDeck => None,
     }
 }
 
@@ -165,6 +166,7 @@ impl Game {
                     base_mana: settings::STARTING_MANA,
                     mana: settings::STARTING_MANA,
                     embers: settings::STARTING_EMBERS,
+                    counters: Counters::default(),
                 },
                 black: Board {
                     deck: black.deck,
@@ -176,6 +178,7 @@ impl Game {
                     base_mana: settings::STARTING_MANA - 1,
                     mana: settings::STARTING_MANA - 1,
                     embers: settings::STARTING_EMBERS,
+                    counters: Counters::default(),
                 },
                 white_player_id: white.id,
                 black_player_id: black.id,
@@ -392,6 +395,7 @@ impl Game {
         requirements.iter().all(|r| match r {
             Requirement::Combo => self.state.cards_played_this_turn > 0,
             Requirement::Quickdraw => card.arrived_this_turn(self.state.turn_count),
+            Requirement::CounterAtLeast { counter, amount } => self.source_board().counters.get(*counter) >= *amount,
             Requirement::IsHolding { filters } => {
                 let source_board = self.source_board();
                 source_board.hand.iter().any(|c| match c {
@@ -400,6 +404,11 @@ impl Game {
                 })
             }
         })
+    }
+
+    /// A passive is live while any friendly minion carrying it is on the board.
+    fn has_passive(board: &Board, passive: PassiveEffect) -> bool {
+        board.battlefield.iter().any(|m| m.card.passives.contains(&passive))
     }
 
     fn check_card_must_match(requirements: &[Condition], card: &CardEntity) -> bool {
@@ -738,6 +747,11 @@ impl Game {
                 }
             }
 
+            Effect::ReverseDeck => {
+                let (source, _) = self.boards_for_mut(owner);
+                source.deck.reverse();
+            }
+
             Effect::Summon { minion_card_id, summon_amount } => {
                 let mut summoned = Vec::with_capacity(summon_amount);
                 for _ in 0..summon_amount {
@@ -879,6 +893,8 @@ impl Game {
         }
 
         // Enqueue onPlay effects
+        let quickdraw_doubled = Self::has_passive(self.source_board(), PassiveEffect::QuickdrawTriggersTwice);
+        let mut quickdraw_fired = false;
         for ability in &abilities {
             if ability.trigger != Trigger::OnPlay {
                 continue;
@@ -886,19 +902,29 @@ impl Game {
             if !self.check_requirements(&ability.requirements, &consumed) {
                 continue;
             }
-            for effect in &ability.effects {
-                let tid = effect_target_spec(effect)
-                    .filter(|ts| ts.target_mode == TargetMode::Targeted)
-                    .and_then(|_| target_id.clone());
+            let is_quickdraw = ability.requirements.contains(&Requirement::Quickdraw);
+            quickdraw_fired |= is_quickdraw;
+            let copies = if is_quickdraw && quickdraw_doubled { 2 } else { 1 };
+            for _ in 0..copies {
+                for effect in &ability.effects {
+                    let tid = effect_target_spec(effect)
+                        .filter(|ts| ts.target_mode == TargetMode::Targeted)
+                        .and_then(|_| target_id.clone());
 
-                let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
-                self.effect_queue.push(QueuedEffect {
-                    effect: effect.clone(),
-                    owner: owner,
-                    target_id: tid,
-                    self_id: Some(entity_id),
-                });
+                    let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
+                    self.effect_queue.push(QueuedEffect {
+                        effect: effect.clone(),
+                        owner: owner,
+                        target_id: tid,
+                        self_id: Some(entity_id),
+                    });
+                }
             }
+        }
+
+        // a doubled quickdraw is still one quickdraw played
+        if quickdraw_fired {
+            self.source_board_mut().counters.quickdraws_played += 1;
         }
 
         self.process_effect_queue();

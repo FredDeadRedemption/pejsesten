@@ -11,25 +11,21 @@ async fn broadcast(io: &SocketIo, game: &Game) {
 }
 
 pub const BOT_ID: &str = "bot";
-pub const HERO_ID: u32 = 3;
+pub const HERO_ID: u32 = 103; // The Hermit
 
+/// The Kennel list from decks.json, kept in sync by hand.
 pub fn default_deck() -> Vec<u32> {
     vec![
-        1, 1,   // Machine Elf (1 cost, charge)
-        6, 6,   // Black Cat (1 cost, tradeable)
-        7, 7,   // Barry the Hexblade (2 cost, buff all)
-        2, 2,   // Overzealous Priest (3 cost, draw)
-        3, 3,   // Silverguard Knight (3 cost, 5/3, deathrattle draw)
-        4, 4,   // Radiant Sentinel (4 cost, deal 2 to all minions)
-        12, 12, // Good Friday (3 cost, deal 4 targeted)
-        15, 15, // Smite (2 cost, deal 2/4 targeted)
-        11, 11, // Divine Power (4 cost, +4+4 targeted)
-        13, 13, // Pot of Greed (3 cost, draw 1/2 with combo)
-        36, 36, // Augur (1 cost 1/2, grows on every omen that fires)
-        32,     // Grove Vigil (2 cost omen, +1+1 to own minions)
-        33,     // Ancestors Answer (2 cost omen, summon two wisps)
-        34,     // Chain Reaction (2 cost omen, 2 damage to enemy minions)
-        35,     // Salvage Protocol (1 cost omen, draw two)
+        12, 12, 12, // Black Cat (1 cost 2/1 beast, tradeable)
+        20, 20,     // Zoo (1 cost, +1+1 to your beasts)
+        13, 13, 13, // Dire Hound (2 cost 2/2 beast, blitz)
+        14, 14,     // Carrion Hound (2 cost 1/3 beast, deathwish draw)
+        15, 15,     // Assassin (2 cost 1/1, stealth poisonous)
+        22, 22,     // Pack Instinct (2 cost omen, summon three rats)
+        16, 16, 16, // Hound Master (3 cost 2/3, +2+2 to a friendly beast)
+        17, 17, 17, // Plague Rat (3 cost 1/2 beast, blitz poisonous)
+        18, 18, 18, // Rat Cage (4 cost 2/4 guard, deathwish two rats)
+        19, 19,     // Dire Matriarch (6 cost 4/5 beast, deathwish two hounds)
     ]
 }
 
@@ -37,12 +33,22 @@ fn threat_score(m: &MinionEntity) -> i32 {
     m.stats.attack * 2 + m.stats.defence
 }
 
+/// Retaliation is an attack like any other, so it reads with the same rules reversed.
 fn is_trade_lethal(attacker: &MinionEntity, defender: &MinionEntity) -> bool {
-    defender.stats.attack >= attacker.stats.defence
+    would_kill(defender, attacker)
 }
 
 fn would_kill(attacker: &MinionEntity, defender: &MinionEntity) -> bool {
-    attacker.stats.attack >= defender.stats.defence
+    if defender.ward_active {
+        return false; // the ward eats the hit, poison with it
+    }
+    let poisonous = attacker.card.attributes.contains(&MinionAttribute::Poisonous);
+    attacker.stats.attack >= defender.stats.defence || (poisonous && attacker.stats.attack > 0)
+}
+
+/// The engine's rush rule: a minion that arrived this turn may only attack minions.
+fn can_hit_hero(m: &MinionEntity) -> bool {
+    m.turns_on_board > 0
 }
 
 fn trade_score(attacker: &MinionEntity, defender: &MinionEntity) -> i32 {
@@ -63,7 +69,7 @@ fn can_go_lethal(minions: &[MinionEntity], enemy_board: &Board) -> bool {
     if enemy_board.battlefield.iter().any(|m| m.card.attributes.contains(&MinionAttribute::Guard)) {
         return false;
     }
-    minions.iter().filter(|m| !m.exhausted).map(|m| m.stats.attack).sum::<i32>() >= enemy_board.hero.stats.defence
+    minions.iter().filter(|m| !m.exhausted && can_hit_hero(m)).map(|m| m.stats.attack).sum::<i32>() >= enemy_board.hero.stats.defence
 }
 
 fn filter_minions<'a>(minions: &'a [MinionEntity], filters: &[Condition]) -> Vec<&'a MinionEntity> {
@@ -208,6 +214,8 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
             Effect::Heal { heal, .. } => {
                 score += heal;
             }
+            // the bot reads no deck order, so flipping it is worth nothing to it
+            Effect::ReverseDeck => {}
         }
     }
 
@@ -241,12 +249,16 @@ fn compute_attack_target(attacker_id: u32, bot_board: &Board, enemy_board: &Boar
     let candidates: &[&MinionEntity] = if !guards.is_empty() { &guards } else { &enemy_board.battlefield.iter().collect::<Vec<_>>() };
 
     if !candidates.is_empty() {
-        match candidates.iter().max_by_key(|e| trade_score(attacker, e)) {
-            Some(t) if trade_score(attacker, t) > 0 || !guards.is_empty() => Some(t.entity_id),
-            _ => Some(enemy_board.hero.entity_id),
+        if let Some(t) = candidates.iter().max_by_key(|e| trade_score(attacker, e)) {
+            if trade_score(attacker, t) > 0 || !guards.is_empty() {
+                return Some(t.entity_id);
+            }
         }
-    } else {
-        Some(enemy_board.hero.entity_id)
+    }
+    // nothing worth trading into, so go face, unless it landed too recently to reach the hero
+    match can_hit_hero(attacker) {
+        true => Some(enemy_board.hero.entity_id),
+        false => None,
     }
 }
 
@@ -264,7 +276,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
     let lethal_result: Option<(Vec<u32>, u32)> = {
         let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
         if can_go_lethal(&bot_board.battlefield, enemy_board) {
-            let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect();
+            let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted && can_hit_hero(m)).map(|m| m.entity_id).collect();
             Some((ids, enemy_board.hero.entity_id))
         } else {
             None
@@ -314,7 +326,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
         let lethal_result: Option<(Vec<u32>, u32)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
             if can_go_lethal(&bot_board.battlefield, enemy_board) {
-                let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted).map(|m| m.entity_id).collect();
+                let ids = bot_board.battlefield.iter().filter(|m| !m.exhausted && can_hit_hero(m)).map(|m| m.entity_id).collect();
                 Some((ids, enemy_board.hero.entity_id))
             } else {
                 None
@@ -350,4 +362,56 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
     }
 
     game.end_turn();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scenario::build::{MinionBuild, minion};
+    use crate::scenario::{Setup, Side, starting_hp};
+
+    /// Plays a blitz minion so it sits on the board un-exhausted with no turns behind it.
+    fn blitzer(attack: i32, prey: Option<MinionCard>) -> (u32, crate::scenario::Scenario) {
+        let mut s = Setup::new();
+        if let Some(card) = prey {
+            s.on_board(Side::Black, card);
+        }
+        let idx = s.in_hand(Side::White, minion(1, "Hound", 2, attack, 2).with(MinionAttribute::Charge));
+        let mut scn = s.start("bot blitz");
+        scn.play(idx, None);
+        let id = scn.board(Side::White).battlefield[0].entity_id;
+        (id, scn)
+    }
+
+    #[test]
+    fn a_blitz_minion_is_never_aimed_at_the_hero() {
+        let (hound, scn) = blitzer(2, None);
+        assert_eq!(compute_attack_target(hound, scn.board(Side::White), scn.board(Side::Black)), None);
+    }
+
+    #[test]
+    fn a_blitz_minion_takes_a_trade_it_wins() {
+        let (hound, scn) = blitzer(2, Some(minion(2, "Prey", 1, 1, 2)));
+        let prey = scn.board(Side::Black).battlefield[0].entity_id;
+        assert_eq!(compute_attack_target(hound, scn.board(Side::White), scn.board(Side::Black)), Some(prey));
+    }
+
+    #[test]
+    fn lethal_ignores_attack_that_cannot_reach_the_hero() {
+        let (_, scn) = blitzer(starting_hp(), None);
+        assert!(!can_go_lethal(&scn.board(Side::White).battlefield, scn.board(Side::Black)));
+    }
+
+    #[test]
+    fn poison_makes_any_body_a_kill_but_a_ward_stops_it() {
+        let mut s = Setup::new();
+        let rat = s.on_board(Side::White, minion(1, "Rat", 3, 1, 2).with(MinionAttribute::Poisonous));
+        let ogre = s.on_board(Side::Black, minion(2, "Ogre", 6, 6, 7));
+        let squire = s.on_board(Side::Black, minion(3, "Squire", 1, 1, 1).with(MinionAttribute::Ward));
+        let scn = s.start("bot poison");
+        let (white, black) = (scn.board(Side::White), scn.board(Side::Black));
+        let find = |id: u32, b: &Board| b.battlefield.iter().find(|m| m.entity_id == id).unwrap().clone();
+        assert!(would_kill(&find(rat, white), &find(ogre, black)));
+        assert!(!would_kill(&find(rat, white), &find(squire, black)));
+    }
 }

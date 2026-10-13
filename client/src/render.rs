@@ -25,6 +25,8 @@ const EMBER_MAX: i32 = 5;
 const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
+const COL_BUFFED: Color = Color::new(0.40, 1.00, 0.45, 1.0);
+const COL_DAMAGED: Color = Color::new(1.00, 0.35, 0.35, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
 const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
 const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
@@ -403,8 +405,8 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
 
     if let CardEntity::Minion(m) = card {
         let badge = scale * BADGE_HAND;
-        draw_stat_badge(m.stats.attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
-        draw_stat_badge(m.stats.defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
+        draw_stat_badge(m.stats.attack, m.card.base_attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
+        draw_stat_badge(m.stats.defence, m.card.base_defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
     } else if scale > 0.6 {
         let sl = if matches!(card, CardEntity::Omen(_)) { "omen" } else { "incantation" };
         let font = 10.0 * scale;
@@ -442,8 +444,8 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
     };
     draw_rectangle_lines(x, y, w, h, 2.0, border);
 
-    draw_stat_badge(minion.stats.attack, x + 2.0 + 2.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
-    draw_stat_badge(minion.stats.defence, x + w - 2.0 - 18.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
+    draw_stat_badge(minion.stats.attack, minion.card.base_attack, x + 2.0 + 2.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
+    draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 2.0 - 18.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
 }
 
 fn draw_card_layers(
@@ -771,8 +773,8 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let desc_font = (frame.text.h * 0.20).round();
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 
-    draw_stat_badge(minion.stats.attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0);
-    draw_stat_badge(minion.stats.defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
+    draw_stat_badge(minion.stats.attack, minion.card.base_attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0);
+    draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
 }
 
 fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, anim_offsets: &[(u32, Vec2)]) {
@@ -892,9 +894,9 @@ fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &Texture
     // side colour on the border, so own and enemy hero still read apart at a glance
     draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, edge);
 
-    draw_stat_badge(hero.stats.defence, r.x + r.w - 2.0 - 18.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
+    draw_stat_badge(hero.stats.defence, hero.stats.max_defence, r.x + r.w - 2.0 - 18.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
     if hero.stats.attack > 0 {
-        draw_stat_badge(hero.stats.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
+        draw_stat_badge(hero.stats.attack, hero.stats.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
     }
 }
 
@@ -953,7 +955,18 @@ fn draw_mana_gem(x: f32, y: f32, size: f32) {
     fx::stroke_round_rect(x, y, size, size, r, 1.0, BLACK);
 }
 
-fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color, scale: f32) {
+/// `base` is the stat as printed on the card: over it reads green, under it reads red.
+fn stat_color(val: i32, base: i32) -> Color {
+    if val > base {
+        COL_BUFFED
+    } else if val < base {
+        COL_DAMAGED
+    } else {
+        WHITE
+    }
+}
+
+fn draw_stat_badge(val: i32, base: i32, x: f32, y: f32, color: Color, scale: f32) {
     let bw = 20.0 * scale;
     let bh = 18.0 * scale;
     fx::fill_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, color);
@@ -962,7 +975,10 @@ fn draw_stat_badge(val: i32, x: f32, y: f32, color: Color, scale: f32) {
         let font = (13.0 * scale).round();
         let s = val.to_string();
         let d = ui::measure(&s, font);
-        ui::text(&s, x + 8.0 * scale - d.width / 2.0, y, font, WHITE);
+        let tx = x + 8.0 * scale - d.width / 2.0;
+        // shadow, so a tinted number still reads on both badge colours
+        ui::text(&s, tx + scale, y + scale, font, BLACK);
+        ui::text(&s, tx, y, font, stat_color(val, base));
     }
 }
 
@@ -1122,4 +1138,16 @@ fn fit_text(s: &str, max_w: f32, size: f32) -> String {
         result.push(ch);
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_stat_badge_tints_against_the_printed_stat() {
+        assert_eq!(stat_color(3, 2), COL_BUFFED);
+        assert_eq!(stat_color(1, 2), COL_DAMAGED);
+        assert_eq!(stat_color(2, 2), WHITE);
+    }
 }

@@ -86,6 +86,7 @@ impl Setup {
             base_mana: settings::MAX_MANA,
             mana: settings::MAX_MANA,
             embers: settings::MAX_EMBERS,
+            counters: Counters::default(),
         }
     }
 
@@ -181,6 +182,13 @@ impl Setup {
             Side::Black => &self.state.black,
         };
         board.hand[index].entity_id()
+    }
+
+    pub fn counter(&mut self, side: Side, counter: Counter, n: u32) -> &mut Self {
+        match counter {
+            Counter::QuickdrawsPlayed => self.board_mut(side).counters.quickdraws_played = n,
+        }
+        self
     }
 
     pub fn cards_played_this_turn(&mut self, n: u32) -> &mut Self {
@@ -366,6 +374,10 @@ impl Scenario {
 
     pub fn mana(&self, side: Side) -> i32 {
         self.board(side).mana
+    }
+
+    pub fn counter(&self, side: Side, counter: Counter) -> u32 {
+        self.board(side).counters.get(counter)
     }
 
     pub fn embers(&self, side: Side) -> i32 {
