@@ -231,10 +231,14 @@ Keep it to three copies of the **same card**, not three of a race. Tighter, more
 - ⬜ Quest (hard to implement, but is cool as fuck)
 - ⬜ Questline
 - ✅ Quickdraw (fires on any card that arrived in hand this turn — drawn, bounced, or fetched by an effect)
+- ✅ Quickdraw watcher (a board minion that reacts every time you land one)
+- ✅ Replay (recasts the quickdraws you already played; targets are rolled, which is the one place random targeting is allowed)
 - ✅ Return to hand
 - ✅ Add copy to hand
 - ✅ Cost (n) less
+- ✅ Cost scales with a tally (cheaper in hand as a counter climbs)
 - ✅ Is Holding (effect fires only while a matching card is in hand)
+- ✅ Controls another (fires only while a matching minion is on your board)
 - ⬜ Revive
 - ⬜ Start of Game
 - ⬜ Twinspell
@@ -288,12 +292,13 @@ Keep it to three copies of the **same card**, not three of a race. Tighter, more
 
 - ✅ Buff
 - ⬜ Can't attack
-- ⬜ Cast spell
+- ✅ Cast spell (replay only)
 - ⬜ Change cost type
 - ⬜ Copy
 - ✅ Damage
 - ✅ Destroy
 - ✅ Draw
+- ✅ Generate (a random omen into hand)
 - ✅ Heal
 - ✅ Summon
 - ⬜ Upgradable
@@ -306,7 +311,6 @@ Keep it to three copies of the **same card**, not three of a race. Tighter, more
 - ⬜ Enrage
 - ⬜ Equip
 - ⬜ Force attack (hmm don't particularly like this)
-- ⬜ Generate
 - ⬜ Joust (this is so fun, a bit rng)
 - ⬜ Permanent attribute (what?)
 - ⬜ Put into battlefield

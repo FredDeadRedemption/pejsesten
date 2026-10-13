@@ -14,15 +14,15 @@ more cards than it costs you.
 | 3 | Black Cat | 1 | 2/1 Beast | Tradeable |
 | 2 | Zoo | 1 | — | Give all your beasts +1 +1 (Tradeable) |
 | 3 | Dire Hound | 2 | 2/2 Beast | Blitz |
-| 2 | Carrion Hound | 2 | 1/3 Beast | Deathwish: draw a card |
+| 3 | Carrion Hound | 2 | 1/3 Beast | Deathwish: draw a card |
 | 2 | Assassin | 2 | 1/1 Human | Stealth, Poisonous |
 | 2 | Pack Instinct | 2 | omen | Summon three 1/1 rats |
 | 3 | Hound Master | 3 | 2/3 Human | Fanfare: give a friendly beast +2 +2 |
 | 3 | Plague Rat | 3 | 1/2 Beast | Blitz, Poisonous |
-| 3 | Rat Cage | 4 | 2/4 Guard | Deathwish: summon two 1/1 rats |
+| 2 | Menagerie Keeper | 4 | 2/4 Human | Your beasts have +1 +1 |
 | 2 | Dire Matriarch | 6 | 4/5 Beast | Deathwish: summon two 2/2 hounds |
 
-Curve: 5 at one, 9 at two, 6 at three, 3 at four, 2 at six.
+Curve: 5 at one, 10 at two, 6 at three, 2 at four, 2 at six.
 
 ## How it plays
 
@@ -35,9 +35,10 @@ for 3 mana and a 1/2 body. It is walled off by Guard, which is exactly the count
 Dawnguard has. Assassin is the answer to that: Stealth ignores Guard entirely, so the two
 copies exist to kill a Gargoyle Vigil or a Silverguard Knight the Rat cannot reach.
 
-Rat Cage and Dire Matriarch are the grind. Both leave bodies behind, and both bodies are
-Beasts, so a Zoo or a Hound Master after the trade is a real swing. Note the board cap of
-5 - hold Pack Instinct's rats and Rat Cage's deaths apart or the extra tokens are lost.
+Menagerie Keeper and Dire Matriarch are the grind. The Keeper's aura lifts every Beast
+while it lives, which turns Pack Instinct's rats into real bodies and makes killing the
+Keeper the opponent's problem. Note the board cap of 5 - hold Pack Instinct's rats and the
+Matriarch's hounds apart or the extra tokens are lost.
 
 Pack Instinct on *friendly minion dies* nearly always fires the turn they clear your
 board. On *enemy attacks hero* it punishes a race. On *enemy plays an incantation* it
@@ -57,8 +58,10 @@ Matriarch always, and Assassin unless you know you are against Guards.
   minion on curve from turn 2 and the format would not survive it.
 - Assassin is a straight port of a known-fair line: 2 mana, 1/1, Stealth and Poisonous.
   Two copies is tech, three would be a removal deck wearing a beast costume.
-- 9 cards at two mana is heavy on purpose. The deck wants a body down every turn from 1 to
-  4 and has no card draw outside Carrion Hound.
+- 10 cards at two mana is heavy on purpose. The deck wants a body down every turn from 1
+  to 4 and has no card draw outside Carrion Hound.
+- The deck lost its 4-mana Guard when Rat Cage was reprinted as a 1-mana 0/3 for Sideshow.
+  Menagerie Keeper took the slot, so the deck now protects its aura instead of its hero.
 
 ## Cards that need engine work
 
@@ -70,9 +73,6 @@ Designed for this deck, not printable today. Each one names the single missing p
 - **Houndmaster's Whistle** — 3 incantation. *Give a friendly beast Blitz and +2 +2.*
   Needs an effect that **grants a keyword** - the same entity-level attribute list
   Dawnguard's Lightbearer wants.
-- **Pack Alpha** — 4, 3/3 Beast. *Your other beasts have +1 attack.*
-  Needs **continuous auras**. `Effect::Buff` is a one-shot stat change, so there is nothing
-  that applies while a minion lives and falls off when it dies.
 - **Bone Chorus** — 4 incantation. *Summon a beast from your graveyard.*
   Needs **graveyard summoning**. `Effect::Summon` only mints a fresh card from the pool;
   `Board.graveyard` is written and never read.
