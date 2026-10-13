@@ -17,11 +17,11 @@ pub const HERO_ID: u32 = 105; // Clown Snake
 pub fn default_deck() -> Vec<u32> {
     vec![
         25, 25, 25, // Quick Shot (1 cost, tradeable, 1 to an enemy, quickdraw deals 2 more)
-        42, 42,     // Gunsmith (1 cost 1/3, grows on every quickdraw)
-        41,         // Dust Jackal (1 cost 2/1 beast, blitz)
+        42, 42,     // Gunsmith (1 cost 1/3, +1+1 on every quickdraw)
+        41,         // Dust Jackal (1 cost 1/1 beast, blitz)
         43,         // Toad (1 cost 1/1 beast, deathwish random omen)
         44,         // Rat Cage (1 cost 0/3, deathwish three rats)
-        27, 27, 27, // Knife Thrower (2 cost 2/2, tradeable, quickdraw 3 to an enemy minion)
+        27, 27, 27, // Knife Thrower (2 cost 2/2, tradeable, quickdraw 2 to an enemy minion)
         46, 46,     // Gunslinger (2 cost 2/4, pings all enemies on every quickdraw)
         32, 32,     // Hat Trick (2 cost, draw, quickdraw copies it)
         45,         // Card Shark (2 cost 2/2 guard, fanfare reverse your deck)
@@ -29,7 +29,7 @@ pub fn default_deck() -> Vec<u32> {
         48,         // Reload (3 cost, draw cheaper per quickdraw landed)
         49,         // Fox Courier (3 cost 2/3 beast, draws with another beast out)
         50,         // Bristleback (3 cost 3/3 beast, guard)
-        51, 51,     // Fat Rat (4 cost 3/3 beast, tradeable, quickdraw summons a 2/2 rat)
+        51, 51,     // Fat Rat (4 cost 3/3 beast, tradeable, quickdraw summons a 2/2 blitz rat)
         52,         // Bear (5 cost 5/6 beast, tradeable)
         53,         // Gazelle (6 cost 4/4 beast, blitz, cheaper per quickdraw)
         54,         // The Dentist (7 cost 7/7, fanfare replays every quickdraw)

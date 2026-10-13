@@ -12,11 +12,11 @@ quietly climbing behind it.
 | # | Card | Cost | Body | Text |
 |---|------|------|------|------|
 | 3 | Quick Shot | 1 | — | Tradeable. Deal 1 damage to an enemy. Quickdraw: deal 2 more |
-| 2 | Gunsmith | 1 | 1/3 Human | Whenever you land a Quickdraw, gain +2 +1 |
-| 1 | Dust Jackal | 1 | 2/1 Beast | Blitz |
+| 2 | Gunsmith | 1 | 1/3 Human | Whenever you land a Quickdraw, gain +1 +1 |
+| 1 | Dust Jackal | 1 | 1/1 Beast | Blitz |
 | 1 | Toad | 1 | 1/1 Beast | Deathwish: add a random omen to your hand |
 | 1 | Rat Cage | 1 | 0/3 | Deathwish: summon three 1/1 rats |
-| 3 | Knife Thrower | 2 | 2/2 Human | Tradeable. Quickdraw: deal 3 damage to an enemy minion |
+| 3 | Knife Thrower | 2 | 2/2 Human | Tradeable. Quickdraw: deal 2 damage to an enemy minion |
 | 2 | Gunslinger | 2 | 2/4 Human | Whenever you land a Quickdraw, deal 1 damage to all enemies |
 | 2 | Hat Trick | 2 | — | Draw a card. Quickdraw: add a copy of it to your hand |
 | 1 | Card Shark | 2 | 2/2 Beast | Guard. Fanfare: reverse your deck |
@@ -24,7 +24,7 @@ quietly climbing behind it.
 | 1 | Reload | 3 | — | Draw a card. It costs 1 less for each Quickdraw you landed |
 | 1 | Fox Courier | 3 | 2/3 Beast | Fanfare: if you control another beast, draw a card |
 | 1 | Bristleback | 3 | 3/3 Beast | Guard |
-| 2 | Fat Rat | 4 | 3/3 Beast | Tradeable. Quickdraw: summon a 2/2 rat |
+| 2 | Fat Rat | 4 | 3/3 Beast | Tradeable. Quickdraw: summon a 2/2 rat with blitz |
 | 1 | Bear | 5 | 5/6 Beast | Tradeable |
 | 1 | Gazelle | 6 | 4/4 Beast | Blitz. Costs 1 less for each Quickdraw you landed |
 | 1 | The Dentist | 7 | 7/7 Human | Fanfare: replay every Quickdraw you landed this game |

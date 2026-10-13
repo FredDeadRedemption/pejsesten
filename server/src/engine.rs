@@ -947,10 +947,11 @@ impl Game {
                 }
 
                 let (source_board, _) = self.boards_for_mut(owner);
-                for minion in summoned {
+                for mut minion in summoned {
                     if source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                         break;
                     }
+                    minion.exhausted = !minion.card.attributes.contains(&MinionAttribute::Charge);
                     source_board.battlefield.push(minion);
                 }
             }

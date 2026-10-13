@@ -46,6 +46,8 @@ pub fn all() -> Vec<Case> {
         case("effects", "returning an enemy minion puts it in the enemy hand", bounce_enemy_goes_to_enemy_hand),
         case("effects", "summon mints from the scenario pool", summon_from_pool),
         case("effects", "summon stops at a full board", summon_stops_at_full_board),
+        case("effects", "a summoned minion arrives exhausted", summon_arrives_exhausted),
+        case("effects", "a summoned blitz minion can swing on arrival", summon_with_blitz_can_swing),
         case("effects", "reversing the deck flips the draw order", reverse_deck_flips_draw_order),
         case("effects", "a reverse brings a traded card back to the top", reverse_deck_recovers_a_traded_card),
         // attributes
@@ -1340,6 +1342,34 @@ fn replay_drops_the_body_on_a_full_board() -> Scenario {
     scn.play(0, None);
     scn.expect_eq("no room for the replayed body", scn.board_len(Side::White), settings::MAX_BOARD_SIZE);
     scn.expect_eq("its shot fired anyway", scn.hp(Side::Black), 16);
+    scn
+}
+
+fn summon_arrives_exhausted() -> Scenario {
+    let mut s = Setup::new();
+    let token = minion(1, "Whelp", 0, 2, 2);
+    s.summonable(token.clone());
+    let prey = s.on_board(Side::Black, minion(2, "Prey", 0, 1, 4));
+    let call = s.spell_in_hand(Side::White, incantation(3, "Call", 0).does(on_play(vec![summon(&token, 1)])));
+    let mut scn = s.start("summon exhaustion");
+    scn.play(call, None);
+    let whelp = scn.board(Side::White).battlefield[0].entity_id;
+    scn.expect("the summoned body is exhausted", scn.exhausted(whelp));
+    scn.expect_attack("it cannot swing the turn it arrives", whelp, prey, false);
+    scn
+}
+
+fn summon_with_blitz_can_swing() -> Scenario {
+    let mut s = Setup::new();
+    let token = minion(1, "Whelp", 0, 2, 2).with(MinionAttribute::Charge);
+    s.summonable(token.clone());
+    let prey = s.on_board(Side::Black, minion(2, "Prey", 0, 1, 4));
+    let call = s.spell_in_hand(Side::White, incantation(3, "Call", 0).does(on_play(vec![summon(&token, 1)])));
+    let mut scn = s.start("summon with blitz");
+    scn.play(call, None);
+    let whelp = scn.board(Side::White).battlefield[0].entity_id;
+    scn.expect_attack("blitz swings on arrival", whelp, prey, true);
+    scn.expect_eq("the prey took the hit", scn.defence(prey), Some(2));
     scn
 }
 
