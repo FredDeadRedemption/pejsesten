@@ -532,6 +532,8 @@ impl Game {
 
     // --- Deaths (flattened loop instead of recursion) ---
 
+    /// The one point where derived stats are refreshed, so every public action that damages,
+    /// buffs or moves a minion has to end here.
     fn check_for_deaths(&mut self) {
         let mut died: [bool; 2] = [false, false];
         loop {
@@ -591,6 +593,8 @@ impl Game {
 
     /// Damage taken. Every effect that moves numbers goes through here or [`Self::buff_mut`],
     /// so hero and minion cannot drift apart.
+    /// Writing either leaves `stats` stale until [`Self::refresh_stats`] runs, so an action that
+    /// touches them must end in [`Self::check_for_deaths`] before anything reads the board.
     fn damage_mut(&mut self, owner: PlayerSide, tr: TargetRef) -> &mut i32 {
         let (source, enemy) = self.boards_for_mut(owner);
         match tr {
@@ -642,6 +646,8 @@ impl Game {
 
     /// Rebuilds the derived stats of everything in play. Cards in hand and deck keep the
     /// printed numbers they were minted with.
+    /// Called from [`Self::check_for_deaths`], not from the writers, so stats are only correct
+    /// between actions; nothing may read `stats` mid-action and expect a fresh number.
     fn refresh_stats(&mut self) {
         for side in [PlayerSide::White, PlayerSide::Black] {
             let board = self.source_board_for(side);
