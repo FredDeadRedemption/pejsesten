@@ -347,6 +347,7 @@ fn draw_card_frame(
         let bg = match color {
             CardColor::White => Color::new(0.75, 0.70, 0.55, 1.0),
             CardColor::Black => Color::new(0.18, 0.14, 0.22, 1.0),
+            CardColor::Green => Color::new(0.16, 0.30, 0.18, 1.0),
         };
         draw_rectangle(x, y, w, h, bg);
     }

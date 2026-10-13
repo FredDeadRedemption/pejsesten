@@ -66,6 +66,7 @@ impl Setup {
                 white_turn: true,
                 turn_count: 1,
                 cards_played_this_turn: 0,
+                arrivals_played_this_turn: 0,
                 attacked_this_turn: false,
                 phase: GamePhase::Playing,
                 mulligan_white_done: true,
@@ -88,6 +89,7 @@ impl Setup {
             mana: settings::MAX_MANA,
             embers: settings::MAX_EMBERS,
             counters: Counters::default(),
+            quickdraw_log: vec![],
         }
     }
 

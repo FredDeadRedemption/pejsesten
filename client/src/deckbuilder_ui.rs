@@ -103,6 +103,7 @@ fn top_bar(ctx: &egui::Context, db: &mut DeckBuilderState, action: &mut Action) 
                 ("Any", ColorFilter::All),
                 ("White", ColorFilter::White),
                 ("Black", ColorFilter::Black),
+                ("Green", ColorFilter::Green),
             ] {
                 dirty |= ui.selectable_value(&mut db.filter_color, value, label).changed();
             }

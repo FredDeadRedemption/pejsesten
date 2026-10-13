@@ -143,7 +143,8 @@ impl TextureCache {
 fn frame_key(color: &CardColor) -> &'static str {
     match color {
         CardColor::White => "cards/card-frame-white.png",
-        CardColor::Black => "cards/card-frame-black.png",
+        // green borrows the black frame until the art exists
+        CardColor::Black | CardColor::Green => "cards/card-frame-black.png",
     }
 }
 

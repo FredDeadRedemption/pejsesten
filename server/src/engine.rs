@@ -3,6 +3,7 @@
 
 use crate::settings;
 use rand::Rng;
+use rand::RngExt;
 use rand::seq::SliceRandom;
 use shared::cards;
 use shared::cards::instantiate_minion;
@@ -28,6 +29,7 @@ pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> Incantati
     IncantationEntity {
         entity_id,
         cost: c.base_cost,
+        discount: 0,
         arrived_on_turn: None,
         card: c.clone(),
     }
@@ -37,6 +39,7 @@ pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
     OmenEntity {
         entity_id,
         cost: c.base_cost,
+        discount: 0,
         arrived_on_turn: None,
         card: c.clone(),
         armed_trigger: None,
@@ -123,6 +126,8 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
         Effect::Draw { .. } => None,
         Effect::Summon { .. } => None,
         Effect::ReverseDeck => None,
+        Effect::AddRandomOmen => None,
+        Effect::ReplayQuickdraws => None,
     }
 }
 
@@ -158,6 +163,7 @@ impl Game {
                     mana: settings::STARTING_MANA,
                     embers: settings::STARTING_EMBERS,
                     counters: Counters::default(),
+                    quickdraw_log: vec![],
                 },
                 black: Board {
                     deck: black.deck,
@@ -170,12 +176,14 @@ impl Game {
                     mana: settings::STARTING_MANA - 1,
                     embers: settings::STARTING_EMBERS,
                     counters: Counters::default(),
+                    quickdraw_log: vec![],
                 },
                 white_player_id: white.id,
                 black_player_id: black.id,
                 white_turn: true,
                 turn_count: 0,
                 cards_played_this_turn: 0,
+                arrivals_played_this_turn: 0,
                 attacked_this_turn: false,
                 phase: if settings::MULLIGAN { GamePhase::Mulligan } else { GamePhase::Playing },
                 mulligan_white_done: !settings::MULLIGAN,
@@ -196,6 +204,7 @@ impl Game {
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
         let mut game = Game { state, effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() };
         game.refresh_stats();
+        game.refresh_costs();
         game
     }
 
@@ -382,6 +391,54 @@ impl Game {
         Self::resolve_target_refs(spec, source, enemy, self_id)
     }
 
+    // --- Replay ---
+
+    /// Casts a card again from nowhere: never in hand, never paid for, and its quickdraw is
+    /// always live. Targets are rolled because the player never picked any.
+    fn replay_card(&mut self, card: &Card, owner: PlayerSide) {
+        let entity_id = self.ids.next_id();
+        let mut entity = match card {
+            Card::Minion(m) => CardEntity::Minion(instantiate_minion(m, entity_id)),
+            Card::Incantation(i) => CardEntity::Incantation(instantiate_incantation(i, entity_id)),
+            Card::Omen(_) | Card::Hero(_) => return,
+        };
+        *entity.arrived_on_turn_mut() = Some(self.state.turn_count);
+
+        // no room means no body, but the ability still goes off
+        if let CardEntity::Minion(minion) = &entity {
+            let board = self.source_board_for_mut(owner);
+            if board.battlefield.len() < settings::MAX_BOARD_SIZE {
+                let mut minion = minion.clone();
+                minion.exhausted = !minion.card.attributes.contains(&MinionAttribute::Charge);
+                board.battlefield.push(minion);
+            }
+        }
+
+        for ability in entity.abilities().to_vec() {
+            if ability.trigger != Trigger::OnPlay || !self.check_requirements(&ability.requirements, &entity) {
+                continue;
+            }
+            for effect in &ability.effects {
+                let target_id = effect_target_spec(effect)
+                    .filter(|ts| ts.target_mode == TargetMode::Targeted)
+                    .and_then(|ts| self.random_target_id(ts, owner));
+                self.apply_effect(effect.clone(), owner, target_id, Some(entity_id));
+            }
+        }
+    }
+
+    fn random_target_id(&self, spec: &TargetSpec, owner: PlayerSide) -> Option<u32> {
+        let refs = self.get_target_refs(spec, owner, None, None);
+        let tr = *refs.get(rand::rng().random_range(0..refs.len().max(1)))?;
+        let (source, enemy) = self.boards_for(owner);
+        match tr {
+            TargetRef::MinionSource(i) => source.battlefield.get(i).map(|m| m.entity_id),
+            TargetRef::MinionEnemy(i) => enemy.battlefield.get(i).map(|m| m.entity_id),
+            TargetRef::HeroSource => Some(source.hero.entity_id),
+            TargetRef::HeroEnemy => Some(enemy.hero.entity_id),
+        }
+    }
+
     // --- Requirements ---
 
     fn check_requirements(&self, requirements: &[Requirement], card: &CardEntity) -> bool {
@@ -389,6 +446,11 @@ impl Game {
             Requirement::Combo => self.state.cards_played_this_turn > 0,
             Requirement::Quickdraw => card.arrived_this_turn(self.state.turn_count),
             Requirement::CounterAtLeast { counter, amount } => self.source_board().counters.get(*counter) >= *amount,
+            Requirement::ArrivalPlayedThisTurn => self.state.arrivals_played_this_turn > 0,
+            Requirement::ControlsOther { filters } => {
+                let self_id = card.entity_id();
+                self.source_board().battlefield.iter().any(|m| m.entity_id != self_id && Self::filters_match(filters, m))
+            }
             Requirement::IsHolding { filters } => {
                 let source_board = self.source_board();
                 source_board.hand.iter().any(|c| match c {
@@ -402,6 +464,16 @@ impl Game {
     /// A passive is live while any friendly minion carrying it is on the board.
     fn has_passive(board: &Board, passive: PassiveEffect) -> bool {
         board.battlefield.iter().any(|m| m.card.passives.contains(&passive))
+    }
+
+    /// A follow-up with unmet requirements is dropped, leaving the effect it rides on intact.
+    fn resolve_follow_up(&self, effect: &Effect, card: &CardEntity) -> Effect {
+        match effect {
+            Effect::Draw { draw_amount, follow_up: Some(fu) } if !self.check_requirements(&fu.requirements, card) => {
+                Effect::Draw { draw_amount: *draw_amount, follow_up: None }
+            }
+            other => other.clone(),
+        }
     }
 
     fn check_card_must_match(requirements: &[Condition], card: &CardEntity) -> bool {
@@ -453,7 +525,7 @@ impl Game {
                         effect: effect.clone(),
                         owner: owner,
                         target_id: None,
-                        self_id: None,
+                        self_id: Some(minion.entity_id),
                     });
                 }
             }
@@ -581,6 +653,7 @@ impl Game {
             }
             self.process_effect_queue(); // process death triggers before checking again
         }
+        self.refresh_costs();
 
         for (side, lost) in [(PlayerSide::White, died[0]), (PlayerSide::Black, died[1])] {
             if lost {
@@ -667,6 +740,29 @@ impl Game {
         }
     }
 
+    /// Hand costs are derived like stats: printed cost, less the discount the card carries,
+    /// less whatever its scale is worth right now. Runs wherever the hand or a scale moved.
+    fn refresh_costs(&mut self) {
+        for side in [PlayerSide::White, PlayerSide::Black] {
+            let board = self.source_board_for(side);
+            let counters = board.counters.clone();
+            let battlefield_len = board.battlefield.len() as i32;
+
+            for card in self.source_board_for_mut(side).hand.iter_mut() {
+                let scaled = match card.cost_scaling().cloned() {
+                    Some(s) => match s.scaled_by {
+                        Some(ScaledBy::MinionsOnBoard) => battlefield_len * s.scalar,
+                        Some(ScaledBy::Counter { counter }) => counters.get(counter) as i32 * s.scalar,
+                        None => s.scalar,
+                    },
+                    None => 0,
+                };
+                let discount = card.discount();
+                *card.cost_mut() = (card.base_cost() - discount - scaled).max(0);
+            }
+        }
+    }
+
     /// Ward eats one hit and breaks. A hero has none, so nothing is absorbed.
     fn absorb_ward(&mut self, owner: PlayerSide, tr: TargetRef) -> bool {
         let (source, enemy) = self.boards_for_mut(owner);
@@ -723,6 +819,7 @@ impl Game {
                 // Step 2: follow-up (collect battlefield len while immutably borrowed)
                 if let Some(ref fu) = follow_up {
                     let battlefield_len = self.source_board_for(owner).battlefield.len();
+                    let counters = self.source_board_for(owner).counters.clone();
                     let mut extra: Vec<CardEntity> = vec![];
 
                     for card in drawn.iter_mut() {
@@ -734,9 +831,10 @@ impl Game {
                                 FollowUpEffect::Discount { scaled_amount } => {
                                     let discount = match &scaled_amount.scaled_by {
                                         Some(ScaledBy::MinionsOnBoard) => battlefield_len as i32 * scaled_amount.scalar,
+                                        Some(ScaledBy::Counter { counter }) => counters.get(*counter) as i32 * scaled_amount.scalar,
                                         None => scaled_amount.scalar,
                                     };
-                                    *card.cost_mut() = (*card.cost_mut() - discount).max(0);
+                                    *card.discount_mut() += discount;
                                 }
                                 FollowUpEffect::Copy { copy_amount } => {
                                     for _ in 0..*copy_amount {
@@ -773,7 +871,7 @@ impl Game {
 
                     if let Some(mut minion) = minion {
                         if let Some(reduction) = cost_reduction {
-                            minion.cost = (minion.card.base_cost - reduction).max(0);
+                            minion.discount = reduction;
                         }
 
                         minion.exhausted = false;
@@ -811,6 +909,28 @@ impl Game {
             Effect::ReverseDeck => {
                 let (source, _) = self.boards_for_mut(owner);
                 source.deck.reverse();
+            }
+
+            Effect::AddRandomOmen => {
+                let omens: Vec<OmenCard> = cards::get_collectible_cards()
+                    .into_iter()
+                    .filter_map(|c| match c {
+                        Card::Omen(o) => Some(o),
+                        _ => None,
+                    })
+                    .collect();
+                if let Some(pick) = omens.get(rand::rng().random_range(0..omens.len().max(1))) {
+                    let omen = instantiate_omen(pick, self.ids.next_id());
+                    let turn = self.state.turn_count;
+                    let board = self.source_board_for_mut(owner);
+                    Self::add_to_hand(board, Some(turn), [CardEntity::Omen(omen)]);
+                }
+            }
+
+            Effect::ReplayQuickdraws => {
+                for card in self.source_board_for(owner).quickdraw_log.clone() {
+                    self.replay_card(&card, owner);
+                }
             }
 
             Effect::Summon { minion_card_id, summon_amount } => {
@@ -865,7 +985,9 @@ impl Game {
         }
 
         self.state.cards_played_this_turn = 0;
+        self.state.arrivals_played_this_turn = 0;
         self.state.attacked_this_turn = false;
+        self.refresh_costs();
         //self.enqueue_trigger(Trigger::OnDraw);
         //self.process_effect_queue();
     }
@@ -968,13 +1090,14 @@ impl Game {
             let copies = if is_quickdraw && quickdraw_doubled { 2 } else { 1 };
             for _ in 0..copies {
                 for effect in &ability.effects {
-                    let tid = effect_target_spec(effect)
+                    let effect = self.resolve_follow_up(effect, &consumed);
+                    let tid = effect_target_spec(&effect)
                         .filter(|ts| ts.target_mode == TargetMode::Targeted)
                         .and_then(|_| target_id.clone());
 
                     let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
                     self.effect_queue.push(QueuedEffect {
-                        effect: effect.clone(),
+                        effect,
                         owner: owner,
                         target_id: tid,
                         self_id: Some(entity_id),
@@ -985,7 +1108,11 @@ impl Game {
 
         // a doubled quickdraw is still one quickdraw played
         if quickdraw_fired {
-            self.source_board_mut().counters.quickdraws_played += 1;
+            let played = consumed.card();
+            let board = self.source_board_mut();
+            board.counters.quickdraws_played += 1;
+            board.quickdraw_log.push(played);
+            self.enqueue_trigger(Trigger::OnQuickdraw);
         }
 
         self.process_effect_queue();
@@ -994,6 +1121,9 @@ impl Game {
         let source_board = self.source_board_mut();
         source_board.mana -= cost;
         self.state.cards_played_this_turn += 1;
+        if consumed.arrived_this_turn(self.state.turn_count) {
+            self.state.arrivals_played_this_turn += 1;
+        }
 
         match consumed {
             CardEntity::Minion(_) => {
@@ -1119,6 +1249,7 @@ impl Game {
         let drawn = Self::draw_cards(source_board, 1);
         Self::add_to_hand(source_board, Some(turn), drawn);
         source_board.mana -= 1;
+        self.refresh_costs();
         true
     }
 
@@ -1131,6 +1262,7 @@ impl Game {
             your_turn: for_white == self.state.white_turn,
             turn_count: self.state.turn_count,
             cards_played_this_turn: self.state.cards_played_this_turn,
+            arrivals_played_this_turn: self.state.arrivals_played_this_turn,
             phase: self.state.phase.clone(),
             mulligan_submitted: if for_white { self.state.mulligan_white_done } else { self.state.mulligan_black_done },
             open_cards: settings::OPEN_CARDS,

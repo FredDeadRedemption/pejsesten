@@ -35,6 +35,12 @@ pub fn all() -> Vec<Case> {
         case("effects", "draw follow-up discounts a matching card", draw_follow_up_discount),
         case("effects", "draw follow-up discount scales with minions on board", draw_follow_up_scaled_discount),
         case("effects", "draw follow-up copies a matching card", draw_follow_up_copy),
+        case("effects", "draw follow-up discount scales with a counter", draw_follow_up_counter_discount),
+        case("effects", "a follow-up with an unmet requirement is dropped", follow_up_requirement_gate),
+        case("effects", "a hand cost tracks the counter it scales with", cost_scaling_tracks_the_counter),
+        case("effects", "replay recasts every quickdraw of the game", replay_recasts_every_quickdraw),
+        case("effects", "a replayed quickdraw rolls its own target", replay_rolls_a_target),
+        case("effects", "a full board drops a replayed body but not its ability", replay_drops_the_body_on_a_full_board),
         case("effects", "return to hand resets a buffed minion", bounce_resets_stats),
         case("effects", "return to hand can set a reduced cost", bounce_cost_reduction),
         case("effects", "returning an enemy minion puts it in the enemy hand", bounce_enemy_goes_to_enemy_hand),
@@ -62,6 +68,8 @@ pub fn all() -> Vec<Case> {
         case("triggers", "fanfare fires when the minion is played", fanfare_fires),
         case("triggers", "deathwish fires when the minion dies", deathwish_fires),
         case("triggers", "a deathwish that kills fires the next deathwish", deathwish_chains),
+        case("triggers", "a quickdraw wakes the board's quickdraw watchers", quickdraw_wakes_watchers),
+        case("triggers", "a stale play leaves the quickdraw watchers alone", stale_play_leaves_watchers_alone),
         // passives
         case("passives", "a board passive doubles a quickdraw ability", passive_doubles_quickdraw),
         case("passives", "a board passive leaves other abilities alone", passive_only_doubles_quickdraw),
@@ -77,6 +85,8 @@ pub fn all() -> Vec<Case> {
         case("requirements", "is holding checks the rest of the hand", is_holding_gate),
         case("requirements", "only a quickdraw that fires raises the counter", counter_counts_quickdraw_plays),
         case("requirements", "a counter gate opens once the tally is reached", counter_gate),
+        case("requirements", "controls other does not count the minion itself", controls_other_ignores_self),
+        case("requirements", "an arrival played this turn opens the gate", arrival_played_gate),
         // rules
         case("rules", "a card over your mana cannot be played", mana_gate),
         case("rules", "playing a card spends its mana", mana_is_spent),
@@ -1158,6 +1168,180 @@ const WATCH_PASSIVE: [OmenTrigger; 3] = [
     OmenTrigger::EnemyAttacksHero,
     OmenTrigger::EnemyPlaysIncantation,
 ];
+
+fn quickdraw_wakes_watchers() -> Scenario {
+    let mut s = Setup::new();
+    let smith = s.on_board(Side::White, minion(1, "Smith", 0, 1, 3).does(on_quickdraw(vec![buff(itself(), 2, 1)])));
+    let bolt = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(1)]), Requirement::Quickdraw)),
+    );
+    s.mark_arrived_this_turn(Side::White, bolt);
+    let mut scn = s.start("quickdraw watcher");
+    scn.play(bolt, None);
+    scn.expect_eq("the watcher grew once", scn.attack_of(smith), Some(3));
+    scn
+}
+
+fn stale_play_leaves_watchers_alone() -> Scenario {
+    let mut s = Setup::new();
+    let smith = s.on_board(Side::White, minion(1, "Smith", 0, 1, 3).does(on_quickdraw(vec![buff(itself(), 2, 1)])));
+    let bolt = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(1)]), Requirement::Quickdraw)),
+    );
+    let mut scn = s.start("stale watcher");
+    scn.play(bolt, None);
+    scn.expect_eq("nothing fired, nothing grew", scn.attack_of(smith), Some(1));
+    scn
+}
+
+fn controls_other_ignores_self() -> Scenario {
+    let mut s = Setup::new();
+    s.in_deck(Side::White, minion(1, "Page", 0, 1, 1));
+    let courier = minion(2, "Courier", 0, 2, 3).of(Race::Beast).does(requiring(
+        on_play(vec![draw(1)]),
+        Requirement::ControlsOther { filters: vec![Condition::IsRace { race: Race::Beast }] },
+    ));
+    s.in_hand(Side::White, courier.clone());
+    s.in_hand(Side::White, courier);
+    let mut scn = s.start("controls other");
+    scn.play(0, None);
+    scn.expect_eq("alone on the board it drew nothing", scn.deck_len(Side::White), 1);
+    scn.play(0, None);
+    scn.expect_eq("the second one saw the first", scn.deck_len(Side::White), 0);
+    scn
+}
+
+fn arrival_played_gate() -> Scenario {
+    let mut s = Setup::new();
+    let magpie = minion(1, "Magpie", 0, 2, 2)
+        .does(requiring(on_play(vec![buff(itself(), 1, 1)]), Requirement::ArrivalPlayedThisTurn));
+    s.in_hand(Side::White, magpie.clone());
+    s.in_hand(Side::White, minion(2, "Fresh", 0, 1, 1));
+    s.mark_arrived_this_turn(Side::White, 1);
+    s.in_hand(Side::White, magpie);
+    let mut scn = s.start("arrival played");
+    let early = scn.hand_entity_id(Side::White, 0);
+    scn.play(0, None);
+    scn.expect_eq("no arrival played yet", scn.attack_of(early.unwrap()), Some(2));
+    scn.play(0, None);
+    let late = scn.hand_entity_id(Side::White, 0);
+    scn.play(0, None);
+    scn.expect_eq("the fresh card opened the gate", scn.attack_of(late.unwrap()), Some(3));
+    scn
+}
+
+fn draw_follow_up_counter_discount() -> Scenario {
+    let mut s = Setup::new();
+    s.counter(Side::White, Counter::QuickdrawsPlayed, 2);
+    s.in_deck(Side::White, minion(1, "Pricey", 5, 1, 1));
+    let reload = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Reload", 0).does(on_play(vec![draw_then(
+            1,
+            follow_up(vec![], vec![discount(1, Some(ScaledBy::Counter { counter: Counter::QuickdrawsPlayed }))]),
+        )])),
+    );
+    let mut scn = s.start("counter discount");
+    scn.play(reload, None);
+    scn.expect_eq("two quickdraws took two off", scn.hand_cost(Side::White, 0), Some(3));
+    scn
+}
+
+fn follow_up_requirement_gate() -> Scenario {
+    let mut s = Setup::new();
+    s.in_deck(Side::White, minion(1, "First", 0, 1, 1));
+    s.in_deck(Side::White, minion(2, "Second", 0, 1, 1));
+    let trick = incantation(3, "Trick", 0).does(on_play(vec![draw_then(
+        1,
+        follow_up_requiring(follow_up(vec![], vec![copies(1)]), Requirement::Quickdraw),
+    )]));
+    s.spell_in_hand(Side::White, trick.clone());
+    let fresh = s.spell_in_hand(Side::White, trick);
+    s.mark_arrived_this_turn(Side::White, fresh);
+    let mut scn = s.start("follow up requirement");
+    scn.play(0, None);
+    scn.expect_eq("the stale copy only drew", scn.hand_len(Side::White), 2);
+    scn.play(0, None);
+    scn.expect_eq("the fresh one drew and copied", scn.hand_len(Side::White), 3);
+    scn
+}
+
+fn cost_scaling_tracks_the_counter() -> Scenario {
+    let mut s = Setup::new();
+    s.in_hand(
+        Side::White,
+        minion(1, "Gazelle", 6, 4, 4).scaling(ScaledAmount {
+            scalar: 1,
+            scaled_by: Some(ScaledBy::Counter { counter: Counter::QuickdrawsPlayed }),
+        }),
+    );
+    let bolt = s.spell_in_hand(
+        Side::White,
+        incantation(2, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(1)]), Requirement::Quickdraw)),
+    );
+    s.mark_arrived_this_turn(Side::White, bolt);
+    let mut scn = s.start("cost scaling");
+    scn.expect_eq("printed cost with the tally at zero", scn.hand_cost(Side::White, 0), Some(6));
+    scn.play(bolt, None);
+    scn.expect_eq("one quickdraw took one off", scn.hand_cost(Side::White, 0), Some(5));
+    scn
+}
+
+fn replay_recasts_every_quickdraw() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    let bolt = incantation(1, "Bolt", 0).does(requiring(on_play(vec![bolt_enemy_hero(2)]), Requirement::Quickdraw));
+    s.spell_in_hand(Side::White, bolt.clone());
+    s.spell_in_hand(Side::White, bolt);
+    s.mark_arrived_this_turn(Side::White, 0);
+    s.mark_arrived_this_turn(Side::White, 1);
+    s.in_hand(Side::White, minion(2, "Dentist", 0, 7, 7).does(on_play(vec![replay_quickdraws()])));
+    let mut scn = s.start("replay");
+    scn.play(0, None);
+    scn.play(0, None);
+    scn.expect_eq("two quickdraws landed", scn.hp(Side::Black), 16);
+    scn.play(0, None);
+    scn.expect_eq("the replay fired both again", scn.hp(Side::Black), 12);
+    scn
+}
+
+fn replay_rolls_a_target() -> Scenario {
+    let mut s = Setup::new();
+    let ogre = s.on_board(Side::Black, minion(1, "Ogre", 0, 3, 7));
+    s.spell_in_hand(
+        Side::White,
+        incantation(2, "Bolt", 0).does(requiring(on_play(vec![damage(pick_enemy_minion(), 2)]), Requirement::Quickdraw)),
+    );
+    s.mark_arrived_this_turn(Side::White, 0);
+    s.in_hand(Side::White, minion(3, "Dentist", 0, 7, 7).does(on_play(vec![replay_quickdraws()])));
+    let mut scn = s.start("replay rolls a target");
+    scn.play(0, Some(ogre));
+    scn.expect_eq("the quickdraw hit what was picked", scn.defence(ogre), Some(5));
+    scn.play(0, None);
+    scn.expect_eq("the replay rolled the only legal target", scn.defence(ogre), Some(3));
+    scn
+}
+
+fn replay_drops_the_body_on_a_full_board() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::Black, 20);
+    let thrower = minion(1, "Thrower", 0, 1, 1).does(requiring(on_play(vec![bolt_enemy_hero(2)]), Requirement::Quickdraw));
+    s.in_hand(Side::White, thrower);
+    s.mark_arrived_this_turn(Side::White, 0);
+    s.in_hand(Side::White, minion(2, "Dentist", 0, 7, 7).does(on_play(vec![replay_quickdraws()])));
+    for i in 0..3 {
+        s.on_board(Side::White, minion(10 + i, "Filler", 0, 1, 1));
+    }
+    let mut scn = s.start("replay on a full board");
+    scn.play(0, None);
+    scn.expect_eq("the quickdraw landed", scn.hp(Side::Black), 18);
+    scn.play(0, None);
+    scn.expect_eq("no room for the replayed body", scn.board_len(Side::White), settings::MAX_BOARD_SIZE);
+    scn.expect_eq("its shot fired anyway", scn.hp(Side::Black), 16);
+    scn
+}
 
 fn bolt_enemy_hero(damage_amount: i32) -> Effect {
     damage(spec(TargetMode::Auto, TargetSide::Enemy, EntityType::Hero), damage_amount)

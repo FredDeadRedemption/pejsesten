@@ -36,6 +36,7 @@ pub enum ColorFilter {
     All,
     White,
     Black,
+    Green,
 }
 
 pub enum Panel {
@@ -102,6 +103,7 @@ impl DeckBuilderState {
             match &self.filter_color {
                 ColorFilter::White if color != &CardColor::White => return None,
                 ColorFilter::Black if color != &CardColor::Black => return None,
+                ColorFilter::Green if color != &CardColor::Green => return None,
                 _ => {}
             }
             Some(i)

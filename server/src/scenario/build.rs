@@ -24,6 +24,7 @@ pub fn minion(id: u32, name: &str, cost: i32, attack: i32, defence: i32) -> Mini
         races: vec![],
         attributes: vec![],
         passives: vec![],
+        cost_scaling: None,
         is_token: false,
     }
 }
@@ -63,6 +64,7 @@ pub trait MinionBuild: Sized {
     fn of(self, r: Race) -> Self;
     fn does(self, a: Ability) -> Self;
     fn passive(self, p: PassiveEffect) -> Self;
+    fn scaling(self, s: ScaledAmount) -> Self;
 }
 
 impl MinionBuild for MinionCard {
@@ -80,6 +82,10 @@ impl MinionBuild for MinionCard {
     }
     fn passive(mut self, p: PassiveEffect) -> Self {
         self.passives.push(p);
+        self
+    }
+    fn scaling(mut self, s: ScaledAmount) -> Self {
+        self.cost_scaling = Some(s);
         self
     }
 }
@@ -110,9 +116,18 @@ pub fn on_death(effects: Vec<Effect>) -> Ability {
     Ability { trigger: Trigger::OnDeath, requirements: vec![], effects }
 }
 
+pub fn on_quickdraw(effects: Vec<Effect>) -> Ability {
+    Ability { trigger: Trigger::OnQuickdraw, requirements: vec![], effects }
+}
+
 pub fn requiring(mut a: Ability, r: Requirement) -> Ability {
     a.requirements.push(r);
     a
+}
+
+pub fn follow_up_requiring(mut f: FollowUpAbility, r: Requirement) -> FollowUpAbility {
+    f.requirements.push(r);
+    f
 }
 
 // target specs
@@ -179,12 +194,25 @@ pub fn reverse_deck() -> Effect {
     Effect::ReverseDeck
 }
 
+pub fn add_random_omen() -> Effect {
+    Effect::AddRandomOmen
+}
+
+pub fn replay_quickdraws() -> Effect {
+    Effect::ReplayQuickdraws
+}
+
+/// Shorthand: the minion the ability sits on.
+pub fn itself() -> TargetSpec {
+    spec(TargetMode::SelfOnly, TargetSide::Friendly, EntityType::Minion)
+}
+
 pub fn summon(card: &MinionCard, summon_amount: usize) -> Effect {
     Effect::Summon { minion_card_id: card.id, summon_amount }
 }
 
 pub fn follow_up(card_must_match: Vec<Condition>, follow_up_effects: Vec<FollowUpEffect>) -> FollowUpAbility {
-    FollowUpAbility { card_must_match, follow_up_effects }
+    FollowUpAbility { card_must_match, requirements: vec![], follow_up_effects }
 }
 
 pub fn discount(scalar: i32, scaled_by: Option<ScaledBy>) -> FollowUpEffect {

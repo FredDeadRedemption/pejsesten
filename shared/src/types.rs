@@ -12,6 +12,7 @@ pub enum GamePhase {
 pub enum Color {
     White,
     Black,
+    Green,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -26,6 +27,8 @@ pub enum Trigger {
     OnPlay,
     OnDeath,
     OnOmenFired,
+    /// Fires on the friendly board after a quickdraw ability resolves, once per card played.
+    OnQuickdraw,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -69,6 +72,8 @@ pub enum Requirement {
     Quickdraw,
     IsHolding { filters: Vec<Condition> },
     CounterAtLeast { counter: Counter, amount: u32 },
+    ControlsOther { filters: Vec<Condition> },
+    ArrivalPlayedThisTurn,
 }
 
 /// A tally kept for the whole game on the board that owns it.
@@ -93,6 +98,7 @@ impl Counters {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ScaledBy {
     MinionsOnBoard,
+    Counter { counter: Counter },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,6 +116,8 @@ pub enum FollowUpEffect {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FollowUpAbility {
     pub card_must_match: Vec<Condition>,
+    /// Read against the card that was played, so only the play path can satisfy them.
+    pub requirements: Vec<Requirement>,
     pub follow_up_effects: Vec<FollowUpEffect>,
 }
 
@@ -123,6 +131,8 @@ pub enum Effect {
     Destroy { target_spec: TargetSpec },
     Summon { minion_card_id: u32, summon_amount: usize },
     ReverseDeck,
+    AddRandomOmen,
+    ReplayQuickdraws,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -171,6 +181,8 @@ pub struct MinionCard {
     pub races: Vec<Race>,
     pub attributes: Vec<MinionAttribute>,
     pub passives: Vec<PassiveEffect>,
+    /// Cost taken off while the card sits in hand, recomputed as the scale moves.
+    pub cost_scaling: Option<ScaledAmount>,
     pub is_token: bool,
 }
 
@@ -236,6 +248,7 @@ pub struct OmenCard {
 pub struct OmenEntity {
     pub entity_id: u32,
     pub cost: i32,
+    pub discount: i32,
     pub arrived_on_turn: Option<u32>,
     pub card: OmenCard,
     // none in hand, and stripped before the opponent sees an armed one
@@ -287,6 +300,7 @@ pub struct Buff {
 pub struct MinionEntity {
     pub entity_id: u32,
     pub cost: i32,
+    pub discount: i32,
     pub turns_on_board: u32,
     pub arrived_on_turn: Option<u32>,
     pub card: MinionCard,
@@ -304,6 +318,7 @@ pub struct MinionEntity {
 pub struct IncantationEntity {
     pub entity_id: u32,
     pub cost: i32,
+    pub discount: i32,
     pub arrived_on_turn: Option<u32>,
     pub card: IncantationCard,
 }
@@ -351,6 +366,8 @@ pub struct Board {
     pub mana: i32,
     pub embers: i32,
     pub counters: Counters,
+    /// Every quickdraw this board landed, in the order they were played.
+    pub quickdraw_log: Vec<Card>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -362,6 +379,7 @@ pub struct GameStateServer {
     pub white_turn: bool,
     pub turn_count: u32,
     pub cards_played_this_turn: u32,
+    pub arrivals_played_this_turn: u32,
     pub attacked_this_turn: bool,
     pub phase: GamePhase,
     pub mulligan_white_done: bool,
@@ -397,6 +415,7 @@ pub struct GameStateClient {
     pub your_turn: bool,
     pub turn_count: u32,
     pub cards_played_this_turn: u32,
+    pub arrivals_played_this_turn: u32,
     pub phase: GamePhase,
     pub mulligan_submitted: bool,
     pub open_cards: bool,
@@ -450,6 +469,33 @@ impl CardEntity {
             CardEntity::Minion(m) => &mut m.cost,
             CardEntity::Incantation(i) => &mut i.cost,
             CardEntity::Omen(o) => &mut o.cost,
+        }
+    }
+    pub fn card(&self) -> Card {
+        match self {
+            CardEntity::Minion(m) => Card::Minion(m.card.clone()),
+            CardEntity::Incantation(i) => Card::Incantation(i.card.clone()),
+            CardEntity::Omen(o) => Card::Omen(o.card.clone()),
+        }
+    }
+    pub fn discount_mut(&mut self) -> &mut i32 {
+        match self {
+            CardEntity::Minion(m) => &mut m.discount,
+            CardEntity::Incantation(i) => &mut i.discount,
+            CardEntity::Omen(o) => &mut o.discount,
+        }
+    }
+    pub fn discount(&self) -> i32 {
+        match self {
+            CardEntity::Minion(m) => m.discount,
+            CardEntity::Incantation(i) => i.discount,
+            CardEntity::Omen(o) => o.discount,
+        }
+    }
+    pub fn cost_scaling(&self) -> Option<&ScaledAmount> {
+        match self {
+            CardEntity::Minion(m) => m.card.cost_scaling.as_ref(),
+            CardEntity::Incantation(_) | CardEntity::Omen(_) => None,
         }
     }
     pub fn base_cost(&self) -> i32 {
