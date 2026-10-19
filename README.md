@@ -8,13 +8,11 @@ Two players, one hero each, 25 card decks. Mana buys the board, embers buy infor
 
 ## Philosophy
 
-- No (mana) **ramping**, nothing remotely *rampesque* like jade golems.
+- No (mana) **ramping**, nothing remotely *rampesque*.
 - No extra turns.
-- No excessively big mana cheats, keep it for combo style decks.
-- No stacking effects on mana cheats.
+- No excessively mana cheats, smaller cheats kept for combo-style decks.
 - No random targets unless spell is being **replayed**.
-- Discourage RnG. 
-- Encourage **disruption** and **hard counters**.
+- Discourage RnG - encourage **disruption** and **hard counters**.
 - Reward player interaction with mechanics like **Counter** and **Secret**. 
 
 ---
