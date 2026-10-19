@@ -831,10 +831,10 @@ fn with_rotation(pivot: Vec2, angle: f32, draw: impl FnOnce()) {
     unsafe { get_internal_gl() }.quad_gl.pop_model_matrix();
 }
 
-/// A met condition outranks plain affordability: it is the rarer thing to notice.
+/// Both cues mean "playable right now", so an unaffordable card gets neither.
 fn glow_style(cfg: &glow::Config, hint: &CardHint) -> Option<glow::Style> {
     match (hint.condition_met, hint.playable) {
-        (true, _) => Some(cfg.condition),
+        (true, true) => Some(cfg.condition),
         (false, true) => Some(cfg.playable),
         _ => None,
     }
