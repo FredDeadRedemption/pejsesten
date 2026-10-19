@@ -378,12 +378,13 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         return;
     }
 
-    let (color, image_url, name, cost, description) = match card {
+    let (color, image_url, name, cost, base_cost, description) = match card {
         CardEntity::Minion(m) => (
             &m.card.color,
             m.card.image_url.as_str(),
             m.card.name.as_str(),
             m.cost,
+            m.card.base_cost,
             m.card.description.as_deref().unwrap_or(""),
         ),
         CardEntity::Incantation(i) => (
@@ -391,6 +392,7 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
             i.card.image_url.as_str(),
             i.card.name.as_str(),
             i.cost,
+            i.card.base_cost,
             i.card.description.as_deref().unwrap_or(""),
         ),
         CardEntity::Omen(o) => (
@@ -398,11 +400,12 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
             o.card.image_url.as_str(),
             o.card.name.as_str(),
             o.cost,
+            o.card.base_cost,
             o.card.description.as_deref().unwrap_or(""),
         ),
     };
 
-    draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, description, cache, WHITE, scale, GEM_HAND, true);
+    draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, base_cost, description, cache, WHITE, scale, GEM_HAND, true);
 
     if let CardEntity::Minion(m) = card {
         let badge = scale * BADGE_HAND;
@@ -426,6 +429,7 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
         &minion.card.image_url,
         &minion.card.name,
         minion.cost,
+        minion.card.base_cost,
         minion.card.description.as_deref().unwrap_or(""),
         cache,
         tint,
@@ -451,7 +455,7 @@ fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache
 
 fn draw_card_layers(
     x: f32, y: f32, w: f32, h: f32,
-    color: &CardColor, image_url: &str, name: &str, cost: i32, description: &str,
+    color: &CardColor, image_url: &str, name: &str, cost: i32, base_cost: i32, description: &str,
     cache: &TextureCache, tint: Color,
     scale: f32,
     gem_frac: f32,
@@ -467,7 +471,7 @@ fn draw_card_layers(
     }
 
     let cost_font = (gem * 0.7).round();
-    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, cost_font, WHITE);
+    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, cost_font, cost_color(cost, base_cost));
     if !show_text {
         return;
     }
@@ -639,7 +643,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
 
     let gem = frame.title.h;
     draw_mana_gem(frame.title.x, frame.title.y, gem);
-    draw_text_centered(&inc.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
+    draw_text_centered(&inc.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, cost_color(inc.cost, card.base_cost));
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
     ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
@@ -659,7 +663,7 @@ fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache) {
         let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &omen.card.color, &omen.card.image_url, cache, WHITE);
         let gem = (rect.h * GEM_BOARD).min(rect.w * 0.4);
         draw_mana_gem(frame.title.x, frame.title.y, gem);
-        draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), WHITE);
+        draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), cost_color(omen.cost, omen.card.base_cost));
         let name = fit_text(&omen.card.name, frame.text.w, 9.0);
         ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, BLACK);
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, COL_OMEN);
@@ -701,7 +705,7 @@ fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &
 
     let gem = frame.title.h;
     draw_mana_gem(frame.title.x, frame.title.y, gem);
-    draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
+    draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, cost_color(omen.cost, card.base_cost));
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
     ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
@@ -957,6 +961,17 @@ fn draw_mana_gem(x: f32, y: f32, size: f32) {
 }
 
 /// `base` is the stat as printed on the card: over it reads green, under it reads red.
+/// Inverse of stat_color: a cost below the printed one is the good direction.
+fn cost_color(cost: i32, base: i32) -> Color {
+    if cost < base {
+        COL_BUFFED
+    } else if cost > base {
+        COL_DAMAGED
+    } else {
+        WHITE
+    }
+}
+
 fn stat_color(val: i32, base: i32) -> Color {
     if val > base {
         COL_BUFFED
