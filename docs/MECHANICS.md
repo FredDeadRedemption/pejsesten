@@ -4,8 +4,8 @@ Every mechanic this game has or might have: the name used here, what it is calle
 Hearthstone, Magic or elsewhere, what it does, and whether it is built.
 
 Built behaviour is read from `shared/src/types.rs`, `server/src/engine.rs` and
-`server/src/settings.rs`. Everything unbuilt comes from `README.md`, which carries the
-reasoning per keyword; this file carries the list.
+`server/src/settings.rs`. The larger unbuilt designs have their own write-ups in
+[CONCEPTS.md](CONCEPTS.md).
 
 | Symbol | Meaning |
 |---|---|
@@ -69,19 +69,19 @@ Prod values, with the dev profile in brackets where it differs (`server/src/sett
 | ⬜ | Rush | Rush | - | Attack minions on arrival but not the hero. Already how Blitz resolves, so this is the split of one keyword into two |
 | ⬜ | Freeze | Freeze | - | The minion misses its next attack |
 | ⬜ | Can't attack | Can't Attack | - | A body that only defends |
-| 🟡 | Reborn | Reborn | - | The first death returns it with 1 defence |
+| 🟡 | Reborn | Reborn | - | The first death returns it with 1 defence. Not loved |
 | 🟡 | Elusive | Elusive | - | Cannot be targeted by spells |
 | 🟡 | Immune | Immune | - | Takes no damage. Only ever for heroes, if at all |
 | 🟡 | Spell damage | Spell Damage | - | Your incantations deal extra damage |
 | 🟡 | Temporary | Temporary | - | Leaves at the end of the turn |
 | 🟡 | Permanent attribute | Permanent attribute | - | Intent unclear, parked |
-| ❌ | Windfury | Windfury | - | Attacks twice per turn |
-| ❌ | Mega-Windfury | Mega-Windfury | - | Attacks four times per turn |
-| ❌ | Unlimited attacks | - | - | No attack cap at all |
+| ❌ | Windfury | Windfury | - | Attacks twice per turn. Not wanted |
+| ❌ | Mega-Windfury | Mega-Windfury | - | Attacks four times per turn. Even less wanted |
+| ❌ | Unlimited attacks | - | - | No attack cap at all. Too strong to price |
 | ❌ | Magnetic | Magnetic | - | Fuses onto another minion, carrying its stats and keywords over. Too close to Blitz stacking |
 | ❌ | Forgetful | Forgetful | - | Half the time the attack hits something else. Randomness |
-| ❌ | Titan | Titan | - | Three one-shot abilities before it may attack |
-| ❌ | Starship | Starship | - | Pieces assemble into one permanent body |
+| ❌ | Titan | Titan | - | Three one-shot abilities before it may attack. Maybe worth a look once everything else is in |
+| ❌ | Starship | Starship | - | Pieces assemble into one permanent body. Sigils cover assembly better |
 
 ---
 
@@ -122,12 +122,12 @@ still resolves. Filters (`Condition`) are `IsRace { race }` and `HasAttribute { 
 | ✅ | Controls another | "if you control a ..." | `ControlsOther { filters }` | Another friendly minion matches the filters |
 | ✅ | Counter at least | "if you've cast 3 spells" | `CounterAtLeast { counter, amount }` | A board tally reached the amount. Only tally so far: `QuickdrawsPlayed` |
 | ✅ | Arrival played | - | `ArrivalPlayedThisTurn` | You already played a card this turn that had arrived this turn |
-| 🟡 | Outcast | Outcast | - | The card is the leftmost or rightmost in your hand |
+| 🟡 | Outcast | Outcast | - | The card is the leftmost or rightmost in your hand. Possibly not as clever as it looks |
 | 🟡 | Manathirst | Manathirst | - | You have at least X mana crystals |
 | 🟡 | Kindred | Kindred | - | A card of the same race was played last turn |
 | 🟡 | Corrupt | Corrupt | - | Upgrades in hand once you play a more expensive card |
 | 🟡 | Infuse | Infuse | - | Upgrades in hand once X friendly minions have died |
-| 🟡 | Joust | Joust | - | Reveal a minion from each deck, the costlier one wins |
+| 🟡 | Joust | Joust | - | Reveal a minion from each deck, the costlier one wins. Fun, but random |
 
 ---
 
@@ -157,7 +157,7 @@ side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and fi
 | ⬜ | Copy | Copy, Clone | - | Duplicate a card or a minion |
 | ⬜ | Upgradable | - | - | A card that improves while you hold it |
 | ⬜ | Twinspell | Twinspell | - | Casting leaves a copy without Twinspell in hand |
-| ⬜ | Quest | Quest | - | Track a goal, pay out when it completes |
+| ⬜ | Quest | Quest | - | Track a goal, pay out when it completes. Sigils are the planned shape, see CONCEPTS.md |
 | ⬜ | Questline | Questline | - | A quest in three stages |
 | ⬜ | Miniaturize | Miniaturize | - | Play it and get a 1 cost 1/1 version in hand |
 | ⬜ | Forge | Forge | - | Pay mana from hand to upgrade the card |
@@ -173,7 +173,7 @@ side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and fi
 | 🟡 | Passive | Passive | - | A standing effect, floated as the replacement for hero powers |
 | 🟡 | Equip | Equip, Weapon | - | Gives the hero a weapon |
 | 🟡 | Discard | Discard | - | Throw a card out of hand |
-| 🟡 | Force attack | - | - | Make a minion attack |
+| 🟡 | Force attack | - | - | Make a minion attack. Not much liked |
 | 🟡 | Put into battlefield | Put into play, Cheat into play | - | Place a card on the board without paying for it |
 | 🟡 | Put into hand | Tutor | - | Fetch a specific card into hand |
 | 🟡 | Replace | - | - | Swap one card for another |
@@ -181,13 +181,13 @@ side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and fi
 | 🟡 | Transform | Transform, Polymorph | - | Turn a minion into something else |
 | ❌ | Rewind | Rewind | - | Undo a card and replay it for a different random outcome. Needs randomness to be worth anything |
 | ❌ | Jade Golem | Jade Golem | - | A golem one size bigger every time. Ramp by another name |
-| ❌ | Lackey | Lackey | - | Generated 1/1s with small fanfares |
-| ❌ | Invoke | Invoke | - | Upgrade your hero power by playing invokers |
+| ❌ | Lackey | Lackey | - | Generated 1/1s with small fanfares. Good idea, wrong flavour |
+| ❌ | Invoke | Invoke | - | Upgrade your hero power by playing invokers. Good idea, but no hero powers |
 | ❌ | Imbue | Imbue | - | Hero power upgrades. No hero power system |
 | ❌ | Herald | Herald | - | Summons limbs of one big body |
-| ❌ | Gigantify | Gigantify | - | Play it and get an 8 cost 8/8 version |
-| ❌ | Transform when drawn | Transform When Drawn | - | Changes in your hand as you draw it |
-| ❌ | Keep enchantment | - | - | Buffs survive a bounce or a transform |
+| ❌ | Gigantify | Gigantify | - | Play it and get an 8 cost 8/8 version. Miniaturize is the half we want |
+| ❌ | Transform when drawn | Transform When Drawn | - | Changes in your hand as you draw it. No point |
+| ❌ | Keep enchantment | - | - | Buffs survive a bounce or a transform. Hard to implement cleanly |
 | ❌ | Recurring | - | - | Duplicate of effects already listed |
 | ❌ | Reopen | Reopen | - | Refresh a used location. There are no locations |
 
@@ -276,7 +276,7 @@ An omen firing cannot arm or fire another omen, so death cascades cannot chain t
 
 ## Concepts
 
-Larger designs from `README.md`, none of them built.
+Larger designs, none of them built. Written up in [CONCEPTS.md](CONCEPTS.md).
 
 | | Name | Equivalent | Effect |
 |---|---|---|---|

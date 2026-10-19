@@ -16,7 +16,7 @@ pejsesten/
 │   ├── app_storage.js  # custom plugin: localStorage
 │   ├── app_session.js  # custom plugin: persistent player token
 │   └── static/         # card art, favicon
-├── docs/               # design notes
+├── docs/               # mechanics, concepts, game modes, deckbuilding
 ├── xtask/              # dev launchers behind `cargo dev` and `cargo dev web`
 └── Dockerfile          # multi-stage: builds wasm + server, ships one container
 ```
