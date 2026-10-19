@@ -26,7 +26,7 @@ pub fn default_deck() -> Vec<u32> {
         32, 32,     // Hat Trick (2 cost, draw, quickdraw copies it)
         45,         // Card Shark (2 cost 2/2 guard, fanfare reverse your deck)
         47,         // Shiny Magpie (2 cost 2/2, +1+1 after an arrival was played)
-        48,         // Reload (3 cost, draw cheaper per quickdraw landed)
+        59,         // Bottom Deal (2 cost, reverse your deck then draw)
         49,         // Fox Courier (3 cost 2/3 beast, draws with another beast out)
         50,         // Bristleback (3 cost 3/3 beast, guard)
         51, 51,     // Fat Rat (4 cost 3/3 beast, tradeable, quickdraw summons a 2/2 blitz rat)

@@ -21,7 +21,7 @@ quietly climbing behind it.
 | 2 | Hat Trick | 2 | — | Draw a card. Quickdraw: add a copy of it to your hand |
 | 1 | Card Shark | 2 | 2/2 Beast | Guard. Fanfare: reverse your deck |
 | 1 | Shiny Magpie | 2 | 2/2 Beast | Fanfare: if you already played a card that arrived this turn, gain +1 +1 |
-| 1 | Reload | 3 | — | Draw a card. It costs 1 less for each Quickdraw you landed |
+| 1 | Bottom Deal | 2 | — | Reverse your deck. Draw a card |
 | 1 | Fox Courier | 3 | 2/3 Beast | Fanfare: if you control another beast, draw a card |
 | 1 | Bristleback | 3 | 3/3 Beast | Guard |
 | 2 | Fat Rat | 4 | 3/3 Beast | Tradeable. Quickdraw: summon a 2/2 rat with blitz |
@@ -29,17 +29,17 @@ quietly climbing behind it.
 | 1 | Gazelle | 6 | 4/4 Beast | Blitz. Costs 1 less for each Quickdraw you landed |
 | 1 | The Dentist | 7 | 7/7 Human | Fanfare: replay every Quickdraw you landed this game |
 
-Curve: 8 at one, 9 at two, 3 at three, 2 at four, 1 at five, 1 at six, 1 at seven.
+Curve: 8 at one, 10 at two, 2 at three, 2 at four, 1 at five, 1 at six, 1 at seven.
 
 ## How it plays
 
 Five things put a card in your hand on your own turn, and each one arms a Quickdraw: the
-turn draw, a trade, Hat Trick, Reload, and Fox Courier. Trading is the cheap one - 1 mana
+turn draw, a trade, Hat Trick, Bottom Deal, and Fox Courier. Trading is the cheap one - 1 mana
 turns a dead card into a fresh one you can fire the same turn - and three Quick Shots, three
 Knife Throwers, two Fat Rats and a Bear are all Tradeable, so the deck nearly always has
 something to pitch.
 
-The counter is the real resource. Gazelle and Reload get cheaper as it climbs, and The
+The counter is the real resource. Gazelle gets cheaper as it climbs, and The
 Dentist cashes the whole thing in at seven mana: every Quickdraw you landed all game fires
 again, targets rolled because you never picked them. Six landed shots make him a game ender;
 two make him a 7/7.
