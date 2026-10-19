@@ -427,6 +427,13 @@ impl Scenario {
         state.enemy_board.omens.get(index).and_then(|o| o.armed_trigger)
     }
 
+    /// The glow affordance a hand card ships with, as the owning client would receive it.
+    pub fn hint_condition_met(&self, side: Side, index: usize) -> bool {
+        let for_white = side == Side::White;
+        let state = self.game.parse_client_state(for_white);
+        state.hand_hints.get(index).map_or(false, |h| h.condition_met)
+    }
+
     pub fn graveyard_len(&self, side: Side) -> usize {
         self.board(side).graveyard.len()
     }

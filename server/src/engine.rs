@@ -1298,10 +1298,22 @@ impl Game {
             };
             CardHint {
                 playable: card.cost() <= board.mana && has_room,
-                condition_met: card.abilities().iter()
-                    .any(|a| !a.requirements.is_empty() && self.check_requirements(&a.requirements, card)),
+                condition_met: Self::gated_requirements(card)
+                    .any(|reqs| self.check_requirements(reqs, card)),
             }
         }).collect()
+    }
+
+    /// Every requirement set a card could satisfy by being played. A follow-up carries its own,
+    /// so a card like Hat Trick gates its quickdraw there and not on the ability.
+    fn gated_requirements(card: &CardEntity) -> impl Iterator<Item = &Vec<Requirement>> {
+        card.abilities().iter().flat_map(|a| {
+            let follow_ups = a.effects.iter().filter_map(|e| match e {
+                Effect::Draw { follow_up: Some(f), .. } => Some(&f.requirements),
+                _ => None,
+            });
+            std::iter::once(&a.requirements).chain(follow_ups)
+        }).filter(|reqs| !reqs.is_empty())
     }
 
     pub fn submit_mulligan(&mut self, player_id: &str, mut indices: Vec<usize>) -> bool {

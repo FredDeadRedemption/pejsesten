@@ -83,6 +83,8 @@ pub fn all() -> Vec<Case> {
         case("requirements", "combo is off on the first card of the turn", combo_blocked),
         case("requirements", "combo is on after a card has been played", combo_allowed),
         case("requirements", "quickdraw only fires on a freshly drawn card", quickdraw_gate),
+        case("requirements", "a follow-up gate shows up in the hand hint", follow_up_gate_lights_the_hint),
+        case("requirements", "a stale card leaves the follow-up gate dark", follow_up_gate_stays_dark_when_stale),
         case("requirements", "quickdraw arms a card drawn mid turn", quickdraw_arms_a_mid_turn_draw),
         case("requirements", "a bounced minion arrives armed again", quickdraw_rearms_on_bounce),
         case("requirements", "a traded card arrives armed", quickdraw_arms_a_traded_card),
@@ -816,6 +818,39 @@ fn quickdraw_gate() -> Scenario {
     scn.expect_eq("stale card did nothing", scn.hp(Side::Black), 20);
     scn.play(fresh - 1, None);
     scn.expect_eq("fresh card fired", scn.hp(Side::Black), 17);
+    scn
+}
+
+/// Hat Trick keeps its quickdraw on the draw's follow-up, so the hint has to look there too.
+fn hat_trick_style_spell(id: u32) -> IncantationCard {
+    incantation(id, "Trick", 1).does(on_play(vec![Effect::Draw {
+        draw_amount: 1,
+        follow_up: Some(FollowUpAbility {
+            card_must_match: vec![],
+            requirements: vec![Requirement::Quickdraw],
+            follow_up_effects: vec![FollowUpEffect::Copy { copy_amount: 1 }],
+        }),
+    }]))
+}
+
+fn follow_up_gate_lights_the_hint() -> Scenario {
+    let mut s = Setup::new();
+    s.mana(Side::White, 3);
+    let trick = s.spell_in_hand(Side::White, hat_trick_style_spell(1));
+    s.in_deck(Side::White, minion(2, "Fresh", 1, 1, 1));
+    s.mark_arrived_this_turn(Side::White, trick);
+    let mut scn = s.start("follow-up hint");
+    scn.expect("a freshly drawn card lights the follow-up gate", scn.hint_condition_met(Side::White, 0));
+    scn
+}
+
+fn follow_up_gate_stays_dark_when_stale() -> Scenario {
+    let mut s = Setup::new();
+    s.mana(Side::White, 3);
+    s.spell_in_hand(Side::White, hat_trick_style_spell(1));
+    s.in_deck(Side::White, minion(2, "Fresh", 1, 1, 1));
+    let mut scn = s.start("follow-up hint stale");
+    scn.expect("a stale card has nothing to light up", !scn.hint_condition_met(Side::White, 0));
     scn
 }
 
