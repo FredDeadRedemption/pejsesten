@@ -29,6 +29,8 @@ pub enum Trigger {
     OnOmenFired,
     /// Fires on the friendly board after a quickdraw ability resolves, once per card played.
     OnQuickdraw,
+    /// Fires on the friendly board after a trade resolves, once per card traded.
+    OnTrade,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

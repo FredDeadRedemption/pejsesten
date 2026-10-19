@@ -1250,6 +1250,9 @@ impl Game {
         let drawn = Self::draw_cards(source_board, 1);
         Self::add_to_hand(source_board, Some(turn), drawn);
         source_board.mana -= 1;
+        self.enqueue_trigger(Trigger::OnTrade);
+        self.process_effect_queue();
+        self.check_for_deaths();
         self.refresh_costs();
         true
     }

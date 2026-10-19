@@ -72,6 +72,8 @@ pub fn all() -> Vec<Case> {
         case("triggers", "a deathwish that kills fires the next deathwish", deathwish_chains),
         case("triggers", "a quickdraw wakes the board's quickdraw watchers", quickdraw_wakes_watchers),
         case("triggers", "a stale play leaves the quickdraw watchers alone", stale_play_leaves_watchers_alone),
+        case("triggers", "a trade wakes the board's trade watchers", trade_wakes_trade_watchers),
+        case("triggers", "a play leaves the trade watchers alone", play_leaves_trade_watchers_alone),
         // passives
         case("passives", "a board passive doubles a quickdraw ability", passive_doubles_quickdraw),
         case("passives", "a board passive leaves other abilities alone", passive_only_doubles_quickdraw),
@@ -1182,6 +1184,30 @@ fn quickdraw_wakes_watchers() -> Scenario {
     let mut scn = s.start("quickdraw watcher");
     scn.play(bolt, None);
     scn.expect_eq("the watcher grew once", scn.attack_of(smith), Some(3));
+    scn
+}
+
+fn trade_wakes_trade_watchers() -> Scenario {
+    let mut s = Setup::new();
+    s.mana(Side::White, 3);
+    let trader = s.on_board(Side::White, minion(1, "Trader", 0, 1, 4).does(on_trade(vec![buff(itself(), 1, 1)])));
+    let pitch = s.in_hand(Side::White, minion(2, "Pitch", 1, 1, 1).with(MinionAttribute::Tradeable));
+    s.in_deck(Side::White, minion(3, "Fresh", 1, 1, 1));
+    let mut scn = s.start("trade watcher");
+    scn.expect_trade("trade accepted", pitch, true);
+    scn.expect_eq("the watcher grew once", scn.attack_of(trader), Some(2));
+    scn.expect_eq("and gained defence with it", scn.defence(trader), Some(5));
+    scn
+}
+
+fn play_leaves_trade_watchers_alone() -> Scenario {
+    let mut s = Setup::new();
+    s.mana(Side::White, 3);
+    let trader = s.on_board(Side::White, minion(1, "Trader", 0, 1, 4).does(on_trade(vec![buff(itself(), 1, 1)])));
+    let body = s.in_hand(Side::White, minion(2, "Body", 1, 1, 1));
+    let mut scn = s.start("trade watcher idle");
+    scn.play(body, None);
+    scn.expect_eq("nothing traded, nothing grew", scn.attack_of(trader), Some(1));
     scn
 }
 

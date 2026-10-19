@@ -120,6 +120,10 @@ pub fn on_quickdraw(effects: Vec<Effect>) -> Ability {
     Ability { trigger: Trigger::OnQuickdraw, requirements: vec![], effects }
 }
 
+pub fn on_trade(effects: Vec<Effect>) -> Ability {
+    Ability { trigger: Trigger::OnTrade, requirements: vec![], effects }
+}
+
 pub fn requiring(mut a: Ability, r: Requirement) -> Ability {
     a.requirements.push(r);
     a
