@@ -7,14 +7,14 @@ Hearthstone, Magic or elsewhere, and whether it is built.
 |---|---|
 | ✅ | built and playable |
 | ⬜ | wanted, not built |
-| 🟡 | maybe, undecided |
+| ❓ | maybe, undecided |
 | ❌ | ruled out |
 
 | | Name | Equivalent | Decks | Bans | Match | What it is |
 |---|---|---|---|---|---|---|
 | ✅ | Single Match | ladder Bo1, Standard | 1 | - | 1 game | One deck, one game. The default, for casual and ladder play |
 | ⬜ | Crucible 3 | Conquest Bo3, HS Masters | 3 | 1 each | Bo3, 2 wins | Win a game with each of your 2 surviving decks. A win retires that deck |
-| 🟡 | Crucible 4 | Conquest Bo5, old HCT | 4 | 1 each | Bo5, 3 wins | Same rules, one more deck. Longer and a heavier build cost |
+| ❓ | Crucible 4 | Conquest Bo5, old HCT | 4 | 1 each | Bo5, 3 wins | Same rules, one more deck. Longer and a heavier build cost |
 
 No sideboarding in any mode. The roster is the sideboard.
 

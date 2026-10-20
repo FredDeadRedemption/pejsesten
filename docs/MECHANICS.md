@@ -11,7 +11,7 @@ Built behaviour is read from `shared/src/types.rs`, `server/src/engine.rs` and
 |---|---|
 | ✅ | built and playable |
 | ⬜ | wanted, not built |
-| 🟡 | maybe, undecided |
+| ❓ | maybe, undecided |
 | ❌ | ruled out |
 
 ---
@@ -69,12 +69,12 @@ Prod values, with the dev profile in brackets where it differs (`server/src/sett
 | ⬜ | Rush | Rush | - | Attack minions on arrival but not the hero. Already how Blitz resolves, so this is the split of one keyword into two |
 | ⬜ | Freeze | Freeze | - | The minion misses its next attack |
 | ⬜ | Can't attack | Can't Attack | - | A body that only defends |
-| 🟡 | Reborn | Reborn | - | The first death returns it with 1 defence. Not loved |
-| 🟡 | Elusive | Elusive | - | Cannot be targeted by spells |
-| 🟡 | Immune | Immune | - | Takes no damage. Only ever for heroes, if at all |
-| 🟡 | Spell damage | Spell Damage | - | Your incantations deal extra damage |
-| 🟡 | Temporary | Temporary | - | Leaves at the end of the turn |
-| 🟡 | Permanent attribute | Permanent attribute | - | Intent unclear, parked |
+| ❓ | Reborn | Reborn | - | The first death returns it with 1 defence. Not loved |
+| ❓ | Elusive | Elusive | - | Cannot be targeted by spells |
+| ❓ | Immune | Immune | - | Takes no damage. Only ever for heroes, if at all |
+| ❓ | Spell damage | Spell Damage | - | Your incantations deal extra damage |
+| ❓ | Temporary | Temporary | - | Leaves at the end of the turn |
+| ❓ | Permanent attribute | Permanent attribute | - | Intent unclear, parked |
 | ❌ | Windfury | Windfury | - | Attacks twice per turn. Not wanted |
 | ❌ | Mega-Windfury | Mega-Windfury | - | Attacks four times per turn. Even less wanted |
 | ❌ | Unlimited attacks | - | - | No attack cap at all. Too strong to price |
@@ -97,12 +97,12 @@ Prod values, with the dev profile in brackets where it differs (`server/src/sett
 | ✅ | Omen watcher | Secret payoff | `OnOmenFired` | After one of your omens resolves. Checked on both boards, whoever owned the omen |
 | ⬜ | Start of game | Start of Game | - | Before the first turn |
 | ⬜ | Finale | Finale | - | The card is played with no mana left over |
-| 🟡 | Spellburst | Spellburst | - | One shot, the first time you play an incantation |
-| 🟡 | Frenzy | Frenzy | - | The first time the minion survives damage |
-| 🟡 | Overheal | Overheal | - | The minion is healed past its max defence |
-| 🟡 | Honorable kill | Honorable Kill | - | The attack killed with exactly lethal damage |
-| 🟡 | Overkill | Overkill | - | The attack dealt more than lethal damage |
-| 🟡 | Enrage | Enrage | - | While the minion is damaged |
+| ❓ | Spellburst | Spellburst | - | One shot, the first time you play an incantation |
+| ❓ | Frenzy | Frenzy | - | The first time the minion survives damage |
+| ❓ | Overheal | Overheal | - | The minion is healed past its max defence |
+| ❓ | Honorable kill | Honorable Kill | - | The attack killed with exactly lethal damage |
+| ❓ | Overkill | Overkill | - | The attack dealt more than lethal damage |
+| ❓ | Enrage | Enrage | - | While the minion is damaged |
 | ❌ | Inspire | Inspire | - | After using a hero power. No hero powers, and it was weak |
 | ❌ | Casts when drawn | Casts When Drawn | - | Fires itself out of the deck. Randomness |
 | ❌ | Summoned when drawn | Summoned When Drawn | - | Same, with a body |
@@ -122,12 +122,12 @@ still resolves. Filters (`Condition`) are `IsRace { race }` and `HasAttribute { 
 | ✅ | Controls another | "if you control a ..." | `ControlsOther { filters }` | Another friendly minion matches the filters |
 | ✅ | Counter at least | "if you've cast 3 spells" | `CounterAtLeast { counter, amount }` | A board tally reached the amount. Only tally so far: `QuickdrawsPlayed` |
 | ✅ | Arrival played | - | `ArrivalPlayedThisTurn` | You already played a card this turn that had arrived this turn |
-| 🟡 | Outcast | Outcast | - | The card is the leftmost or rightmost in your hand. Possibly not as clever as it looks |
-| 🟡 | Manathirst | Manathirst | - | You have at least X mana crystals |
-| 🟡 | Kindred | Kindred | - | A card of the same race was played last turn |
-| 🟡 | Corrupt | Corrupt | - | Upgrades in hand once you play a more expensive card |
-| 🟡 | Infuse | Infuse | - | Upgrades in hand once X friendly minions have died |
-| 🟡 | Joust | Joust | - | Reveal a minion from each deck, the costlier one wins. Fun, but random |
+| ❓ | Outcast | Outcast | - | The card is the leftmost or rightmost in your hand. Possibly not as clever as it looks |
+| ❓ | Manathirst | Manathirst | - | You have at least X mana crystals |
+| ❓ | Kindred | Kindred | - | A card of the same race was played last turn |
+| ❓ | Corrupt | Corrupt | - | Upgrades in hand once you play a more expensive card |
+| ❓ | Infuse | Infuse | - | Upgrades in hand once X friendly minions have died |
+| ❓ | Joust | Joust | - | Reveal a minion from each deck, the costlier one wins. Fun, but random |
 
 ---
 
@@ -162,23 +162,23 @@ side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and fi
 | ⬜ | Miniaturize | Miniaturize | - | Play it and get a 1 cost 1/1 version in hand |
 | ⬜ | Forge | Forge | - | Pay mana from hand to upgrade the card |
 | ⬜ | Change cost type | - | - | A card paid for with something other than mana |
-| 🟡 | Adapt | Adapt | - | Choose one of three upgrades from a fixed list |
-| 🟡 | Dredge | Dredge | - | Look at the bottom three of your deck, put one on top |
-| 🟡 | Excavate | Excavate | - | Adds a treasure to hand, better each time |
-| 🟡 | Echo | Echo | - | Replayable all turn, the copy expires at end of turn |
-| 🟡 | Recruit | Recruit | - | Summon a minion straight out of your deck |
-| 🟡 | Shatter | Shatter | - | On arrival in hand, splits into two halves of itself |
-| 🟡 | Spare part | Spare Part | - | Generates cheap filler spells |
-| 🟡 | Sidequest | Sidequest | - | A small quest that is not your whole deck plan |
-| 🟡 | Passive | Passive | - | A standing effect, floated as the replacement for hero powers |
-| 🟡 | Equip | Equip, Weapon | - | Gives the hero a weapon |
-| 🟡 | Discard | Discard | - | Throw a card out of hand |
-| 🟡 | Force attack | - | - | Make a minion attack. Not much liked |
-| 🟡 | Put into battlefield | Put into play, Cheat into play | - | Place a card on the board without paying for it |
-| 🟡 | Put into hand | Tutor | - | Fetch a specific card into hand |
-| 🟡 | Replace | - | - | Swap one card for another |
-| 🟡 | Swap effects | - | - | Trade abilities between two cards. Not stat swapping, which is out |
-| 🟡 | Transform | Transform, Polymorph | - | Turn a minion into something else |
+| ❓ | Adapt | Adapt | - | Choose one of three upgrades from a fixed list |
+| ❓ | Dredge | Dredge | - | Look at the bottom three of your deck, put one on top |
+| ❓ | Excavate | Excavate | - | Adds a treasure to hand, better each time |
+| ❓ | Echo | Echo | - | Replayable all turn, the copy expires at end of turn |
+| ❓ | Recruit | Recruit | - | Summon a minion straight out of your deck |
+| ❓ | Shatter | Shatter | - | On arrival in hand, splits into two halves of itself |
+| ❓ | Spare part | Spare Part | - | Generates cheap filler spells |
+| ❓ | Sidequest | Sidequest | - | A small quest that is not your whole deck plan |
+| ❓ | Passive | Passive | - | A standing effect, floated as the replacement for hero powers |
+| ❓ | Equip | Equip, Weapon | - | Gives the hero a weapon |
+| ❓ | Discard | Discard | - | Throw a card out of hand |
+| ❓ | Force attack | - | - | Make a minion attack. Not much liked |
+| ❓ | Put into battlefield | Put into play, Cheat into play | - | Place a card on the board without paying for it |
+| ❓ | Put into hand | Tutor | - | Fetch a specific card into hand |
+| ❓ | Replace | - | - | Swap one card for another |
+| ❓ | Swap effects | - | - | Trade abilities between two cards. Not stat swapping, which is out |
+| ❓ | Transform | Transform, Polymorph | - | Turn a minion into something else |
 | ❌ | Rewind | Rewind | - | Undo a card and replay it for a different random outcome. Needs randomness to be worth anything |
 | ❌ | Jade Golem | Jade Golem | - | A golem one size bigger every time. Ramp by another name |
 | ❌ | Lackey | Lackey | - | Generated 1/1s with small fanfares. Good idea, wrong flavour |
@@ -268,9 +268,9 @@ An omen firing cannot arm or fire another omen, so death cascades cannot chain t
 | | Name | Equivalent | Code | Effect |
 |---|---|---|---|---|
 | ⬜ | Deck size | - | `MAX_DECK_CARDS` | The design is 25 cards and up to 3 copies. The builder caps at 50 today and does not limit copies |
-| 🟡 | Fabled | Fabled | - | Adding the card also puts two uncollectible partners in the deck |
-| 🟡 | Tourist | Tourist | - | Lets the deck hold cards from another colour |
-| 🟡 | Deckbuilding effect | - | - | Any card that changes what a legal deck is |
+| ❓ | Fabled | Fabled | - | Adding the card also puts two uncollectible partners in the deck |
+| ❓ | Tourist | Tourist | - | Lets the deck hold cards from another colour |
+| ❓ | Deckbuilding effect | - | - | Any card that changes what a legal deck is |
 
 ---
 
