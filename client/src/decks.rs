@@ -89,7 +89,17 @@ mod backend {
     }
 }
 
-pub use backend::{load, now_id, save};
+pub use backend::{now_id, save};
+
+// web has no file to read, so an unseeded browser would otherwise show no decks at all
+const STOCK: &str = include_str!("../../decks.json");
+
+pub fn load() -> Vec<Deck> {
+    match backend::load() {
+        decks if decks.is_empty() => serde_json::from_str(STOCK).unwrap_or_default(),
+        decks => decks,
+    }
+}
 
 pub fn export_all(decks: &[Deck]) -> String {
     let json = serde_json::to_string(decks).unwrap_or_default();
