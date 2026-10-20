@@ -63,6 +63,8 @@ fn default_deck() -> Vec<u32> {
     shared::cards::get_collectible_cards().iter().map(Card::id).flat_map(|id| [id, id]).collect()
 }
 
+const DEFAULT_DECK: &str = "Gunslinger";
+
 /// Which built deck queues up next. Slot 0 is the dev deck, so the lobby works with no decks saved.
 struct Lobby {
     decks: Vec<Deck>,
@@ -71,7 +73,9 @@ struct Lobby {
 
 impl Lobby {
     fn load() -> Self {
-        Self { decks: decks::load(), selected: 0 }
+        let decks = decks::load();
+        let selected = decks.iter().position(|d| d.name == DEFAULT_DECK).map_or(0, |i| i + 1);
+        Self { decks, selected }
     }
 
     fn cycle(&mut self) {
