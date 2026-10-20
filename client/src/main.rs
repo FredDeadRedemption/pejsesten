@@ -1,9 +1,10 @@
 use macroquad::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 #[macro_use]
 mod log;
 
+mod anim;
 mod card3d;
 mod clipboard;
 mod deckbuilder;
@@ -16,8 +17,10 @@ mod network;
 mod render;
 mod session;
 mod textures;
+mod timeline;
 mod ui;
 
+use anim::Anims;
 use card3d::Card3D;
 use deckbuilder::DeckBuilderState;
 use decks::Deck;
@@ -29,6 +32,7 @@ use shared::types::{
     TargetMode, ScenarioFrameInfo, TargetSide, TargetSpec,
 };
 use textures::TextureCache;
+use timeline::Timeline;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn server_url() -> String {
@@ -116,7 +120,7 @@ enum Screen {
     Connecting,
     Lobby(Lobby),
     Mulligan { state: GameStateClient, selected: Vec<usize> },
-    Playing(GameStateClient),
+    Playing(Timeline),
     DeckBuilder(DeckBuilderState),
     CardFlipTest(Card3D),
     GlowTest(Vec<CardEntity>),
@@ -152,8 +156,7 @@ async fn main() {
     let mut drag: Option<DragState> = None;
     let mut hover_id: Option<u32> = None;
     let mut hover_timer: f32 = 0.0;
-    let mut anims: Vec<BumpAnim> = vec![];
-    let mut hand_flips: HashMap<u32, CardFlip> = HashMap::new();
+    let mut anims = Anims::new();
     let mut scenario: Option<ScenarioFrameInfo> = None;
     let mut omen_pick: Option<OmenPick> = None;
     let mut glow_watcher = glow::Watcher::new();
@@ -169,28 +172,45 @@ async fn main() {
         // --- Network ---
         while let Some(event) = net.poll() {
             match event {
-                ServerEvent::GameState(state) => {
-                    cache.queue_for_state(&state);
-                    screen = match state.phase {
+                ServerEvent::GameState(update) => {
+                    cache.queue_for_state(&update.state);
+                    match update.state.phase {
                         GamePhase::Mulligan => {
                             let selected = match &screen {
                                 Screen::Mulligan { selected, .. } => selected.clone(),
                                 _ => vec![],
                             };
-                            Screen::Mulligan { state, selected }
+                            screen = Screen::Mulligan { state: update.state, selected };
                         }
-                        GamePhase::Playing => Screen::Playing(state),
-                    };
+                        // a running timeline queues the batch; a fresh one has nothing to play from
+                        GamePhase::Playing => match &mut screen {
+                            Screen::Playing(timeline) => timeline.push(update),
+                            _ => {
+                                // entity ids restart with a game, so nothing may outlive the old one
+                                anims = Anims::new();
+                                screen = Screen::Playing(Timeline::new(update.state));
+                            }
+                        },
+                    }
                 }
                 ServerEvent::ScenarioFrame(info) => scenario = Some(info),
                 ServerEvent::Redirect => {}
             }
         }
 
+        // --- Timeline ---
+        if let Screen::Playing(timeline) = &mut screen {
+            let dt = get_frame_time();
+            for event in timeline.tick(dt) {
+                anims.spawn(&event, timeline.visual(), w, h);
+            }
+            anims.tick(dt, timeline.visual());
+        }
+
         if let Some(pick) = &omen_pick {
             let still_there = match &screen {
-                Screen::Playing(state) => {
-                    state.self_board.hand.get(pick.hand_index).map(|c| c.entity_id()) == Some(pick.entity_id)
+                Screen::Playing(timeline) => {
+                    timeline.state().self_board.hand.get(pick.hand_index).map(|c| c.entity_id()) == Some(pick.entity_id)
                 }
                 _ => false,
             };
@@ -231,7 +251,7 @@ async fn main() {
         }
 
         // --- Input ---
-        handle_input(&mut screen, &mut net, &mut drag, &mut anims, &mut scenario, &mut omen_pick, mx, my, w, h);
+        handle_input(&mut screen, &mut net, &mut drag, &mut scenario, &mut omen_pick, mx, my, w, h);
 
         // egui lays the deck builder out and consumes its input before anything is painted
         let deck_builder = match &mut screen {
@@ -268,25 +288,14 @@ async fn main() {
                 card.draw();
                 ui::text("Card Flip Test — Space/Click to flip, Esc to go back", 20.0, 30.0, 22.0, WHITE);
             }
-            Screen::Playing(state) => {
-                // Tick anims
-                let dt = get_frame_time();
-                for a in &mut anims { a.tick(dt); }
-                anims.retain(|a| !a.done());
-
-                // Sync hand-flip animations: new cards start back-facing and rotate to front
-                let hand_ids: HashSet<u32> = state.self_board.hand.iter().map(|c| c.entity_id()).collect();
-                hand_flips.retain(|id, _| hand_ids.contains(id));
-                for card in &state.self_board.hand {
-                    hand_flips.entry(card.entity_id()).or_insert_with(CardFlip::new_drawn);
-                }
-                for f in hand_flips.values_mut() { f.update(dt); }
+            Screen::Playing(timeline) => {
+                let state = timeline.visual();
 
                 // Update hover
                 if drag.is_none() {
                     let new_hover = find_hovered_entity(Vec2::new(mx, my), state, w, h);
                     if new_hover == hover_id {
-                        hover_timer += dt;
+                        hover_timer += get_frame_time();
                     } else {
                         hover_id = new_hover;
                         hover_timer = 0.0;
@@ -295,18 +304,12 @@ async fn main() {
                     hover_id = None;
                     hover_timer = 0.0;
                 }
-                let anim_offsets: Vec<(u32, Vec2)> = anims.iter()
-                    .map(|a| (a.entity_id, a.offset()))
-                    .collect();
-                let hand_flip_vec: Vec<(u32, f32)> = hand_flips.iter()
-                    .map(|(id, f)| (*id, f.cos()))
-                    .collect();
-                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer, anim_offsets, hand_flip_vec);
+                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer);
                 let targeting_active = drag_render.card.is_some()
                     && !drag_render.targetable_ids.is_empty()
                     && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
                 show_mouse(!targeting_active);
-                render::draw_game(state, &cache, &drag_render);
+                render::draw_game(state, &cache, &drag_render, &anims.overlay());
             }
             Screen::DeckBuilder(db) => {
                 show_mouse(true);
@@ -356,87 +359,6 @@ fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
             Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None,
         })
         .collect()
-}
-
-struct BumpAnim {
-    entity_id: u32,
-    dir: Vec2,
-    reach: f32, // px to travel — computed so the card edge just touches the target
-    t: f32,
-}
-
-impl BumpAnim {
-    fn new(entity_id: u32, dir: Vec2, reach: f32) -> Self {
-        Self { entity_id, dir, reach, t: 0.0 }
-    }
-
-    fn tick(&mut self, dt: f32) {
-        self.t = (self.t + dt / 0.38).min(1.0);
-    }
-
-    fn done(&self) -> bool { self.t >= 1.0 }
-
-    fn offset(&self) -> Vec2 {
-        let frac = if self.t < 0.35 {
-            let p = self.t / 0.35;
-            p * (2.0 - p)          // ease-out quad: 0 → 1
-        } else {
-            let p = (self.t - 0.35) / 0.65;
-            (1.0 - p) * (1.0 - p) // ease-in quad: 1 → 0
-        };
-        self.dir * self.reach * frac
-    }
-}
-
-const FLIP_RATE: f32 = 8.0;
-
-struct CardFlip {
-    rotation_y: f32,
-    target_y: f32,
-}
-
-impl CardFlip {
-    fn new_drawn() -> Self {
-        Self { rotation_y: std::f32::consts::PI, target_y: 0.0 }
-    }
-
-    // exponential form: a texture preload can stall a frame for >0.25s, and the plain
-    // dt lerp overshoots past that, leaving the card spinning at a sliver forever
-    fn update(&mut self, dt: f32) {
-        let diff = self.target_y - self.rotation_y;
-        self.rotation_y += diff * (1.0 - (-FLIP_RATE * dt).exp());
-    }
-
-    fn cos(&self) -> f32 {
-        self.rotation_y.cos()
-    }
-}
-
-fn make_bump_anim(attacker_id: u32, target_id: u32, state: &GameStateClient, w: f32, h: f32) -> Option<BumpAnim> {
-    let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
-    let a_center = state.self_board.battlefield.iter().zip(self_rects.iter())
-        .find(|(m, _)| m.entity_id == attacker_id)
-        .map(|(_, r)| Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0))?;
-
-    let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
-    let t_center = state.enemy_board.battlefield.iter().zip(enemy_rects.iter())
-        .find(|(m, _)| m.entity_id == target_id)
-        .map(|(_, r)| Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0))
-        .or_else(|| {
-            if state.enemy_board.hero.entity_id == target_id {
-                let r = layout::enemy_hero_rect(w, h);
-                Some(Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0))
-            } else {
-                None
-            }
-        })?;
-
-    let delta = t_center - a_center;
-    let dist = delta.length();
-    let dir = delta / dist;
-    // travel until the attacker's edge just meets the target's edge
-    let reach = (dist - 50.0 - 50.0).max(20.0);
-    Some(BumpAnim::new(attacker_id, dir, reach))
 }
 
 fn target_spec_from_effect(effect: &Effect) -> Option<&TargetSpec> {
@@ -575,7 +497,7 @@ fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     None
 }
 
-fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32, anim_offsets: Vec<(u32, Vec2)>, hand_flips: Vec<(u32, f32)>) -> DragRender<'a> {
+fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32) -> DragRender<'a> {
     let targetable_ids = compute_targetable_ids(drag, state);
     let trade_drop_active = match drag {
         Some(DragState::Card { index }) => state.self_board.hand.get(*index)
@@ -592,8 +514,6 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             targetable_ids,
             trade_drop_active,
             hovered_id,
-            anim_offsets,
-            hand_flips,
         },
         Some(DragState::Minion { entity_id }) => DragRender {
             card: None,
@@ -602,10 +522,8 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             targetable_ids,
             trade_drop_active,
             hovered_id,
-            anim_offsets,
-            hand_flips,
         },
-        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_id, anim_offsets, hand_flips },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_id },
     }
 }
 
@@ -613,7 +531,6 @@ fn handle_input(
     screen: &mut Screen,
     net: &mut NetworkClient,
     drag: &mut Option<DragState>,
-    anims: &mut Vec<BumpAnim>,
     scenario: &mut Option<ScenarioFrameInfo>,
     omen_pick: &mut Option<OmenPick>,
     mx: f32, my: f32,
@@ -711,7 +628,12 @@ fn handle_input(
             }
         }
 
-        Screen::Playing(state) => {
+        Screen::Playing(timeline) => {
+            // the board is still catching up to the server, so nothing is legal yet
+            if !timeline.idle() {
+                return;
+            }
+            let state = timeline.state();
             if !state.your_turn {
                 return;
             }
@@ -775,9 +697,6 @@ fn handle_input(
                             }
                             DragState::Minion { entity_id } => {
                                 if let Some(target_id) = find_target(mouse, state, w, h, &targets) {
-                                    if let Some(anim) = make_bump_anim(entity_id, target_id, state, w, h) {
-                                        anims.push(anim);
-                                    }
                                     net.attack(&AttackData { origin_id: entity_id, target_id });
                                 }
                             }

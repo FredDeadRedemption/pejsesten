@@ -1,9 +1,9 @@
 use serde_json::Value;
 
-use shared::types::{AttackData, GameStateClient, PlayerMetaData, ScenarioFrameInfo};
+use shared::types::{AttackData, PlayerMetaData, ScenarioFrameInfo, StateUpdate};
 
 pub enum ServerEvent {
-    GameState(GameStateClient),
+    GameState(StateUpdate),
     ScenarioFrame(ScenarioFrameInfo),
     Redirect,
 }
@@ -195,9 +195,8 @@ impl NetworkClient {
                     let data = arr.get(1)?;
                     match event {
                         "newGameState" => {
-                            let state: GameStateClient =
-                                serde_json::from_value(data.clone()).ok()?;
-                            Some(ServerEvent::GameState(state))
+                            let update: StateUpdate = serde_json::from_value(data.clone()).ok()?;
+                            Some(ServerEvent::GameState(update))
                         }
                         "scenarioFrame" => {
                             let info: ScenarioFrameInfo = serde_json::from_value(data.clone()).ok()?;

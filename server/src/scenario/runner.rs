@@ -5,7 +5,7 @@
 use super::cases;
 use crate::engine::{Game, IdGenerator};
 use crate::settings;
-use shared::types::ScenarioFrameInfo;
+use shared::types::{ScenarioFrameInfo, StateUpdate};
 use socketioxide::SocketIo;
 use std::time::Duration;
 
@@ -19,7 +19,7 @@ pub async fn run(io: SocketIo, socket_id: String) {
         failed += scenario.failures().len();
 
         for frame in scenario.frames() {
-            let view = Game::from_state(frame.state.clone(), IdGenerator::new()).parse_client_state(true);
+            let state = Game::from_state(frame.state.clone(), IdGenerator::new()).parse_client_state(true);
             let info = ScenarioFrameInfo {
                 case: case.name.clone(),
                 group: case.group.to_string(),
@@ -31,6 +31,8 @@ pub async fn run(io: SocketIo, socket_id: String) {
                 failed,
                 done: false,
             };
+            // each frame is its own board, so there is nothing to animate between them
+            let view = StateUpdate { state, events: vec![] };
             io.to(socket_id.clone()).emit("newGameState", &view).await.ok();
             io.to(socket_id.clone()).emit("scenarioFrame", &info).await.ok();
             tokio::time::sleep(Duration::from_millis(settings::SCENARIO_FRAME_MS)).await;

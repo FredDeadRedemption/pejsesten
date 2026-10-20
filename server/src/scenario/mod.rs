@@ -333,6 +333,11 @@ impl Scenario {
 
     // --- queries ---
 
+    /// Events recorded since the last call, which is what the client would animate.
+    pub fn events(&mut self) -> Vec<GameEvent> {
+        self.game.drain_events()
+    }
+
     pub fn state(&self) -> &GameStateServer {
         &self.game.state
     }

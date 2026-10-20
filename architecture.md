@@ -163,6 +163,32 @@ Everything else in `network.rs` (and `main.rs`, deckbuilder, etc.) just calls `w
 
 The Rust client speaks raw socket.io v4 framing over a single WebSocket. The framing (e.g. `42["eventName",{...}]`) is hand-rolled in `client/src/network.rs::handle_message`. Server uses `socketioxide` to speak the same protocol. No JSON-RPC, no custom framing layer beyond what socket.io defines.
 
+### State and events
+
+`newGameState` carries a `StateUpdate`: the authoritative `GameStateClient` snapshot, plus the
+ordered `Vec<GameEvent>` of visible changes that led to it. The snapshot is the only truth. Events
+exist so the client can animate causally, which a snapshot cannot express — diff two boards and you
+learn *what* changed, never *why* or *in what order*.
+
+The engine records an event wherever it mutates something a player can see: `deal_damage`, `heal`,
+`absorb_ward`, `check_for_deaths`, each `apply_effect` arm, and the five public actions. They
+accumulate on `Game` and `broadcast` drains them, so several engine calls in a row (a bot going
+lethal, a death cascade) arrive as one ordered batch. `TriggerFired` marks an ability starting to
+resolve and is emitted from `process_effect_queue` rather than at enqueue time, so it lands in
+resolution order and the client can attribute what follows to its source.
+
+Events carry entity ids and numbers only — never card payloads, never an omen's armed trigger — so
+they leak nothing the snapshot beside them does not, and the same list goes to both players. Each
+side resolves the ids against its own view.
+
+Client side, `timeline.rs` holds the snapshot plus a lagging copy of the board and plays one event
+at a time, so a minion that died is still on screen while its death animates. Each event lands on
+the lagging copy when it finishes, and a drained queue assigns the snapshot over it, so the two
+cannot drift. Input and every rule read `Timeline::state()`; only the renderer reads
+`Timeline::visual()`. A reconnect replay sends an empty event list, which snaps with no animation.
+`anim.rs` turns the events the timeline starts into the bumps, flashes, collapses and floating
+numbers that `render.rs` looks up per entity.
+
 ### Session identity
 
 The client sends its player token as socket.io auth in the namespace-connect frame (`40{"token":"..."}`), so the server knows who a socket belongs to before any event arrives. That token — never the socket id — is the player id inside `Game`, and each socket joins a room named after it, so `broadcast` keeps working across a reconnect.
@@ -229,5 +255,6 @@ Single Railway service, single origin. The server hosts the static files via `to
 - "How do I add a new browser API to the wasm client?" — Write a JS plugin (~30 lines) and matching Rust `extern "C"` block. Add the JS file to `index.html`, the link list in `xtask/src/main.rs`, and the Dockerfile.
 - "Why is `ewebsock` desktop-only?" — It pulls `wasm-bindgen` transitively, which can't coexist with `mq_js_bundle.js`. We use our `app_ws.js` plugin on wasm instead.
 - "Why does `MEDIA_ROOT` differ between targets?" — Native loads from disk via an absolute path baked at compile time. Wasm loads via HTTP from `/media/...`, served by the same axum server.
+- "Why does my opponent's attack animate now?" — `Attacked` comes off the server event stream, so both players drain the same list. It used to be spawned from the attacker's own click.
 - "Where do decks save?" — `decks.json` in CWD on desktop, `localStorage` under key `pejsesten.decks` on wasm.
 - "How do I update `mq_js_bundle.js`?" — `curl -sSL https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js -o client/mq_js_bundle.js`. The hosted version is known-good; the master branch on GitHub has a strict-mode bug.

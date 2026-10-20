@@ -102,10 +102,14 @@ struct QueuedEffect {
     owner: PlayerSide,
     target_id: Option<u32>,
     self_id: Option<u32>,
+    // first effect of an ability, so the recorded marker lands in resolution order
+    starts_block: bool,
 }
 
 pub struct Game {
     pub state: GameStateServer,
+    /// Visible changes since the last broadcast, in the order they resolved.
+    events: Vec<GameEvent>,
     effect_queue: Vec<QueuedEffect>,
     ids: IdGenerator,
     // omen effects must not arm further omens, or a death cascade chains the whole zone
@@ -189,6 +193,7 @@ impl Game {
                 mulligan_white_done: !settings::MULLIGAN,
                 mulligan_black_done: !settings::MULLIGAN,
             },
+            events: vec![],
             effect_queue: vec![],
             ids: ids,
             omens_firing: false,
@@ -196,13 +201,10 @@ impl Game {
         }
     }
 
-    // --- Board access ---
-    // white and black are separate struct fields so Rust allows split mutable borrows
-
     /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
     /// Caller owns id continuity: pass a generator already past the state's entity ids.
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
-        let mut game = Game { state, effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() };
+        let mut game = Game { state, events: vec![], effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() };
         game.refresh_stats();
         game.refresh_costs();
         game
@@ -212,6 +214,31 @@ impl Game {
     pub fn register_summonable(&mut self, card: MinionCard) {
         self.summon_pool.insert(card.id, card);
     }
+
+    // --- Events ---
+
+    fn record(&mut self, event: GameEvent) {
+        self.events.push(event);
+    }
+
+    /// Hands the recorded events to the caller and starts a fresh log.
+    pub fn drain_events(&mut self) -> Vec<GameEvent> {
+        std::mem::take(&mut self.events)
+    }
+
+    /// The entity behind a target ref, so an event can name what an effect actually hit.
+    fn entity_id_at(&self, owner: PlayerSide, tr: TargetRef) -> Option<u32> {
+        let (source, enemy) = self.boards_for(owner);
+        match tr {
+            TargetRef::HeroSource => Some(source.hero.entity_id),
+            TargetRef::HeroEnemy => Some(enemy.hero.entity_id),
+            TargetRef::MinionSource(i) => source.battlefield.get(i).map(|m| m.entity_id),
+            TargetRef::MinionEnemy(i) => enemy.battlefield.get(i).map(|m| m.entity_id),
+        }
+    }
+
+    // --- Board access ---
+    // white and black are separate struct fields so Rust allows split mutable borrows
 
     fn source_board(&self) -> &Board {
         if self.state.white_turn { &self.state.white } else { &self.state.black }
@@ -411,6 +438,7 @@ impl Game {
                 let mut minion = minion.clone();
                 minion.exhausted = !minion.card.attributes.contains(&MinionAttribute::Charge);
                 board.battlefield.push(minion);
+                self.record(GameEvent::MinionSummoned { entity_id });
             }
         }
 
@@ -418,6 +446,7 @@ impl Game {
             if ability.trigger != Trigger::OnPlay || !self.check_requirements(&ability.requirements, &entity) {
                 continue;
             }
+            self.record(GameEvent::TriggerFired { source_id: entity_id });
             for effect in &ability.effects {
                 let target_id = effect_target_spec(effect)
                     .filter(|ts| ts.target_mode == TargetMode::Targeted)
@@ -498,14 +527,18 @@ impl Game {
 
     // cards that arrive at a full hand are burned
     // `arrival` is None for the pre-game deal, Some(turn) for anything that lands during play
-    fn add_to_hand(board: &mut Board, arrival: Option<u32>, cards: impl IntoIterator<Item = CardEntity>) {
+    // returns what landed, so a burned card is never reported as drawn
+    fn add_to_hand(board: &mut Board, arrival: Option<u32>, cards: impl IntoIterator<Item = CardEntity>) -> Vec<u32> {
+        let mut landed = vec![];
         for mut card in cards {
             if board.hand.len() >= settings::MAX_HAND_SIZE {
-                return;
+                return landed;
             }
             *card.arrived_on_turn_mut() = arrival;
+            landed.push(card.entity_id());
             board.hand.push(card);
         }
+        landed
     }
 
     // --- Effect queue ---
@@ -520,12 +553,13 @@ impl Game {
                     continue;
                 }
                 let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
-                for effect in &ability.effects {
+                for (i, effect) in ability.effects.iter().enumerate() {
                     to_queue.push(QueuedEffect {
                         effect: effect.clone(),
                         owner: owner,
                         target_id: None,
                         self_id: Some(minion.entity_id),
+                        starts_block: i == 0,
                     });
                 }
             }
@@ -536,7 +570,7 @@ impl Game {
     /// Minions that react to an omen resolving, on both boards whoever it belonged to.
     fn fire_omen_watchers(&mut self) {
         for side in [PlayerSide::White, PlayerSide::Black] {
-            let reactions: Vec<(u32, Effect)> = self
+            let reactions: Vec<(u32, Effect, bool)> = self
                 .source_board_for(side)
                 .battlefield
                 .iter()
@@ -546,11 +580,14 @@ impl Game {
                         .abilities
                         .iter()
                         .filter(|a| a.trigger == Trigger::OnOmenFired)
-                        .flat_map(move |a| a.effects.iter().map(move |e| (id, e.clone())))
+                        .flat_map(move |a| a.effects.iter().enumerate().map(move |(i, e)| (id, e.clone(), i == 0)))
                 })
                 .collect();
 
-            for (id, effect) in reactions {
+            for (id, effect, starts_block) in reactions {
+                if starts_block {
+                    self.record(GameEvent::TriggerFired { source_id: id });
+                }
                 self.apply_effect(effect, side, None, Some(id));
             }
         }
@@ -585,6 +622,7 @@ impl Game {
 
         self.omens_firing = true;
         for omen in &fired {
+            self.record(GameEvent::OmenFired { entity_id: omen.entity_id });
             for effect in &omen.card.effects {
                 self.apply_effect(effect.clone(), owner, None, None);
             }
@@ -598,6 +636,11 @@ impl Game {
         // drain one at a time so effects enqueued by effects are processed in order
         while !self.effect_queue.is_empty() {
             let queued = self.effect_queue.remove(0);
+            if queued.starts_block {
+                if let Some(source_id) = queued.self_id {
+                    self.record(GameEvent::TriggerFired { source_id });
+                }
+            }
             self.apply_effect(queued.effect, queued.owner, queued.target_id, queued.self_id);
         }
     }
@@ -612,6 +655,7 @@ impl Game {
             self.refresh_stats();
             let mut any_died = false;
             let mut to_queue: Vec<QueuedEffect> = vec![];
+            let mut dead_ids: Vec<u32> = vec![];
 
             // Check both boards each iteration
             for white_is_board in [true, false] {
@@ -623,12 +667,13 @@ impl Game {
                         any_died = true;
                         died[if white_is_board { 0 } else { 1 }] = true;
                         let dead = board.battlefield.remove(i);
+                        dead_ids.push(dead.entity_id);
 
                         for ability in &dead.card.abilities {
                             if ability.trigger != Trigger::OnDeath {
                                 continue;
                             }
-                            for effect in &ability.effects {
+                            for (n, effect) in ability.effects.iter().enumerate() {
                                 let owner = if white_is_board { PlayerSide::White } else { PlayerSide::Black };
 
                                 to_queue.push(QueuedEffect {
@@ -636,6 +681,7 @@ impl Game {
                                     owner: owner,
                                     target_id: None,
                                     self_id: Some(dead.entity_id.clone()),
+                                    starts_block: n == 0,
                                 });
                             }
                         }
@@ -647,6 +693,9 @@ impl Game {
                 }
             }
 
+            for entity_id in dead_ids {
+                self.record(GameEvent::Died { entity_id });
+            }
             self.effect_queue.extend(to_queue);
             if !any_died {
                 break;
@@ -689,8 +738,28 @@ impl Game {
     }
 
     fn heal(&mut self, owner: PlayerSide, tr: TargetRef, amount: i32) {
-        let damage = self.damage_mut(owner, tr);
-        *damage = (*damage - amount).max(0);
+        let entity_id = self.entity_id_at(owner, tr);
+        // clamped at zero, so what was asked for is not what landed
+        let healed = {
+            let damage = self.damage_mut(owner, tr);
+            let before = *damage;
+            *damage = (*damage - amount).max(0);
+            before - *damage
+        };
+        if healed > 0 && let Some(entity_id) = entity_id {
+            self.record(GameEvent::Healed { entity_id, amount: healed });
+        }
+    }
+
+    /// Damage applied where the amount is known, so nothing lands on the board unrecorded.
+    /// [`Self::damage_mut`] hands out a bare handle and cannot see the delta.
+    fn deal_damage(&mut self, owner: PlayerSide, tr: TargetRef, amount: i32) {
+        if amount == 0 {
+            return;
+        }
+        let Some(entity_id) = self.entity_id_at(owner, tr) else { return };
+        *self.damage_mut(owner, tr) += amount;
+        self.record(GameEvent::Damaged { entity_id, amount });
     }
 
     /// A hero cannot be destroyed, only brought to zero.
@@ -765,6 +834,7 @@ impl Game {
 
     /// Ward eats one hit and breaks. A hero has none, so nothing is absorbed.
     fn absorb_ward(&mut self, owner: PlayerSide, tr: TargetRef) -> bool {
+        let entity_id = self.entity_id_at(owner, tr);
         let (source, enemy) = self.boards_for_mut(owner);
         let minion = match tr {
             TargetRef::MinionSource(i) => &mut source.battlefield[i],
@@ -773,6 +843,9 @@ impl Game {
         };
         let absorbed = minion.ward_active;
         minion.ward_active = false;
+        if absorbed && let Some(entity_id) = entity_id {
+            self.record(GameEvent::WardBroken { entity_id });
+        }
         absorbed
     }
 
@@ -782,9 +855,13 @@ impl Game {
         match effect {
             Effect::Buff { target_spec, attack, defence } => {
                 for tr in self.get_target_refs(&target_spec, owner, target_id, self_id) {
+                    let entity_id = self.entity_id_at(owner, tr);
                     let buff = self.buff_mut(owner, tr);
                     buff.attack += attack;
                     buff.defence += defence;
+                    if let Some(entity_id) = entity_id {
+                        self.record(GameEvent::Buffed { entity_id, attack, defence });
+                    }
                 }
             }
 
@@ -801,7 +878,7 @@ impl Game {
                     if self.absorb_ward(owner, tr) {
                         continue;
                     }
-                    *self.damage_mut(owner, tr) += damage;
+                    self.deal_damage(owner, tr, damage);
                     dealt += damage;
                 }
                 if lifesteal {
@@ -817,6 +894,7 @@ impl Game {
                 };
 
                 // Step 2: follow-up (collect battlefield len while immutably borrowed)
+                let mut created: Vec<u32> = vec![];
                 if let Some(ref fu) = follow_up {
                     let battlefield_len = self.source_board_for(owner).battlefield.len();
                     let counters = self.source_board_for(owner).counters.clone();
@@ -841,6 +919,7 @@ impl Game {
                                         let mut copy = card.clone();
                                         // its own entity, or the two move and highlight as one
                                         *copy.entity_id_mut() = self.ids.next_id();
+                                        created.push(copy.entity_id());
                                         extra.push(copy);
                                     }
                                 }
@@ -853,13 +932,21 @@ impl Game {
                 // Step 3: push to hand
                 let turn = self.state.turn_count;
                 let source_board = self.source_board_for_mut(owner);
-                Self::add_to_hand(source_board, Some(turn), drawn);
+                let landed = Self::add_to_hand(source_board, Some(turn), drawn);
+                for entity_id in landed {
+                    if created.contains(&entity_id) {
+                        self.record(GameEvent::CardCreated { entity_id });
+                    } else {
+                        self.record(GameEvent::CardDrawn { entity_id });
+                    }
+                }
             }
 
             Effect::ReturnToHand { target_spec, cost_reduction } => {
                 let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
 
                 let turn = self.state.turn_count;
+                let mut returned: Vec<u32> = vec![];
                 let (source, enemy) = self.boards_for_mut(owner);
 
                 for tr in refs.into_iter().rev() {
@@ -885,14 +972,18 @@ impl Game {
 
                         match tr {
                             TargetRef::MinionSource(_) => {
-                                Self::add_to_hand(source, Some(turn), [CardEntity::Minion(minion)]);
+                                returned.extend(Self::add_to_hand(source, Some(turn), [CardEntity::Minion(minion)]));
                             }
                             TargetRef::MinionEnemy(_) => {
-                                Self::add_to_hand(enemy, Some(turn), [CardEntity::Minion(minion)]);
+                                returned.extend(Self::add_to_hand(enemy, Some(turn), [CardEntity::Minion(minion)]));
                             }
                             _ => {}
                         }
                     }
+                }
+
+                for entity_id in returned {
+                    self.record(GameEvent::ReturnedToHand { entity_id });
                 }
             }
 
@@ -923,7 +1014,10 @@ impl Game {
                     let omen = instantiate_omen(pick, self.ids.next_id());
                     let turn = self.state.turn_count;
                     let board = self.source_board_for_mut(owner);
-                    Self::add_to_hand(board, Some(turn), [CardEntity::Omen(omen)]);
+                    let landed = Self::add_to_hand(board, Some(turn), [CardEntity::Omen(omen)]);
+                    for entity_id in landed {
+                        self.record(GameEvent::CardCreated { entity_id });
+                    }
                 }
             }
 
@@ -946,13 +1040,19 @@ impl Game {
                     }
                 }
 
+                let mut placed: Vec<u32> = vec![];
                 let (source_board, _) = self.boards_for_mut(owner);
                 for mut minion in summoned {
                     if source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                         break;
                     }
                     minion.exhausted = !minion.card.attributes.contains(&MinionAttribute::Charge);
+                    placed.push(minion.entity_id);
                     source_board.battlefield.push(minion);
+                }
+
+                for entity_id in placed {
+                    self.record(GameEvent::MinionSummoned { entity_id });
                 }
             }
         }
@@ -967,15 +1067,17 @@ impl Game {
             self.fire_omens(OmenTrigger::EnemyEndsTurnWithoutAttacking, ender.other());
         }
 
+        self.record(GameEvent::TurnEnded);
+
         self.state.turn_count += 1;
         self.state.white_turn = !self.state.white_turn;
         let white_is_source = self.state.white_turn;
 
-        {
+        let landed = {
             let turn = self.state.turn_count;
             let source_board = self.source_board_mut();
             let drawn = Self::draw_cards(source_board, 1);
-            Self::add_to_hand(source_board, Some(turn), drawn);
+            let landed = Self::add_to_hand(source_board, Some(turn), drawn);
             source_board.base_mana = (source_board.base_mana + 1).min(settings::MAX_MANA);
             source_board.mana = source_board.base_mana;
             source_board.embers = (source_board.embers + 1).min(settings::MAX_EMBERS);
@@ -983,6 +1085,10 @@ impl Game {
                 minion.exhausted = false;
                 minion.turns_on_board += 1;
             }
+            landed
+        };
+        for entity_id in landed {
+            self.record(GameEvent::CardDrawn { entity_id });
         }
 
         self.state.cards_played_this_turn = 0;
@@ -1061,6 +1167,7 @@ impl Game {
         let entity_id = consumed.entity_id();
         let cost = consumed.cost();
         let abilities = consumed.abilities().to_vec();
+        self.record(GameEvent::CardPlayed { entity_id });
 
         // Place minion on battlefield
         if let CardEntity::Minion(mut minion) = consumed.clone() {
@@ -1090,7 +1197,7 @@ impl Game {
             quickdraw_fired |= is_quickdraw;
             let copies = if is_quickdraw && quickdraw_doubled { 2 } else { 1 };
             for _ in 0..copies {
-                for effect in &ability.effects {
+                for (n, effect) in ability.effects.iter().enumerate() {
                     let effect = self.resolve_follow_up(effect, &consumed);
                     let tid = effect_target_spec(&effect)
                         .filter(|ts| ts.target_mode == TargetMode::Targeted)
@@ -1102,6 +1209,7 @@ impl Game {
                         owner: owner,
                         target_id: tid,
                         self_id: Some(entity_id),
+                        starts_block: n == 0,
                     });
                 }
             }
@@ -1202,13 +1310,15 @@ impl Game {
             attacker.stealth_active = false;
         }
 
+        self.record(GameEvent::Attacked { attacker_id: data.origin_id, target_id: data.target_id });
+
         let landed = !self.absorb_ward(owner, target_ref);
         if landed {
-            *self.damage_mut(owner, target_ref) += attacker_attack;
+            self.deal_damage(owner, target_ref, attacker_attack);
         }
         // a harmless defender must not spend the attacker's ward
         if retaliation > 0 && !self.absorb_ward(owner, attacker_ref) {
-            *self.damage_mut(owner, attacker_ref) += retaliation;
+            self.deal_damage(owner, attacker_ref, retaliation);
         }
 
         if lifesteal && landed {
@@ -1246,10 +1356,15 @@ impl Game {
         let turn = self.state.turn_count;
         let source_board = self.source_board_mut();
         let card = source_board.hand.remove(index);
+        let traded_id = card.entity_id();
         source_board.deck.push(card);
         let drawn = Self::draw_cards(source_board, 1);
-        Self::add_to_hand(source_board, Some(turn), drawn);
+        let landed = Self::add_to_hand(source_board, Some(turn), drawn);
         source_board.mana -= 1;
+        self.record(GameEvent::CardTraded { entity_id: traded_id });
+        for entity_id in landed {
+            self.record(GameEvent::CardDrawn { entity_id });
+        }
         self.enqueue_trigger(Trigger::OnTrade);
         self.process_effect_queue();
         self.check_for_deaths();
@@ -1360,5 +1475,103 @@ impl Game {
         }
 
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scenario::build::{MinionBuild, damage, minion, on_death, on_play, pick_enemy_minion, summon};
+    use crate::scenario::{Setup, Side};
+
+    /// Three beats, in the order a client has to play them: the lunge, each hit, then the body.
+    #[test]
+    fn an_attack_records_the_strike_then_both_hits_then_the_death() {
+        let mut s = Setup::new();
+        let hound = s.on_board(Side::White, minion(1, "Hound", 2, 3, 3));
+        let prey = s.on_board(Side::Black, minion(2, "Prey", 2, 2, 2));
+        let mut scn = s.start("attack events");
+
+        assert!(scn.attack(hound, prey));
+        assert_eq!(
+            scn.events(),
+            vec![
+                GameEvent::Attacked { attacker_id: hound, target_id: prey },
+                GameEvent::Damaged { entity_id: prey, amount: 3 },
+                GameEvent::Damaged { entity_id: hound, amount: 2 },
+                GameEvent::Died { entity_id: prey },
+            ]
+        );
+    }
+
+    /// A ward reports itself breaking and no damage, so the client never animates a hit that
+    /// never landed.
+    #[test]
+    fn a_ward_eating_a_hit_is_recorded_instead_of_the_damage() {
+        let mut s = Setup::new();
+        let hound = s.on_board(Side::White, minion(1, "Hound", 2, 3, 3));
+        let guard = s.on_board(Side::Black, minion(2, "Guard", 2, 1, 1).with(MinionAttribute::Ward));
+        let mut scn = s.start("ward events");
+
+        assert!(scn.attack(hound, guard));
+        assert_eq!(
+            scn.events(),
+            vec![
+                GameEvent::Attacked { attacker_id: hound, target_id: guard },
+                GameEvent::WardBroken { entity_id: guard },
+                GameEvent::Damaged { entity_id: hound, amount: 1 },
+            ]
+        );
+    }
+
+    /// The marker is what lets the client read the summon as caused by the death.
+    #[test]
+    fn a_deathwish_is_marked_as_the_cause_of_what_it_summons() {
+        let rat = minion(3, "Rat", 1, 2, 2);
+        let mut s = Setup::new();
+        s.summonable(rat.clone());
+        let hound = s.on_board(Side::White, minion(1, "Hound", 2, 3, 3));
+        let cage = s.on_board(Side::Black, minion(2, "Cage", 2, 0, 1).does(on_death(vec![summon(&rat, 1)])));
+        let mut scn = s.start("deathwish events");
+
+        assert!(scn.attack(hound, cage));
+        let events = scn.events();
+        let at = |want: &GameEvent| events.iter().position(|e| e == want);
+        let died = at(&GameEvent::Died { entity_id: cage }).expect("cage died");
+        let fired = at(&GameEvent::TriggerFired { source_id: cage }).expect("deathwish fired");
+        let summoned = events.iter().position(|e| matches!(e, GameEvent::MinionSummoned { .. })).expect("rat summoned");
+        assert!(died < fired && fired < summoned, "{events:?}");
+    }
+
+    /// A played card leads its own ability, so the card lands before its effect goes off.
+    #[test]
+    fn a_played_card_comes_before_the_ability_it_fires() {
+        let mut s = Setup::new();
+        let target = s.on_board(Side::Black, minion(2, "Target", 2, 0, 5));
+        let index = s.in_hand(Side::White, minion(1, "Archer", 1, 1, 1).does(on_play(vec![damage(pick_enemy_minion(), 2)])));
+        let played = s.hand_entity_id(Side::White, index);
+        let mut scn = s.start("play events");
+
+        assert!(scn.play(index, Some(target)));
+        assert_eq!(
+            scn.events(),
+            vec![
+                GameEvent::CardPlayed { entity_id: played },
+                GameEvent::TriggerFired { source_id: played },
+                GameEvent::Damaged { entity_id: target, amount: 2 },
+            ]
+        );
+    }
+
+    /// Nothing recorded means nothing to animate, which is how a refused move must look.
+    #[test]
+    fn a_refused_move_records_nothing() {
+        let mut s = Setup::new();
+        let hound = s.on_board(Side::White, minion(1, "Hound", 2, 3, 3));
+        let prey = s.on_board(Side::Black, minion(2, "Prey", 2, 2, 2));
+        let mut scn = s.start("refused events");
+
+        assert!(!scn.attack(prey, hound), "black cannot attack on white's turn");
+        assert_eq!(scn.events(), vec![]);
     }
 }

@@ -552,3 +552,35 @@ impl CardEntity {
         }
     }
 }
+
+/// One visible change the engine already resolved, in the order it happened. Events carry entity
+/// ids and numbers only, never card payloads or an omen's armed trigger, so they leak nothing the
+/// snapshot beside them does not. The client animates them; it never derives state from them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum GameEvent {
+    CardPlayed { entity_id: u32 },
+    MinionSummoned { entity_id: u32 },
+    Attacked { attacker_id: u32, target_id: u32 },
+    Damaged { entity_id: u32, amount: i32 },
+    Healed { entity_id: u32, amount: i32 },
+    Buffed { entity_id: u32, attack: i32, defence: i32 },
+    WardBroken { entity_id: u32 },
+    Died { entity_id: u32 },
+    ReturnedToHand { entity_id: u32 },
+    CardDrawn { entity_id: u32 },
+    /// A card that appeared in hand from nowhere, so no deck was spent on it.
+    CardCreated { entity_id: u32 },
+    CardTraded { entity_id: u32 },
+    OmenFired { entity_id: u32 },
+    /// An ability starting to resolve, so what follows can be read as caused by its source.
+    TriggerFired { source_id: u32 },
+    TurnEnded,
+}
+
+/// What the server pushes after every action: the authoritative snapshot, and the ordered events
+/// that led to it. The snapshot is the truth; a lost or wrong event costs an animation, nothing more.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateUpdate {
+    pub state: GameStateClient,
+    pub events: Vec<GameEvent>,
+}

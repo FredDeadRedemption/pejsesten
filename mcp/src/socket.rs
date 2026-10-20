@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
-use shared::types::GameStateClient;
+use shared::types::{GameStateClient, StateUpdate};
 use tokio::sync::{mpsc, watch};
 use tokio_tungstenite::tungstenite::Message;
 
@@ -96,8 +96,9 @@ fn handle(text: &str, state: &watch::Sender<Option<GameStateClient>>, auth: &str
             '2' => {
                 let frame: Vec<Value> = serde_json::from_str(&text[2..]).ok()?;
                 if frame.first()?.as_str()? == "newGameState" {
-                    if let Ok(pushed) = serde_json::from_value(frame.get(1)?.clone()) {
-                        state.send_replace(Some(pushed));
+                    // the events riding along are for animation, which a text player has no use for
+                    if let Ok(pushed) = serde_json::from_value::<StateUpdate>(frame.get(1)?.clone()) {
+                        state.send_replace(Some(pushed.state));
                     }
                 }
                 None

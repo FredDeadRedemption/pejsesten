@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::HashSet;
 
+use crate::anim::Overlay;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
 use crate::layout::{self, CARD_H, CARD_W};
 use crate::textures::{draw_texture_cover, TextureCache};
@@ -25,8 +26,8 @@ const EMBER_MAX: i32 = 5;
 const COL_DIVIDER: Color = Color::new(0.5, 0.5, 0.5, 0.3);
 const COL_ATK: Color = Color::new(0.90, 0.70, 0.20, 1.0);
 const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
-const COL_BUFFED: Color = Color::new(0.40, 1.00, 0.45, 1.0);
-const COL_DAMAGED: Color = Color::new(1.00, 0.35, 0.35, 1.0);
+pub(crate) const COL_BUFFED: Color = Color::new(0.40, 1.00, 0.45, 1.0);
+pub(crate) const COL_DAMAGED: Color = Color::new(1.00, 0.35, 0.35, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
 const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
 const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
@@ -42,11 +43,9 @@ pub struct DragRender<'a> {
     pub targetable_ids: HashSet<u32>,
     pub trade_drop_active: bool,
     pub hovered_id: Option<u32>,
-    pub anim_offsets: Vec<(u32, Vec2)>, // (entity_id, pixel offset) for bump anims
-    pub hand_flips: Vec<(u32, f32)>,    // (entity_id, cos(rotation_y)) for draw-from-deck flip
 }
 
-pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender) {
+pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender, overlay: &Overlay) {
     let w = ui::size().x;
     let h = ui::size().y;
     let mid = h / 2.0;
@@ -54,8 +53,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
-    draw_board_half(&state.enemy_board, w, h, false, cache, false, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &[]);
-    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, &drag.anim_offsets, &drag.hand_flips, state.open_cards, &state.hand_hints);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false, overlay, state.open_cards, &[]);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, overlay, state.open_cards, &state.hand_hints);
 
     if state.your_turn {
         draw_end_turn_button(w, h);
@@ -85,6 +84,30 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
 
     if targeting_active {
         draw_crosshair(drag.mx, drag.my);
+    }
+
+    draw_numbers(overlay);
+}
+
+/// Floating damage, heal and buff numbers, over everything on the board.
+fn draw_numbers(overlay: &Overlay) {
+    const FONT: f32 = 26.0;
+    for n in overlay.numbers {
+        let p = n.pos + n.offset();
+        let d = ui::measure(&n.text, FONT);
+        let x = p.x - d.width / 2.0;
+        ui::text(&n.text, x + 1.5, p.y + 1.5, FONT, Color::new(0.0, 0.0, 0.0, n.alpha() * 0.7));
+        ui::text(&n.text, x, p.y, FONT, Color { a: n.alpha(), ..n.color });
+    }
+}
+
+/// Death collapse and trigger flash, drawn over a finished card so nothing below needs to know.
+fn draw_entity_fx(r: Rect, fade: f32, flash: f32) {
+    if fade > 0.0 {
+        draw_rectangle(r.x, r.y, r.w, r.h, Color::new(0.0, 0.0, 0.0, 0.65 * fade));
+    }
+    if flash > 0.0 {
+        draw_rectangle(r.x, r.y, r.w, r.h, Color::new(1.0, 1.0, 1.0, 0.45 * flash));
     }
 }
 
@@ -285,15 +308,15 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, anim_offsets: &[(u32, Vec2)], hand_flips: &[(u32, f32)], open_cards: bool, hand_hints: &[CardHint]) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, overlay: &Overlay, open_cards: bool, hand_hints: &[CardHint]) {
     if is_self {
         let mana_y = h - 22.0;
         let deck_r = layout::self_deck_rect(w, h);
 
-        draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache);
-        draw_battlefield(&board.battlefield, w, h, true, cache, anim_offsets);
-        draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache);
-        draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, hand_flips, hand_hints);
+        draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache, overlay);
+        draw_battlefield(&board.battlefield, w, h, true, cache, overlay);
+        draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache, overlay);
+        draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y - 24.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
@@ -301,10 +324,10 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         let mana_y = 18.0;
         let deck_r = layout::enemy_deck_rect(w, h);
 
-        draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache);
-        draw_battlefield(&board.battlefield, w, h, false, cache, anim_offsets);
-        draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len()), cache);
-        draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, hand_flips, hand_hints);
+        draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache, overlay);
+        draw_battlefield(&board.battlefield, w, h, false, cache, overlay);
+        draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len()), cache, overlay);
+        draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, 20.0, mana_y);
         draw_embers(board.embers, 20.0, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
@@ -657,7 +680,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 }
 
-fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache) {
+fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache, overlay: &Overlay) {
     for (omen, rect) in omens.iter().zip(rects.iter()) {
         fx::soft_shadow(rect.x, rect.y, rect.w, rect.h);
         let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &omen.card.color, &omen.card.image_url, cache, WHITE);
@@ -667,6 +690,7 @@ fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache) {
         let name = fit_text(&omen.card.name, frame.text.w, 9.0);
         ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, BLACK);
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, COL_OMEN);
+        draw_entity_fx(*rect, 0.0, overlay.flash(omen.entity_id));
     }
 }
 
@@ -782,22 +806,31 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
 }
 
-fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, anim_offsets: &[(u32, Vec2)]) {
+const DEATH_SHRINK: f32 = 0.25;
+
+fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, overlay: &Overlay) {
     let rects = if is_self {
         layout::self_minion_rects(minions.len(), w, h)
     } else {
         layout::enemy_minion_rects(minions.len(), w, h)
     };
     for (minion, rect) in minions.iter().zip(rects.iter()) {
-        let off = anim_offsets.iter()
-            .find(|(id, _)| *id == minion.entity_id)
-            .map(|(_, v)| *v)
-            .unwrap_or(Vec2::ZERO);
-        draw_minion_card(minion, rect.x + off.x, rect.y + off.y, rect.w, rect.h, cache);
+        let off = overlay.offset(minion.entity_id);
+        let fade = overlay.fade(minion.entity_id);
+        // a dying minion collapses toward its own centre on the way out
+        let scale = 1.0 - DEATH_SHRINK * fade;
+        let r = Rect::new(
+            rect.x + off.x + rect.w * (1.0 - scale) / 2.0,
+            rect.y + off.y + rect.h * (1.0 - scale) / 2.0,
+            rect.w * scale,
+            rect.h * scale,
+        );
+        draw_minion_card(minion, r.x, r.y, r.w, r.h, cache);
+        draw_entity_fx(r, fade, overlay.flash(minion.entity_id));
     }
 }
 
-fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cache: &TextureCache, hand_flips: &[(u32, f32)], hints: &[CardHint]) {
+fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cache: &TextureCache, overlay: &Overlay, hints: &[CardHint]) {
     let cfg = glow::current();
 
     // left to right, so each card overlaps the one before it
@@ -806,10 +839,7 @@ fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cac
         with_rotation(slot.center(), slot.rotation, || {
             fx::soft_shadow(x, y, CARD_W, CARD_H);
             if face_up {
-                let flip_cos = hand_flips.iter()
-                    .find(|(id, _)| *id == card.entity_id())
-                    .map(|(_, v)| *v)
-                    .unwrap_or(1.0);
+                let flip_cos = overlay.hand_flip(card.entity_id());
                 if let Some(style) = hints.get(i).and_then(|h| glow_style(&cfg, h)) {
                     draw_glow(&cfg, &style, x, y, CARD_W, CARD_H, i as f32 * cfg.phase_step, flip_cos.clamp(0.0, 1.0));
                 }
@@ -872,7 +902,7 @@ fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
 }
 
 /// The hero card. Same frame as any card, minus the mana gem: a hero has no cost.
-fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &TextureCache) {
+fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &TextureCache, overlay: &Overlay) {
     let edge = if is_self {
         Color::new(0.42, 0.62, 0.90, 1.0)
     } else {
@@ -903,6 +933,8 @@ fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &Texture
     if hero.stats.attack > 0 {
         draw_stat_badge(hero.stats.attack, hero.stats.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
     }
+
+    draw_entity_fx(r, 0.0, overlay.flash(hero.entity_id));
 }
 
 fn draw_embers(current: i32, x: f32, y: f32) {

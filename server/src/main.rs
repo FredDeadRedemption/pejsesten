@@ -81,9 +81,20 @@ fn validate_turn(player_id: &str, game: &Game) -> bool {
     (player_id == s.white_player_id && s.white_turn) || (player_id == s.black_player_id && !s.white_turn)
 }
 
-async fn broadcast(io: &SocketIo, game: &Game) {
-    let white = game.parse_client_state(true);
-    let black = game.parse_client_state(false);
+/// Ships the board as it stands plus everything that changed getting there.
+pub(crate) async fn broadcast(io: &SocketIo, game: &mut Game) {
+    let events = game.drain_events();
+    push(io, game, events).await;
+}
+
+/// A client that just reconnected has nothing on screen to animate from, so it only gets the board.
+async fn replay(io: &SocketIo, game: &Game) {
+    push(io, game, vec![]).await;
+}
+
+async fn push(io: &SocketIo, game: &Game, events: Vec<GameEvent>) {
+    let white = StateUpdate { state: game.parse_client_state(true), events: events.clone() };
+    let black = StateUpdate { state: game.parse_client_state(false), events };
     io.to(game.state.white_player_id.clone()).emit("newGameState", &white).await.ok();
     io.to(game.state.black_player_id.clone()).emit("newGameState", &black).await.ok();
 }
@@ -101,7 +112,7 @@ async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<S
         if let Some(game) = inner.game.as_ref() {
             if is_player(&me, game) {
                 println!("resuming game for {me}");
-                broadcast(&io, game).await;
+                replay(&io, game).await;
             }
         }
     }
@@ -139,8 +150,8 @@ async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<S
                 };
 
                 let is_p1_white = rand::random::<bool>();
-                let game = Game::new(player1, player2, is_p1_white, ids);
-                broadcast(&io, &game).await;
+                let mut game = Game::new(player1, player2, is_p1_white, ids);
+                broadcast(&io, &mut game).await;
 
                 let url = format!(
                     "{}{}",
@@ -194,7 +205,7 @@ async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<S
 
             // Bot instantly keeps its full hand
             game.submit_mulligan(bot::BOT_ID, vec![]);
-            broadcast(&io, &game).await;
+            broadcast(&io, &mut game).await;
 
             let url = format!(
                 "{}{}",

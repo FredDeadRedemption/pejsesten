@@ -1,14 +1,8 @@
+use crate::broadcast;
 use crate::engine::Game;
 use crate::settings;
 use shared::types::*;
 use socketioxide::SocketIo;
-
-async fn broadcast(io: &SocketIo, game: &Game) {
-    let white = game.parse_client_state(true);
-    let black = game.parse_client_state(false);
-    io.to(game.state.white_player_id.clone()).emit("newGameState", &white).await.ok();
-    io.to(game.state.black_player_id.clone()).emit("newGameState", &black).await.ok();
-}
 
 pub const BOT_ID: &str = "bot";
 pub const HERO_ID: u32 = 105; // Clown Snake
