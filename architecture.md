@@ -9,6 +9,7 @@ pejsesten/
 ├── Cargo.toml          # workspace
 ├── shared/             # card catalog + game types (used by server + client)
 ├── server/             # axum + socketioxide; engine, bot, settings
+├── mcp/                # MCP server, so an assistant can take a seat at the game
 ├── client/             # macroquad app — compiles native AND wasm
 │   ├── index.html      # HTML shim for the wasm build
 │   ├── mq_js_bundle.js # macroquad's JS glue (vendored)
@@ -171,6 +172,25 @@ A reload therefore lands back in the running game: the server replays `newGameSt
 Whoever holds the token is the player — there is no account, no password, nothing stored server side. Good enough until there are real players and a database.
 
 Server URL is set via `option_env!("SERVER_URL")`, defaulting to `ws://localhost:3000`. In production it's baked at build time in the Dockerfile. The wasm and the socket.io server run on the **same origin** (one Railway service serving both), so no CORS gymnastics.
+
+## Playing through MCP
+
+`mcp/` is a stdio MCP server that joins a game as an ordinary player. It holds one socket.io
+connection, keeps the last `newGameState` the server pushed, and exposes the protocol as tools:
+`join_game`, `game_state`, `submit_mulligan`, `play_card`, `attack`, `trade_card`, `end_turn`,
+`wait_for_turn`, `reset_game`. State is rendered as text, with hand positions for playing and
+entity ids for attacking, because those are what the events take.
+
+`PEJSESTEN_HOST` (default `ws://127.0.0.1:3000`) and `PEJSESTEN_TOKEN` (default `claude`) set where
+it connects and who it is. Decks come from `decks.json` by name. The connection is opened on the
+first tool call, so the order of starting the two processes does not matter.
+
+Two quirks of the server shape the tools. It holds one game at a time, which is why `reset_game`
+exists. And it answers an illegal action with the unchanged state and an off-turn action with
+nothing at all, so the tools report a refusal rather than an error.
+
+`.mcp.json` registers it for Claude Code at `./target/debug/mcp`, so build it once with
+`cargo build -p mcp`.
 
 ## Build & run
 

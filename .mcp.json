@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pejsesten": {
+      "command": "./target/debug/mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

@@ -37,4 +37,8 @@ cargo dev       # server plus native client
 cargo dev web   # wasm build, then open http://localhost:3000
 ```
 
+```sh
+cargo build -p mcp   # once, then an assistant can play through .mcp.json
+```
+
 See [architecture.md](architecture.md) for what those do and how the container is built.
