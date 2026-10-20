@@ -92,7 +92,7 @@ mod backend {
 pub use backend::{now_id, save};
 
 // web has no file to read, so an unseeded browser would otherwise show no decks at all
-const STOCK: &str = include_str!("../../decks.json");
+const STOCK: &str = include_str!("stock_decks.json");
 
 pub fn load() -> Vec<Deck> {
     match backend::load() {
