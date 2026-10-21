@@ -8,12 +8,15 @@ use crate::fx::smoothstep;
 use crate::layout;
 use crate::render::{COL_BUFFED, COL_DAMAGED};
 use crate::timeline;
+use crate::transform::Transform;
 use shared::types::{CardEntity, GameEvent, GameStateClient};
 
 const BUMP_TIME: f32 = 0.38;
 const FLIP_RATE: f32 = 8.0;
 const NUMBER_LIFE: f32 = 0.6;
 const NUMBER_RISE: f32 = 42.0;
+/// How much of its own size a dying card gives up on the way out.
+const DEATH_SHRINK: f32 = 0.25;
 /// Share of a flight an enemy card takes to turn face up, so it is readable before it lands.
 const FLY_REVEAL: f32 = 0.7;
 /// How much bigger than a hand card an incantation grows on its way to the board.
@@ -152,17 +155,18 @@ pub struct Overlay<'a> {
 }
 
 impl Overlay<'_> {
-    pub fn offset(&self, entity_id: u32) -> Vec2 {
-        lookup(&self.offsets, entity_id).unwrap_or(Vec2::ZERO)
-    }
-
-    /// 0 while alive, 1 once a dying minion has collapsed.
-    pub fn fade(&self, entity_id: u32) -> f32 {
-        lookup(&self.fades, entity_id).unwrap_or(0.0)
-    }
-
-    pub fn flash(&self, entity_id: u32) -> f32 {
-        lookup(&self.flashes, entity_id).unwrap_or(0.0)
+    /// Everything running on one entity, folded into how its card should be drawn.
+    pub fn transform(&self, entity_id: u32) -> Transform {
+        // 0 while alive, 1 once a dying card has collapsed
+        let fade = lookup(&self.fades, entity_id).unwrap_or(0.0);
+        Transform {
+            offset: lookup(&self.offsets, entity_id).unwrap_or(Vec2::ZERO),
+            // it shrinks toward its own centre as it goes
+            scale: Vec2::splat(1.0 - DEATH_SHRINK * fade),
+            tint: Color { a: 1.0 - fade, ..WHITE },
+            flash: lookup(&self.flashes, entity_id).unwrap_or(0.0),
+            ..Transform::IDENTITY
+        }
     }
 
     /// cos(rotation_y) of a card turning face up, 1 for a card that already is.

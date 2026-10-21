@@ -6,6 +6,7 @@ use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState}
 use crate::layout::{self, CARD_H, CARD_W};
 use crate::playlog::{Play, PlayLog};
 use crate::textures::{draw_texture_cover, TextureCache};
+use crate::transform::{shade, Transform};
 use crate::fx;
 use crate::glow;
 use crate::ui;
@@ -83,10 +84,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     // Dragged card floats above everything — hidden when crosshair takes over
     if let Some(card) = drag.card {
         if !targeting_active {
-            let cx = drag.mx - CARD_W / 2.0;
-            let cy = drag.my - CARD_H * 0.6;
-            fx::soft_shadow(cx + 2.0, cy + 4.0, CARD_W, CARD_H);
-            draw_card(card, cx, cy, CARD_W, CARD_H, cache, 1.0);
+            let slot = Rect::new(drag.mx - CARD_W / 2.0, drag.my - CARD_H * 0.6, CARD_W, CARD_H);
+            draw_card(card, slot, cache, Transform::IDENTITY);
         }
     }
     if let Some(mid_id) = drag.minion_id {
@@ -149,14 +148,11 @@ pub fn draw_game_over(outcome: Outcome, w: f32, h: f32) {
 /// Cards in flight between zones, over the board they are crossing.
 fn draw_flyers(overlay: &Overlay, cache: &TextureCache) {
     for flyer in overlay.flyers {
-        let r = flyer.rect();
-        with_rotation(Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0), flyer.rotation(), || {
-            fx::soft_shadow(r.x, r.y, r.w, r.h);
-            match &flyer.card {
-                Some(card) => draw_card(card, r.x, r.y, r.w, r.h, cache, flyer.flip_cos()),
-                None => draw_card_back(r.x, r.y, r.w, r.h),
-            }
-        });
+        let t = Transform { rotation: flyer.rotation(), ..Transform::IDENTITY };
+        match &flyer.card {
+            Some(card) => draw_card_flipping(card, flyer.rect(), cache, t, flyer.flip_cos()),
+            None => draw_card_back(flyer.rect(), t),
+        }
     }
 }
 
@@ -172,11 +168,8 @@ fn draw_numbers(overlay: &Overlay) {
     }
 }
 
-/// Death collapse and trigger flash, drawn over a finished card so nothing below needs to know.
-fn draw_entity_fx(r: Rect, fade: f32, flash: f32) {
-    if fade > 0.0 {
-        draw_rectangle(r.x, r.y, r.w, r.h, Color::new(0.0, 0.0, 0.0, 0.65 * fade));
-    }
+/// The one thing a tint cannot do: white laid over a finished card.
+fn flash_over(r: Rect, flash: f32) {
     if flash > 0.0 {
         draw_rectangle(r.x, r.y, r.w, r.h, Color::new(1.0, 1.0, 1.0, 0.45 * flash));
     }
@@ -201,8 +194,7 @@ pub fn draw_mulligan(state: &GameStateClient, selected: &[usize], cache: &Textur
     for (i, card) in hand.iter().enumerate() {
         let x = start_x + i as f32 * (full_w + spacing);
         let is_selected = selected.contains(&i);
-        fx::soft_shadow(x, card_y, full_w, full_h);
-        draw_card(card, x, card_y, full_w, full_h, cache, 1.0);
+        draw_card(card, Rect::new(x, card_y, full_w, full_h), cache, Transform::IDENTITY);
 
         if is_selected {
             draw_rectangle(x, card_y, full_w, full_h, Color::new(0.6, 0.0, 0.0, 0.45));
@@ -278,13 +270,13 @@ pub fn draw_glow_test(cards: &[CardEntity], cache: &TextureCache, reloads: u32) 
 
     for (i, (label, style)) in columns.iter().enumerate() {
         let x = start_x + i as f32 * (cw + gap);
-        fx::soft_shadow(x, y, cw, ch);
+        let slot = Rect::new(x, y, cw, ch);
         if let Some(style) = style {
             draw_glow(&cfg, style, x, y, cw, ch, i as f32 * cfg.phase_step, 1.0);
         }
         match cards.get(i) {
-            Some(card) => draw_card(card, x, y, cw, ch, cache, 1.0),
-            None => draw_card_back(x, y, cw, ch),
+            Some(card) => draw_card(card, slot, cache, Transform::IDENTITY),
+            None => draw_card_back(slot, Transform::IDENTITY),
         }
         let ld = ui::measure(label, 18.0);
         ui::text(label, x + cw / 2.0 - ld.width / 2.0, y + ch + 30.0, 18.0, LIGHTGRAY);
@@ -445,7 +437,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         let mana_y = h - 22.0;
         let deck_r = layout::self_deck_rect(w, h);
 
-        draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache, overlay);
+        draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache, overlay.transform(board.hero.entity_id));
         draw_battlefield(&board.battlefield, w, h, true, cache, overlay);
         draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, overlay, hand_hints);
@@ -456,7 +448,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         let mana_y = 18.0;
         let deck_r = layout::enemy_deck_rect(w, h);
 
-        draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache, overlay);
+        draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache, overlay.transform(board.hero.entity_id));
         draw_battlefield(&board.battlefield, w, h, false, cache, overlay);
         draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, overlay, hand_hints);
@@ -523,16 +515,16 @@ fn draw_card_frame(
     frame
 }
 
-fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache, flip_cos: f32) {
-    let scale = flip_cos.abs().clamp(0.0, 1.0);
-    let scaled_w = (w * scale).max(1.0);
-    let sx = x + (w - scaled_w) / 2.0;
-
-    if flip_cos < 0.0 {
-        draw_card_back(sx, y, scaled_w, h);
-        return;
+/// A card mid-turn: the cosine squeezes it, and its sign says which face is showing.
+fn draw_card_flipping(card: &CardEntity, slot: Rect, cache: &TextureCache, t: Transform, cos: f32) {
+    let t = Transform { scale: Vec2::new(t.scale.x * cos.abs().clamp(0.0, 1.0), t.scale.y), ..t };
+    match cos >= 0.0 {
+        true => draw_card(card, slot, cache, t),
+        false => draw_card_back(slot, t),
     }
+}
 
+fn draw_card(card: &CardEntity, slot: Rect, cache: &TextureCache, t: Transform) {
     let (color, image_url, name, cost, base_cost, description) = match card {
         CardEntity::Minion(m) => (
             &m.card.color,
@@ -560,52 +552,63 @@ fn draw_card(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureC
         ),
     };
 
-    draw_card_layers(sx, y, scaled_w, h, color, image_url, name, cost, base_cost, description, cache, WHITE, scale, GEM_HAND, true);
+    t.apply(slot, |r| {
+        fx::soft_shadow_tinted(r.x, r.y, r.w, r.h, t.tint);
+        draw_card_layers(r.x, r.y, r.w, r.h, color, image_url, name, cost, base_cost, description, cache, t.tint, t.scale.x, GEM_HAND, true);
 
-    if let CardEntity::Minion(m) = card {
-        let badge = scale * BADGE_HAND;
-        draw_stat_badge(m.stats.attack, m.card.base_attack, sx + 2.0 + 2.0 * badge, y + h - 2.0 - 5.0 * badge, COL_ATK, badge);
-        draw_stat_badge(m.stats.defence, m.card.base_defence, sx + scaled_w - 2.0 - 18.0 * badge, y + h - 2.0 - 5.0 * badge, COL_DEF, badge);
-    } else if scale > 0.6 {
-        let sl = if matches!(card, CardEntity::Omen(_)) { "omen" } else { "incantation" };
-        let font = 10.0 * scale;
-        let sd = ui::measure(sl, font);
-        ui::text(sl, sx + scaled_w / 2.0 - sd.width / 2.0, y + h - 6.0, font, DARKGRAY);
-    }
+        if let CardEntity::Minion(m) = card {
+            let badge = t.scale.x * BADGE_HAND;
+            draw_stat_badge(m.stats.attack, m.card.base_attack, r.x + 2.0 + 2.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_ATK, badge, t.tint);
+            draw_stat_badge(m.stats.defence, m.card.base_defence, r.x + r.w - 2.0 - 18.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_DEF, badge, t.tint);
+        } else if t.scale.x > 0.6 {
+            let sl = if matches!(card, CardEntity::Omen(_)) { "omen" } else { "incantation" };
+            let font = 10.0 * t.scale.x;
+            let sd = ui::measure(sl, font);
+            ui::text(sl, r.x + r.w / 2.0 - sd.width / 2.0, r.y + r.h - 6.0, font, shade(DARKGRAY, t.tint));
+        }
+        flash_over(r, t.flash);
+    });
 }
 
-fn draw_minion_card(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
-    let tint = if minion.exhausted { Color::new(0.5, 0.5, 0.55, 1.0) } else { WHITE };
-    fx::soft_shadow(x, y, w, h);
-
-    draw_card_layers(
-        x, y, w, h,
-        &minion.card.color,
-        &minion.card.image_url,
-        &minion.card.name,
-        minion.cost,
-        minion.card.base_cost,
-        minion.card.description.as_deref().unwrap_or(""),
-        cache,
-        tint,
-        1.0,
-        GEM_BOARD,
-        false,
-    );
-
-    let border = if minion.ward_active {
-        GOLD
-    } else if minion.stealth_active {
-        Color::new(0.5, 0.5, 0.85, 1.0)
-    } else if minion.exhausted {
-        Color::new(0.4, 0.4, 0.4, 0.6)
-    } else {
-        Color::new(1.0, 1.0, 1.0, 0.7)
+fn draw_minion_card(minion: &MinionEntity, slot: Rect, cache: &TextureCache, t: Transform) {
+    // an exhausted minion is greyed down, which is a tint like any other
+    let tint = match minion.exhausted {
+        true => shade(Color::new(0.5, 0.5, 0.55, 1.0), t.tint),
+        false => t.tint,
     };
-    draw_rectangle_lines(x, y, w, h, 2.0, border);
+    t.apply(slot, |r| {
+        fx::soft_shadow_tinted(r.x, r.y, r.w, r.h, t.tint);
+        draw_card_layers(
+            r.x, r.y, r.w, r.h,
+            &minion.card.color,
+            &minion.card.image_url,
+            &minion.card.name,
+            minion.cost,
+            minion.card.base_cost,
+            minion.card.description.as_deref().unwrap_or(""),
+            cache,
+            tint,
+            1.0,
+            GEM_BOARD,
+            false,
+        );
 
-    draw_stat_badge(minion.stats.attack, minion.card.base_attack, x + 2.0 + 2.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
-    draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 2.0 - 18.0 * BADGE_BOARD, y + h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
+        let border = if minion.ward_active {
+            GOLD
+        } else if minion.stealth_active {
+            Color::new(0.5, 0.5, 0.85, 1.0)
+        } else if minion.exhausted {
+            Color::new(0.4, 0.4, 0.4, 0.6)
+        } else {
+            Color::new(1.0, 1.0, 1.0, 0.7)
+        };
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, shade(border, t.tint));
+
+        let badge = t.scale.x * BADGE_BOARD;
+        draw_stat_badge(minion.stats.attack, minion.card.base_attack, r.x + 2.0 + 2.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_ATK, badge, t.tint);
+        draw_stat_badge(minion.stats.defence, minion.card.base_defence, r.x + r.w - 2.0 - 18.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_DEF, badge, t.tint);
+        flash_over(r, t.flash);
+    });
 }
 
 fn draw_card_layers(
@@ -620,20 +623,20 @@ fn draw_card_layers(
 
     // gem overhangs the title bar into the art window
     let gem = (h * gem_frac).min(w * 0.4);
-    draw_mana_gem(frame.title.x, frame.title.y, gem);
+    draw_mana_gem(frame.title.x, frame.title.y, gem, tint);
     if scale <= 0.6 {
         return;
     }
 
     let cost_font = (gem * 0.7).round();
-    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, cost_font, cost_color(cost, base_cost));
+    draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, cost_font, shade(cost_color(cost, base_cost), tint));
     if !show_text {
         return;
     }
 
     let name_font = (11.0 * scale).round();
     let name_str = fit_text(name, (frame.title.w - gem - 4.0).max(0.0), name_font);
-    ui::text(&name_str, frame.title.x + gem + 3.0, frame.title.y + frame.title.h * 0.78, name_font, BLACK);
+    ui::text(&name_str, frame.title.x + gem + 3.0, frame.title.y + frame.title.h * 0.78, name_font, shade(BLACK, tint));
 
     let desc_font = (frame.text.h * 0.20 * scale).round().max(8.0);
     draw_wrapped_text(
@@ -642,7 +645,7 @@ fn draw_card_layers(
         frame.text.y + desc_font,
         (frame.text.w - 6.0).max(0.0),
         desc_font,
-        BLACK,
+        shade(BLACK, tint),
     );
 }
 
@@ -801,7 +804,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_mana_gem(frame.title.x, frame.title.y, gem);
+    draw_mana_gem(frame.title.x, frame.title.y, gem, WHITE);
     draw_text_centered(&inc.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, cost_color(inc.cost, card.base_cost));
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
@@ -817,16 +820,19 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
 }
 
 fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache, overlay: &Overlay) {
-    for (omen, rect) in omens.iter().zip(rects.iter()) {
-        fx::soft_shadow(rect.x, rect.y, rect.w, rect.h);
-        let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &omen.card.color, &omen.card.image_url, cache, WHITE);
-        let gem = (rect.h * GEM_BOARD).min(rect.w * 0.4);
-        draw_mana_gem(frame.title.x, frame.title.y, gem);
-        draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), cost_color(omen.cost, omen.card.base_cost));
-        let name = fit_text(&omen.card.name, frame.text.w, 9.0);
-        ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, BLACK);
-        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, COL_OMEN);
-        draw_entity_fx(*rect, 0.0, overlay.flash(omen.entity_id));
+    for (omen, slot) in omens.iter().zip(rects.iter()) {
+        let t = overlay.transform(omen.entity_id);
+        t.apply(*slot, |r| {
+            fx::soft_shadow_tinted(r.x, r.y, r.w, r.h, t.tint);
+            let frame = draw_card_frame(r.x, r.y, r.w, r.h, &omen.card.color, &omen.card.image_url, cache, t.tint);
+            let gem = (r.h * GEM_BOARD).min(r.w * 0.4);
+            draw_mana_gem(frame.title.x, frame.title.y, gem, t.tint);
+            draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), shade(cost_color(omen.cost, omen.card.base_cost), t.tint));
+            let name = fit_text(&omen.card.name, frame.text.w, 9.0);
+            ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, shade(BLACK, t.tint));
+            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, shade(COL_OMEN, t.tint));
+            flash_over(r, t.flash);
+        });
     }
 }
 
@@ -864,7 +870,7 @@ fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_mana_gem(frame.title.x, frame.title.y, gem);
+    draw_mana_gem(frame.title.x, frame.title.y, gem, WHITE);
     draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, cost_color(omen.cost, card.base_cost));
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
@@ -899,7 +905,7 @@ pub fn draw_omen_picker(card: &OmenCard, mx: f32, my: f32, cache: &TextureCache)
         let frame = draw_card_frame(rect.x, rect.y, rect.w, rect.h, &card.color, &card.image_url, cache, WHITE);
 
         let gem = frame.title.h;
-        draw_mana_gem(frame.title.x, frame.title.y, gem);
+        draw_mana_gem(frame.title.x, frame.title.y, gem, WHITE);
         draw_text_centered(&card.base_cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 16.0, WHITE);
         let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 13.0);
         ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 13.0, BLACK);
@@ -926,7 +932,7 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_mana_gem(frame.title.x, frame.title.y, gem);
+    draw_mana_gem(frame.title.x, frame.title.y, gem, WHITE);
     draw_text_centered(&card.base_cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, WHITE);
 
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
@@ -936,11 +942,9 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     let desc_font = (frame.text.h * 0.20).round();
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 
-    draw_stat_badge(minion.stats.attack, minion.card.base_attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0);
-    draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0);
+    draw_stat_badge(minion.stats.attack, minion.card.base_attack, x + 8.0, y + h - 5.0, COL_ATK, 1.0, WHITE);
+    draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0, WHITE);
 }
-
-const DEATH_SHRINK: f32 = 0.25;
 
 fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, overlay: &Overlay) {
     for (minion, rect) in minions.iter().zip(minion_rects(minions.len(), w, h, is_self)) {
@@ -971,18 +975,7 @@ fn minion_rects(count: usize, w: f32, h: f32, is_self: bool) -> Vec<Rect> {
 }
 
 fn draw_minion(minion: &MinionEntity, slot: Rect, cache: &TextureCache, overlay: &Overlay) {
-    let off = overlay.offset(minion.entity_id);
-    let fade = overlay.fade(minion.entity_id);
-    // a dying minion collapses toward its own centre on the way out
-    let scale = 1.0 - DEATH_SHRINK * fade;
-    let r = Rect::new(
-        slot.x + off.x + slot.w * (1.0 - scale) / 2.0,
-        slot.y + off.y + slot.h * (1.0 - scale) / 2.0,
-        slot.w * scale,
-        slot.h * scale,
-    );
-    draw_minion_card(minion, r.x, r.y, r.w, r.h, cache);
-    draw_entity_fx(r, fade, overlay.flash(minion.entity_id));
+    draw_minion_card(minion, slot, cache, overlay.transform(minion.entity_id));
 }
 
 fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cache: &TextureCache, overlay: &Overlay, hints: &[CardHint]) {
@@ -993,34 +986,19 @@ fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cac
         if overlay.in_flight(card.entity_id()) {
             continue;
         }
-        let (x, y) = (slot.rect.x, slot.rect.y);
-        with_rotation(slot.center(), slot.rotation, || {
-            fx::soft_shadow(x, y, CARD_W, CARD_H);
-            if face_up {
-                let flip_cos = overlay.hand_flip(card.entity_id());
-                if let Some(style) = hints.get(i).and_then(|h| glow_style(&cfg, h)) {
-                    draw_glow(&cfg, &style, x, y, CARD_W, CARD_H, i as f32 * cfg.phase_step, flip_cos.clamp(0.0, 1.0));
-                }
-                draw_card(card, x, y, CARD_W, CARD_H, cache, flip_cos);
-            } else {
-                draw_card_back(x, y, CARD_W, CARD_H);
-            }
-        });
+        let t = Transform { rotation: slot.rotation, ..Transform::IDENTITY };
+        if !face_up {
+            draw_card_back(slot.rect, t);
+            continue;
+        }
+        let flip_cos = overlay.hand_flip(card.entity_id());
+        if let Some(style) = hints.get(i).and_then(|h| glow_style(&cfg, h)) {
+            t.apply(slot.rect, |r| {
+                draw_glow(&cfg, &style, r.x, r.y, r.w, r.h, i as f32 * cfg.phase_step, flip_cos.clamp(0.0, 1.0));
+            });
+        }
+        draw_card_flipping(card, slot.rect, cache, t, flip_cos);
     }
-}
-
-/// macroquad has no 2d transform of its own, so the gl model matrix is the way to tilt a card.
-fn with_rotation(pivot: Vec2, angle: f32, draw: impl FnOnce()) {
-    if angle == 0.0 {
-        draw();
-        return;
-    }
-    let m = Mat4::from_translation(pivot.extend(0.0))
-        * Mat4::from_rotation_z(angle)
-        * Mat4::from_translation(-pivot.extend(0.0));
-    unsafe { get_internal_gl() }.quad_gl.push_model_matrix(m);
-    draw();
-    unsafe { get_internal_gl() }.quad_gl.pop_model_matrix();
 }
 
 /// Both cues mean "playable right now", so an unaffordable card gets neither.
@@ -1049,50 +1027,56 @@ pub fn draw_glow(cfg: &glow::Config, style: &glow::Style, x: f32, y: f32, w: f32
     }
 }
 
-fn draw_card_back(x: f32, y: f32, w: f32, h: f32) {
-    draw_rectangle(x, y, w, h, Color::new(0.08, 0.08, 0.14, 1.0));
-    draw_rectangle_lines(x, y, w, h, 1.5, Color::new(0.35, 0.18, 0.45, 1.0));
-    let steps = 6;
-    for i in 0..=steps {
-        let t = i as f32 / steps as f32;
-        draw_line(x, y + h * t, x + w, y + h * (1.0 - t), 0.5, Color::new(0.3, 0.15, 0.4, 0.4));
-    }
+fn draw_card_back(slot: Rect, t: Transform) {
+    t.apply(slot, |r| {
+        fx::soft_shadow_tinted(r.x, r.y, r.w, r.h, t.tint);
+        draw_rectangle(r.x, r.y, r.w, r.h, shade(Color::new(0.08, 0.08, 0.14, 1.0), t.tint));
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 1.5, shade(Color::new(0.35, 0.18, 0.45, 1.0), t.tint));
+        let steps = 6;
+        for i in 0..=steps {
+            let p = i as f32 / steps as f32;
+            draw_line(r.x, r.y + r.h * p, r.x + r.w, r.y + r.h * (1.0 - p), 0.5, shade(Color::new(0.3, 0.15, 0.4, 0.4), t.tint));
+        }
+        flash_over(r, t.flash);
+    });
 }
 
 /// The hero card. Same frame as any card, minus the mana gem: a hero has no cost.
-fn draw_hero(hero: &shared::types::Hero, r: Rect, is_self: bool, cache: &TextureCache, overlay: &Overlay) {
+fn draw_hero(hero: &shared::types::Hero, slot: Rect, is_self: bool, cache: &TextureCache, t: Transform) {
     let edge = if is_self {
         Color::new(0.42, 0.62, 0.90, 1.0)
     } else {
         Color::new(0.88, 0.36, 0.34, 1.0)
     };
 
-    fx::soft_shadow(r.x, r.y, r.w, r.h);
-    let frame = draw_card_frame(r.x, r.y, r.w, r.h, &hero.card.color, &hero.card.image_url, cache, WHITE);
+    t.apply(slot, |r| {
+        fx::soft_shadow_tinted(r.x, r.y, r.w, r.h, t.tint);
+        let frame = draw_card_frame(r.x, r.y, r.w, r.h, &hero.card.color, &hero.card.image_url, cache, t.tint);
 
-    let name_font = 11.0;
-    let name = fit_text(&hero.card.name, (frame.title.w - 6.0).max(0.0), name_font);
-    ui::text(&name, frame.title.x + 3.0, frame.title.y + frame.title.h * 0.78, name_font, BLACK);
+        let name_font = 11.0;
+        let name = fit_text(&hero.card.name, (frame.title.w - 6.0).max(0.0), name_font);
+        ui::text(&name, frame.title.x + 3.0, frame.title.y + frame.title.h * 0.78, name_font, shade(BLACK, t.tint));
 
-    let flavor_font = (frame.text.h * 0.20).round().max(8.0);
-    draw_wrapped_text(
-        &strip_html(hero.card.flavor_text.as_deref().unwrap_or("")),
-        frame.text.x + 3.0,
-        frame.text.y + flavor_font,
-        (frame.text.w - 6.0).max(0.0),
-        flavor_font,
-        BLACK,
-    );
+        let flavor_font = (frame.text.h * 0.20).round().max(8.0);
+        draw_wrapped_text(
+            &strip_html(hero.card.flavor_text.as_deref().unwrap_or("")),
+            frame.text.x + 3.0,
+            frame.text.y + flavor_font,
+            (frame.text.w - 6.0).max(0.0),
+            flavor_font,
+            shade(BLACK, t.tint),
+        );
 
-    // side colour on the border, so own and enemy hero still read apart at a glance
-    draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, edge);
+        // side colour on the border, so own and enemy hero still read apart at a glance
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, shade(edge, t.tint));
 
-    draw_stat_badge(hero.stats.defence, hero.stats.max_defence, r.x + r.w - 2.0 - 18.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_DEF, BADGE_BOARD);
-    if hero.stats.attack > 0 {
-        draw_stat_badge(hero.stats.attack, hero.stats.attack, r.x + 2.0 + 2.0 * BADGE_BOARD, r.y + r.h - 2.0 - 5.0 * BADGE_BOARD, COL_ATK, BADGE_BOARD);
-    }
-
-    draw_entity_fx(r, 0.0, overlay.flash(hero.entity_id));
+        let badge = t.scale.x * BADGE_BOARD;
+        draw_stat_badge(hero.stats.defence, hero.stats.max_defence, r.x + r.w - 2.0 - 18.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_DEF, badge, t.tint);
+        if hero.stats.attack > 0 {
+            draw_stat_badge(hero.stats.attack, hero.stats.attack, r.x + 2.0 + 2.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_ATK, badge, t.tint);
+        }
+        flash_over(r, t.flash);
+    });
 }
 
 fn draw_embers(current: i32, x: f32, y: f32) {
@@ -1149,10 +1133,10 @@ fn draw_deck(count: usize, fatigue: i32, x: f32, y: f32, glow: bool) {
     draw_text_centered("fatigue", x + w / 2.0, y + h / 2.0 + 28.0, 11.0, COL_DAMAGED);
 }
 
-fn draw_mana_gem(x: f32, y: f32, size: f32) {
+fn draw_mana_gem(x: f32, y: f32, size: f32, tint: Color) {
     let r = size * 0.25;
-    fx::fill_round_rect(x, y, size, size, r, COL_MANA);
-    fx::stroke_round_rect(x, y, size, size, r, 1.0, BLACK);
+    fx::fill_round_rect(x, y, size, size, r, shade(COL_MANA, tint));
+    fx::stroke_round_rect(x, y, size, size, r, 1.0, shade(BLACK, tint));
 }
 
 /// `base` is the stat as printed on the card: over it reads green, under it reads red.
@@ -1177,19 +1161,19 @@ fn stat_color(val: i32, base: i32) -> Color {
     }
 }
 
-fn draw_stat_badge(val: i32, base: i32, x: f32, y: f32, color: Color, scale: f32) {
+fn draw_stat_badge(val: i32, base: i32, x: f32, y: f32, color: Color, scale: f32, tint: Color) {
     let bw = 20.0 * scale;
     let bh = 18.0 * scale;
-    fx::fill_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, color);
-    fx::stroke_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, 1.0, BLACK);
+    fx::fill_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, shade(color, tint));
+    fx::stroke_round_rect(x - 2.0 * scale, y - 13.0 * scale, bw, bh, 5.0 * scale, 1.0, shade(BLACK, tint));
     if scale > 0.6 {
         let font = (13.0 * scale).round();
         let s = val.to_string();
         let d = ui::measure(&s, font);
         let tx = x + 8.0 * scale - d.width / 2.0;
         // shadow, so a tinted number still reads on both badge colours
-        ui::text(&s, tx + scale, y + scale, font, BLACK);
-        ui::text(&s, tx, y, font, stat_color(val, base));
+        ui::text(&s, tx + scale, y + scale, font, shade(BLACK, tint));
+        ui::text(&s, tx, y, font, shade(stat_color(val, base), tint));
     }
 }
 
@@ -1256,7 +1240,7 @@ fn draw_catalog_card(card: &Card, x: f32, y: f32, w: f32, h: f32, cache: &Textur
     let frame = draw_card_frame(x, y, w, h, color, image_url, cache, WHITE);
 
     let gem = frame.title.h;
-    draw_mana_gem(frame.title.x, frame.title.y, gem);
+    draw_mana_gem(frame.title.x, frame.title.y, gem, WHITE);
     draw_text_centered(&cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 10.0, WHITE);
 
     let name_fit = fit_text(name, frame.title.w - gem - 4.0, 9.0);

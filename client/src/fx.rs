@@ -56,12 +56,17 @@ fn bake_background() -> Texture2D {
 
 /// Soft drop shadow under an (x, y, w, h) rect; extends past the rect and sits a few px low.
 pub fn soft_shadow(x: f32, y: f32, w: f32, h: f32) {
+    soft_shadow_tinted(x, y, w, h, WHITE);
+}
+
+/// The same shadow under a card that is being painted through a tint, so it fades with the card.
+pub fn soft_shadow_tinted(x: f32, y: f32, w: f32, h: f32, tint: Color) {
     let tex = SHADOW.with(|c| c.borrow_mut().get_or_insert_with(bake_shadow).clone());
     // inner opaque region of the texture maps exactly onto the rect
     let grow = SHADOW_TEX / (SHADOW_TEX - 2.0 * SHADOW_BLUR);
     let sw = w * grow;
     let sh = h * grow;
-    draw_texture_ex(&tex, x - (sw - w) / 2.0, y - (sh - h) / 2.0 + SHADOW_DROP, WHITE, DrawTextureParams {
+    draw_texture_ex(&tex, x - (sw - w) / 2.0, y - (sh - h) / 2.0 + SHADOW_DROP, tint, DrawTextureParams {
         dest_size: Some(vec2(sw, sh)),
         ..Default::default()
     });

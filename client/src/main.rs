@@ -19,6 +19,7 @@ mod render;
 mod session;
 mod textures;
 mod timeline;
+mod transform;
 mod ui;
 
 use anim::Anims;
