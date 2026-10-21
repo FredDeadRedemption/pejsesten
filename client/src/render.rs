@@ -69,6 +69,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
         draw_drop_targets(state, drag, w, h);
     }
 
+    draw_lunging(state, cache, overlay, w, h);
     draw_flyers(overlay, cache);
 
     if let Some(hid) = drag.hovered_id {
@@ -942,25 +943,46 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
 const DEATH_SHRINK: f32 = 0.25;
 
 fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, overlay: &Overlay) {
-    let rects = if is_self {
-        layout::self_minion_rects(minions.len(), w, h)
-    } else {
-        layout::enemy_minion_rects(minions.len(), w, h)
-    };
-    for (minion, rect) in minions.iter().zip(rects.iter()) {
-        let off = overlay.offset(minion.entity_id);
-        let fade = overlay.fade(minion.entity_id);
-        // a dying minion collapses toward its own centre on the way out
-        let scale = 1.0 - DEATH_SHRINK * fade;
-        let r = Rect::new(
-            rect.x + off.x + rect.w * (1.0 - scale) / 2.0,
-            rect.y + off.y + rect.h * (1.0 - scale) / 2.0,
-            rect.w * scale,
-            rect.h * scale,
-        );
-        draw_minion_card(minion, r.x, r.y, r.w, r.h, cache);
-        draw_entity_fx(r, fade, overlay.flash(minion.entity_id));
+    for (minion, rect) in minions.iter().zip(minion_rects(minions.len(), w, h, is_self)) {
+        // the one that is lunging comes back in a pass of its own, over both rows
+        if !overlay.lunging(minion.entity_id) {
+            draw_minion(minion, rect, cache, overlay);
+        }
     }
+}
+
+/// Every minion mid-lunge, drawn after both halves so no neighbour clips the one that is moving.
+fn draw_lunging(state: &GameStateClient, cache: &TextureCache, overlay: &Overlay, w: f32, h: f32) {
+    for (board, is_self) in [(&state.enemy_board, false), (&state.self_board, true)] {
+        let minions = &board.battlefield;
+        for (minion, rect) in minions.iter().zip(minion_rects(minions.len(), w, h, is_self)) {
+            if overlay.lunging(minion.entity_id) {
+                draw_minion(minion, rect, cache, overlay);
+            }
+        }
+    }
+}
+
+fn minion_rects(count: usize, w: f32, h: f32, is_self: bool) -> Vec<Rect> {
+    match is_self {
+        true => layout::self_minion_rects(count, w, h),
+        false => layout::enemy_minion_rects(count, w, h),
+    }
+}
+
+fn draw_minion(minion: &MinionEntity, slot: Rect, cache: &TextureCache, overlay: &Overlay) {
+    let off = overlay.offset(minion.entity_id);
+    let fade = overlay.fade(minion.entity_id);
+    // a dying minion collapses toward its own centre on the way out
+    let scale = 1.0 - DEATH_SHRINK * fade;
+    let r = Rect::new(
+        slot.x + off.x + slot.w * (1.0 - scale) / 2.0,
+        slot.y + off.y + slot.h * (1.0 - scale) / 2.0,
+        slot.w * scale,
+        slot.h * scale,
+    );
+    draw_minion_card(minion, r.x, r.y, r.w, r.h, cache);
+    draw_entity_fx(r, fade, overlay.flash(minion.entity_id));
 }
 
 fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cache: &TextureCache, overlay: &Overlay, hints: &[CardHint]) {

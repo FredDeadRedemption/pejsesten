@@ -170,6 +170,11 @@ impl Overlay<'_> {
         lookup(&self.hand_flips, entity_id).unwrap_or(1.0)
     }
 
+    /// Mid-lunge, which the renderer draws last so nothing clips the minion that is moving.
+    pub fn lunging(&self, entity_id: u32) -> bool {
+        self.offsets.iter().any(|(id, _)| *id == entity_id)
+    }
+
     /// A card in flight is drawn by the flight, so its zone must leave the slot empty.
     pub fn in_flight(&self, entity_id: u32) -> bool {
         self.flyers.iter().any(|f| f.entity_id == entity_id)
