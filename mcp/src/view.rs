@@ -42,8 +42,13 @@ pub fn render(s: &GameStateClient) -> String {
 }
 
 fn resources(b: &Board) -> String {
+    // an empty deck says what the next draw costs instead, since that is the number that matters
+    let deck = match b.deck.len() {
+        0 => format!("deck empty, next draw costs {} hp", b.fatigue + 1),
+        n => format!("deck {n}"),
+    };
     format!(
-        "{} [{}] {}/{} hp, mana {}/{}, embers {}, hand {}, deck {}",
+        "{} [{}] {}/{} hp, mana {}/{}, embers {}, hand {}, {deck}",
         b.hero.card.name,
         b.hero.entity_id,
         b.hero.stats.defence,
@@ -52,7 +57,6 @@ fn resources(b: &Board) -> String {
         b.base_mana,
         b.embers,
         b.hand.len(),
-        b.deck.len(),
     )
 }
 

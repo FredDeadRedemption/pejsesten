@@ -152,6 +152,7 @@ impl Game {
                     mana: settings::STARTING_MANA,
                     embers: settings::STARTING_EMBERS,
                     counters: Counters::default(),
+                    fatigue: 0,
                     quickdraw_log: vec![],
                 },
                 black: Board {
@@ -165,6 +166,7 @@ impl Game {
                     mana: settings::STARTING_MANA - 1,
                     embers: settings::STARTING_EMBERS,
                     counters: Counters::default(),
+                    fatigue: 0,
                     quickdraw_log: vec![],
                 },
                 white_player_id: white.id,
@@ -508,6 +510,20 @@ impl Game {
     fn draw_cards(board: &mut Board, amount: usize) -> Vec<CardEntity> {
         let n = amount.min(board.deck.len());
         board.deck.drain(0..n).collect()
+    }
+
+    /// Cards off the top, and a fatigue hit for every one the deck could not pay for. Each hit
+    /// costs one more than the last, so an empty deck is a clock the hero cannot outrun.
+    fn draw_for(&mut self, owner: PlayerSide, amount: usize) -> Vec<CardEntity> {
+        let (board, _) = self.boards_for_mut(owner);
+        let drawn = Self::draw_cards(board, amount);
+        for _ in 0..amount - drawn.len() {
+            let (board, _) = self.boards_for_mut(owner);
+            board.fatigue += 1;
+            let hit = board.fatigue;
+            self.deal_damage(owner, TargetRef::HeroSource, hit);
+        }
+        drawn
     }
 
     // cards that arrive at a full hand are burned
@@ -890,10 +906,7 @@ impl Game {
 
             Effect::Draw { draw_amount, follow_up } => {
                 // Step 1: draw (needs mut borrow)
-                let mut drawn = {
-                    let (source, _) = self.boards_for_mut(owner);
-                    Self::draw_cards(source, draw_amount)
-                };
+                let mut drawn = self.draw_for(owner, draw_amount);
 
                 // Step 2: follow-up (collect battlefield len while immutably borrowed)
                 let mut created: Vec<u32> = vec![];
@@ -1076,12 +1089,12 @@ impl Game {
 
         self.state.turn_count += 1;
         self.state.white_turn = !self.state.white_turn;
-        let white_is_source = self.state.white_turn;
+        let side = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
 
+        let drawn = self.draw_for(side, 1);
         let landed = {
             let turn = self.state.turn_count;
             let source_board = self.source_board_mut();
-            let drawn = Self::draw_cards(source_board, 1);
             let landed = Self::add_to_hand(source_board, Some(turn), drawn);
             source_board.base_mana = (source_board.base_mana + 1).min(settings::MAX_MANA);
             source_board.mana = source_board.base_mana;
@@ -1099,7 +1112,8 @@ impl Game {
         self.state.cards_played_this_turn = 0;
         self.state.arrivals_played_this_turn = 0;
         self.state.attacked_this_turn = false;
-        self.refresh_costs();
+        // fatigue can take the last point of hp, so the turn ends in the death pass like any action
+        self.check_for_deaths();
         //self.enqueue_trigger(Trigger::OnDraw);
         //self.process_effect_queue();
     }

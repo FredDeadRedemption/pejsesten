@@ -30,7 +30,7 @@ pub fn all() -> Vec<Case> {
         case("effects", "heal on a hero stops at max hp", heal_caps_at_max_hp),
         case("effects", "destroy ignores ward", destroy_ignores_ward),
         case("effects", "draw moves cards from the top of the deck", draw_takes_from_top),
-        case("effects", "draw on an empty deck is a no-op", draw_on_empty_deck),
+        case("effects", "draw on an empty deck fatigues instead", draw_on_empty_deck),
         case("effects", "draw into a full hand burns the card", draw_burns_at_full_hand),
         case("effects", "draw follow-up discounts a matching card", draw_follow_up_discount),
         case("effects", "draw follow-up discount scales with minions on board", draw_follow_up_scaled_discount),
@@ -122,6 +122,7 @@ pub fn all() -> Vec<Case> {
         case("game", "lethal on a hero ends the game", lethal_ends_the_game),
         case("game", "a finished game refuses every action", a_finished_game_refuses_actions),
         case("game", "both heroes falling at once is a draw", a_double_knock_out_is_a_draw),
+        case("game", "fatigue takes the last point of hp", fatigue_can_end_the_game),
     ];
     cases.extend(auto_target_matrix());
     cases.extend(targeted_validation_matrix());
@@ -386,6 +387,7 @@ fn draw_on_empty_deck() -> Scenario {
     scn.play(card, None);
     scn.expect_eq("hand is empty", scn.hand_len(Side::White), 0);
     scn.expect_eq("deck is empty", scn.deck_len(Side::White), 0);
+    scn.expect_eq("the two draws cost 1 then 2", scn.hp(Side::White), super::starting_hp() - 3);
     scn
 }
 
@@ -1478,6 +1480,7 @@ fn omen_trigger_is_hidden_from_the_enemy() -> Scenario {
 
 fn omen_fires_and_is_consumed() -> Scenario {
     let mut s = Setup::new();
+    s.stocked_decks();
     let idx = s.omen_in_hand(Side::White, omen(1, "Reprisal", 0, WATCH_PLAY, vec![bolt_enemy_hero(4)]));
     let grunt = s.in_hand(Side::Black, minion(2, "Grunt", 0, 1, 1));
     s.hp(Side::Black, 20);
@@ -1493,6 +1496,7 @@ fn omen_fires_and_is_consumed() -> Scenario {
 
 fn omen_ignores_other_triggers() -> Scenario {
     let mut s = Setup::new();
+    s.stocked_decks();
     let idx = s.omen_in_hand(Side::White, omen(1, "Reprisal", 0, WATCH_PLAY, vec![bolt_enemy_hero(4)]));
     let grunt = s.in_hand(Side::Black, minion(2, "Grunt", 0, 1, 1));
     s.hp(Side::Black, 20);
@@ -1531,6 +1535,7 @@ fn omen_fires_on_friendly_death() -> Scenario {
     ];
 
     let mut s = Setup::new();
+    s.stocked_decks();
     let idx = s.omen_in_hand(Side::White, omen(1, "Last Rites", 0, WATCH_DEATH, vec![bolt_enemy_hero(3)]));
     let victim = s.on_board(Side::White, minion(2, "Victim", 0, 1, 1));
     let killer = s.on_board(Side::Black, minion(3, "Killer", 0, 4, 4));
@@ -1559,6 +1564,7 @@ fn omens_do_not_chain() -> Scenario {
     ];
 
     let mut s = Setup::new();
+    s.stocked_decks();
     let purge = s.omen_in_hand(
         Side::White,
         omen(1, "Purge", 0, WATCH_END, vec![damage(spec(TargetMode::Auto, TargetSide::Friendly, EntityType::Minion), 5)]),
@@ -1581,6 +1587,7 @@ fn omens_do_not_chain() -> Scenario {
 
 fn omen_fires_on_a_quiet_turn() -> Scenario {
     let mut s = Setup::new();
+    s.stocked_decks();
     let idx = s.omen_in_hand(Side::White, omen(1, "Stillness", 0, WATCH_PASSIVE, vec![bolt_enemy_hero(3)]));
     s.hp(Side::Black, 20);
     let mut scn = s.start("omen fires on a quiet turn");
@@ -1596,6 +1603,7 @@ fn omen_fires_on_a_quiet_turn() -> Scenario {
 
 fn attacking_dodges_the_passive_omen() -> Scenario {
     let mut s = Setup::new();
+    s.stocked_decks();
     let idx = s.omen_in_hand(Side::White, omen(1, "Stillness", 0, WATCH_PASSIVE, vec![bolt_enemy_hero(3)]));
     let raider = s.on_board(Side::Black, minion(2, "Raider", 0, 1, 1));
     s.hp(Side::White, 20);
@@ -1620,6 +1628,7 @@ fn omen_fires_on_a_wide_board() -> Scenario {
     ];
 
     let mut s = Setup::new();
+    s.stocked_decks();
     let idx = s.omen_in_hand(Side::White, omen(1, "Cull", 0, WATCH_WIDE, vec![bolt_enemy_hero(3)]));
     s.on_board(Side::Black, minion(2, "One", 0, 1, 1));
     let second = s.in_hand(Side::Black, minion(3, "Two", 0, 1, 1));
@@ -1720,5 +1729,17 @@ fn a_double_knock_out_is_a_draw() -> Scenario {
 
     scn.play(bomb, None);
     scn.expect_eq("nobody took it", scn.phase(), GamePhase::Over { winner: None });
+    scn
+}
+
+fn fatigue_can_end_the_game() -> Scenario {
+    let mut s = Setup::new();
+    s.hp(Side::White, 1);
+    let mut scn = s.start("fatigue lethal");
+
+    scn.end_turn();
+    scn.expect_eq("black pays the first tick", scn.hp(Side::Black), super::starting_hp() - 1);
+    scn.end_turn();
+    scn.expect_eq("white had nothing left to pay with", scn.phase(), GamePhase::Over { winner: Some(PlayerSide::Black) });
     scn
 }

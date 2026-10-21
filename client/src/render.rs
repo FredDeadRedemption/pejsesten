@@ -450,7 +450,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, readout_x, mana_y);
         draw_embers(board.embers, readout_x, mana_y - 24.0);
-        draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
+        draw_deck(board.deck.len(), board.fatigue, deck_r.x, deck_r.y, deck_glow);
     } else {
         let mana_y = 18.0;
         let deck_r = layout::enemy_deck_rect(w, h);
@@ -461,7 +461,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, readout_x, mana_y);
         draw_embers(board.embers, readout_x, mana_y + 32.0);
-        draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
+        draw_deck(board.deck.len(), board.fatigue, deck_r.x, deck_r.y, false);
     }
 }
 
@@ -1096,7 +1096,7 @@ fn draw_mana(current: i32, max: i32, x: f32, y: f32) {
     ui::text(&format!("{}/{}", current, max), x, y + r * 2.0 + 14.0, 13.0, LIGHTGRAY);
 }
 
-fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
+fn draw_deck(count: usize, fatigue: i32, x: f32, y: f32, glow: bool) {
     let w = CARD_W;
     let h = CARD_H;
     fx::soft_shadow(x, y, w, h);
@@ -1117,9 +1117,14 @@ fn draw_deck(count: usize, x: f32, y: f32, glow: bool) {
         let t = i as f32 / steps as f32;
         draw_line(x, y + h * t, x + w, y + h * (1.0 - t), 0.5, Color::new(0.3, 0.15, 0.4, 0.4));
     }
-    // count badge
+    // count badge, or what the next draw off an empty deck is about to cost
     draw_rectangle(x + w / 2.0 - 16.0, y + h / 2.0 - 14.0, 32.0, 28.0, Color::new(0.0, 0.0, 0.0, 0.65));
-    draw_text_centered(&count.to_string(), x + w / 2.0, y + h / 2.0 + 6.0, 20.0, WHITE);
+    if count > 0 {
+        draw_text_centered(&count.to_string(), x + w / 2.0, y + h / 2.0 + 6.0, 20.0, WHITE);
+        return;
+    }
+    draw_text_centered(&format!("-{}", fatigue + 1), x + w / 2.0, y + h / 2.0 + 6.0, 20.0, COL_DAMAGED);
+    draw_text_centered("fatigue", x + w / 2.0, y + h / 2.0 + 28.0, 11.0, COL_DAMAGED);
 }
 
 fn draw_mana_gem(x: f32, y: f32, size: f32) {

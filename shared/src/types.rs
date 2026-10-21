@@ -385,6 +385,8 @@ pub struct Board {
     pub mana: i32,
     pub embers: i32,
     pub counters: Counters,
+    /// How much the last draw off an empty deck cost this hero; the next one costs one more.
+    pub fatigue: i32,
     /// Every quickdraw this board landed, in the order they were played.
     pub quickdraw_log: Vec<Card>,
 }

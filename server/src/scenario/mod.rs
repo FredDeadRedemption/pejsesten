@@ -39,6 +39,9 @@ fn default_hero() -> &'static HeroCard {
     shared::cards::hero_or_default(shared::cards::DEFAULT_HERO_ID)
 }
 
+/// Card id of the blank that [`Setup::stocked_decks`] fills with, clear of what any case mints.
+const FILLER_ID: u32 = 9_999;
+
 /// Hp both scenario boards start on, so cases can set up near the cap without naming a number.
 pub fn starting_hp() -> i32 {
     settings::starting_hp(default_hero())
@@ -89,6 +92,7 @@ impl Setup {
             mana: settings::MAX_MANA,
             embers: settings::MAX_EMBERS,
             counters: Counters::default(),
+            fatigue: 0,
             quickdraw_log: vec![],
         }
     }
@@ -215,6 +219,19 @@ impl Setup {
         let turn = self.state.turn_count;
         if let Some(c) = self.board_mut(side).hand.get_mut(index) {
             *c.arrived_on_turn_mut() = Some(turn);
+        }
+        self
+    }
+
+    /// Blanks in both decks, so ending a turn draws a card instead of paying fatigue. Cases that
+    /// end turns want this unless running out of deck is what they are about.
+    pub fn stocked_decks(&mut self) -> &mut Self {
+        let filler = build::minion(FILLER_ID, "Filler", 0, 0, 1);
+        for side in [Side::White, Side::Black] {
+            for _ in 0..8 {
+                let id = self.ids.next_id();
+                self.board_mut(side).deck.push(CardEntity::Minion(instantiate_minion(&filler, id)));
+            }
         }
         self
     }

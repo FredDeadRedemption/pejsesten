@@ -318,6 +318,7 @@ mod tests {
             mana: 1,
             embers: 0,
             counters: Counters::default(),
+            fatigue: 0,
             quickdraw_log: vec![],
         }
     }
