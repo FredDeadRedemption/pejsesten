@@ -19,7 +19,7 @@ const FLY_REVEAL: f32 = 0.7;
 /// How much bigger than a hand card an incantation grows on its way to the board.
 const INCANTATION_GROW: f32 = 1.2;
 /// How long the banner announcing your turn stays up.
-const TURN_FLASH: f32 = 1.3;
+const TURN_FLASH: f32 = 0.5;
 
 /// An entity-anchored effect that runs for a fixed time and then expires.
 struct Timed {
