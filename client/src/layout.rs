@@ -200,6 +200,10 @@ pub fn mulligan_confirm_rect(w: f32, h: f32) -> Rect {
     Rect::new(w / 2.0 - 90.0, h - 80.0, 180.0, 44.0)
 }
 
+pub fn game_over_button_rect(w: f32, h: f32) -> Rect {
+    Rect::new(board_center_x(w) - 95.0, h / 2.0 + 28.0, 190.0, 46.0)
+}
+
 pub fn end_turn_rect(w: f32, h: f32) -> Rect {
     Rect::new(w - HERO_W - 132.0, h / 2.0 + 14.0, 104.0, 36.0)
 }

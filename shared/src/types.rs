@@ -2,10 +2,27 @@
 #![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum PlayerSide {
+    White,
+    Black,
+}
+
+impl PlayerSide {
+    pub fn other(self) -> Self {
+        match self {
+            PlayerSide::White => PlayerSide::Black,
+            PlayerSide::Black => PlayerSide::White,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GamePhase {
     Mulligan,
     Playing,
+    /// No winner when both heroes fell to the same exchange.
+    Over { winner: Option<PlayerSide> },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -419,9 +436,31 @@ pub struct GameStateClient {
     pub cards_played_this_turn: u32,
     pub arrivals_played_this_turn: u32,
     pub phase: GamePhase,
+    /// Which half of the board is yours, so a finished game reads as won or lost.
+    pub you_are_white: bool,
     pub mulligan_submitted: bool,
     pub open_cards: bool,
     pub hand_hints: Vec<CardHint>,
+}
+
+/// What a finished game means for the player holding the view it came from.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Outcome {
+    Win,
+    Loss,
+    Draw,
+}
+
+impl GameStateClient {
+    pub fn outcome(&self) -> Option<Outcome> {
+        let GamePhase::Over { winner } = self.phase else { return None };
+        let me = if self.you_are_white { PlayerSide::White } else { PlayerSide::Black };
+        Some(match winner {
+            None => Outcome::Draw,
+            Some(side) if side == me => Outcome::Win,
+            Some(_) => Outcome::Loss,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

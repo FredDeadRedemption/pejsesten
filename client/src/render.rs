@@ -9,7 +9,7 @@ use crate::textures::{draw_texture_cover, TextureCache};
 use crate::fx;
 use crate::glow;
 use crate::ui;
-use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, OmenCard, OmenEntity, ScenarioFrameInfo};
+use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, OmenCard, OmenEntity, Outcome, ScenarioFrameInfo};
 
 
 // mana gem as a fraction of card height, stat badge as a multiple of its base size
@@ -55,12 +55,16 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
 
     draw_play_log(log, cache, h);
     draw_line(layout::SIDEBAR_W, mid, w, mid, 1.5, COL_DIVIDER);
-    draw_turn_indicator(state, w, mid);
+    // the banner says the same thing, louder, and a finished game has no turn to announce
+    if overlay.turn_flash.is_none() && !matches!(state.phase, shared::types::GamePhase::Over { .. }) {
+        draw_turn_indicator(state, w, mid);
+    }
 
     draw_board_half(&state.enemy_board, w, h, false, cache, false, overlay, state.open_cards, &[]);
     draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, overlay, state.open_cards, &state.hand_hints);
 
-    if state.your_turn {
+    let over = state.outcome().is_some();
+    if state.your_turn && !over {
         draw_end_turn_button(w, h);
         draw_drop_targets(state, drag, w, h);
     }
@@ -93,6 +97,52 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     }
 
     draw_numbers(overlay);
+
+    if let Some(p) = overlay.turn_flash {
+        draw_turn_banner(p, w, h);
+    }
+}
+
+/// Announces the turn coming back to you, across the board and over everything on it.
+fn draw_turn_banner(p: f32, w: f32, h: f32) {
+    let alpha = 1.0 - fx::smoothstep(0.45, 1.0, p);
+    let scale = 0.92 + 0.16 * fx::smoothstep(0.0, 1.0, p);
+    let mid = h / 2.0;
+    let (x, bw, bh) = (layout::SIDEBAR_W, w - layout::SIDEBAR_W, 68.0);
+    draw_rectangle(x, mid - bh / 2.0, bw, bh, Color::new(0.04, 0.10, 0.05, 0.72 * alpha));
+    let edge = Color::new(0.45, 0.95, 0.55, 0.55 * alpha);
+    draw_line(x, mid - bh / 2.0, w, mid - bh / 2.0, 1.5, edge);
+    draw_line(x, mid + bh / 2.0, w, mid + bh / 2.0, 1.5, edge);
+
+    let label = "YOUR TURN";
+    let font = (44.0 * scale).round();
+    let d = ui::measure(label, font);
+    let x = layout::board_center_x(w) - d.width / 2.0;
+    ui::text(label, x + 2.0, mid + 16.0, font, Color::new(0.0, 0.0, 0.0, 0.6 * alpha));
+    ui::text(label, x, mid + 14.0, font, Color::new(0.45, 0.95, 0.55, alpha));
+}
+
+/// The result, on a panel over the board that produced it.
+pub fn draw_game_over(outcome: Outcome, w: f32, h: f32) {
+    draw_rectangle(0.0, 0.0, w, h, Color::new(0.0, 0.0, 0.0, 0.68));
+
+    let (label, color) = match outcome {
+        Outcome::Win => ("VICTORY", Color::new(0.45, 0.95, 0.55, 1.0)),
+        Outcome::Loss => ("DEFEAT", Color::new(0.95, 0.40, 0.38, 1.0)),
+        Outcome::Draw => ("DRAW", LIGHTGRAY),
+    };
+    let cx = layout::board_center_x(w);
+    let (pw, ph) = (360.0, 190.0);
+    let (px, py) = (cx - pw / 2.0, h / 2.0 - ph / 2.0);
+    fx::soft_shadow(px, py, pw, ph);
+    fx::fill_round_rect(px, py, pw, ph, 10.0, Color::new(0.06, 0.05, 0.10, 0.97));
+    fx::stroke_round_rect(px, py, pw, ph, 10.0, 1.5, Color { a: 0.5, ..color });
+
+    draw_text_centered(label, cx + 2.0, py + 76.0, 56.0, Color::new(0.0, 0.0, 0.0, 0.6));
+    draw_text_centered(label, cx, py + 74.0, 56.0, color);
+
+    let r = layout::game_over_button_rect(w, h);
+    draw_button("BACK TO LOBBY", r.x, r.y, r.w, r.h);
 }
 
 /// Cards in flight between zones, over the board they are crossing.

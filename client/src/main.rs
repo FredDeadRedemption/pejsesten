@@ -186,7 +186,7 @@ async fn main() {
                             screen = Screen::Mulligan { state: update.state, selected };
                         }
                         // a running timeline queues the batch; a fresh one has nothing to play from
-                        GamePhase::Playing => match &mut screen {
+                        GamePhase::Playing | GamePhase::Over { .. } => match &mut screen {
                             Screen::Playing(timeline) => timeline.push(update),
                             _ => {
                                 // entity ids restart with a game, so nothing may outlive the old one
@@ -316,6 +316,10 @@ async fn main() {
                     && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
                 show_mouse(!targeting_active);
                 render::draw_game(state, &cache, &drag_render, &anims.overlay(), &play_log);
+                // only once the last blow has played out
+                if timeline.idle() && let Some(outcome) = state.outcome() {
+                    render::draw_game_over(outcome, w, h);
+                }
             }
             Screen::DeckBuilder(db) => {
                 show_mouse(true);
@@ -639,6 +643,16 @@ fn handle_input(
             if !timeline.idle() {
                 return;
             }
+            if timeline.state().outcome().is_some() {
+                let leave = is_key_pressed(KeyCode::Escape)
+                    || (is_mouse_button_released(MouseButton::Left)
+                        && layout::game_over_button_rect(w, h).contains(Vec2::new(mx, my)));
+                if leave {
+                    *screen = Screen::Lobby(Lobby::load());
+                }
+                return;
+            }
+
             let state = timeline.state();
             if !state.your_turn {
                 return;

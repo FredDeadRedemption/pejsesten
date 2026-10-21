@@ -16,6 +16,14 @@ pub fn render(s: &GameStateClient) -> String {
             let whose = if s.your_turn { "your turn" } else { "opponent's turn" };
             let _ = writeln!(o, "turn {} - {whose}, {} cards played this turn", s.turn_count, s.cards_played_this_turn);
         }
+        GamePhase::Over { .. } => {
+            let result = match s.outcome() {
+                Some(Outcome::Win) => "you win",
+                Some(Outcome::Loss) => "you lose",
+                _ => "a draw",
+            };
+            let _ = writeln!(o, "game over on turn {} - {result}", s.turn_count);
+        }
     }
 
     let _ = writeln!(o, "you:   {}", resources(&s.self_board));

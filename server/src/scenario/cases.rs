@@ -118,6 +118,10 @@ pub fn all() -> Vec<Case> {
         case("omens", "the third enemy minion fires the wide board omen", omen_fires_on_a_wide_board),
         case("omens", "a watcher grows once per omen that resolves", omen_watcher_grows),
         case("omens", "a watcher grows on the enemy's omens too", omen_watcher_grows_on_enemy_omens),
+        // game
+        case("game", "lethal on a hero ends the game", lethal_ends_the_game),
+        case("game", "a finished game refuses every action", a_finished_game_refuses_actions),
+        case("game", "both heroes falling at once is a draw", a_double_knock_out_is_a_draw),
     ];
     cases.extend(auto_target_matrix());
     cases.extend(targeted_validation_matrix());
@@ -1672,5 +1676,49 @@ fn omen_watcher_grows_on_enemy_omens() -> Scenario {
     scn.expect_eq("black's omen fired", scn.omens_len(Side::Black), 0);
     scn.expect_eq("the watcher grew across the table", scn.attack_of(augur), Some(2));
     scn.expect_eq("defence with it", scn.defence(augur), Some(3));
+    scn
+}
+
+// --- game ---
+
+fn lethal_ends_the_game() -> Scenario {
+    let mut s = Setup::new();
+    let killer = s.on_board(Side::White, minion(1, "Killer", 1, 5, 5));
+    s.hp(Side::Black, 5);
+    let hero = s.hero_id(Side::Black);
+    let mut scn = s.start("lethal");
+
+    scn.expect_attack("the killing swing lands", killer, hero, true);
+    scn.expect_eq("white took the game", scn.phase(), GamePhase::Over { winner: Some(PlayerSide::White) });
+    scn
+}
+
+fn a_finished_game_refuses_actions() -> Scenario {
+    let mut s = Setup::new();
+    let killer = s.on_board(Side::White, minion(1, "Killer", 1, 5, 5));
+    let spare = s.in_hand(Side::White, minion(2, "Spare", 0, 1, 1));
+    s.hp(Side::Black, 5);
+    let hero = s.hero_id(Side::Black);
+    let mut scn = s.start("after the end");
+
+    scn.attack(killer, hero);
+    scn.expect_play("no card lands once a hero is down", spare, None, false);
+    scn.end_turn();
+    scn.expect_eq("the turn does not move on either", scn.state().turn_count, 1);
+    scn
+}
+
+fn a_double_knock_out_is_a_draw() -> Scenario {
+    let mut s = Setup::new();
+    let bomb = s.spell_in_hand(
+        Side::White,
+        incantation(1, "Collapse", 0).does(on_play(vec![damage(spec(TargetMode::Auto, TargetSide::All, EntityType::Hero), 3)])),
+    );
+    s.hp(Side::White, 2);
+    s.hp(Side::Black, 2);
+    let mut scn = s.start("double knock out");
+
+    scn.play(bomb, None);
+    scn.expect_eq("nobody took it", scn.phase(), GamePhase::Over { winner: None });
     scn
 }

@@ -18,6 +18,8 @@ const NUMBER_RISE: f32 = 42.0;
 const FLY_REVEAL: f32 = 0.7;
 /// How much bigger than a hand card an incantation grows on its way to the board.
 const INCANTATION_GROW: f32 = 1.2;
+/// How long the banner announcing your turn stays up.
+const TURN_FLASH: f32 = 1.3;
 
 /// An entity-anchored effect that runs for a fixed time and then expires.
 struct Timed {
@@ -145,6 +147,8 @@ pub struct Overlay<'a> {
     hand_flips: Vec<(u32, f32)>,
     pub numbers: &'a [Number],
     pub flyers: &'a [Flyer],
+    /// 0 → 1 while the banner announcing your turn runs, None once it is over.
+    pub turn_flash: Option<f32>,
 }
 
 impl Overlay<'_> {
@@ -184,11 +188,22 @@ pub struct Anims {
     numbers: Vec<Number>,
     flyers: Vec<Flyer>,
     hand_flips: HashMap<u32, CardFlip>,
+    turn_flash: f32,
+    was_your_turn: bool,
 }
 
 impl Anims {
     pub fn new() -> Self {
-        Self { bumps: vec![], fades: vec![], flashes: vec![], numbers: vec![], flyers: vec![], hand_flips: HashMap::new() }
+        Self {
+            bumps: vec![],
+            fades: vec![],
+            flashes: vec![],
+            numbers: vec![],
+            flyers: vec![],
+            hand_flips: HashMap::new(),
+            turn_flash: TURN_FLASH,
+            was_your_turn: false,
+        }
     }
 
     /// `state` is the board as it looks when the event starts, which is where the anchors and the
@@ -258,6 +273,13 @@ impl Anims {
         }
         self.flyers.retain(|f| f.t < f.life);
 
+        // the visual board drives it, so the banner lands with the turn and not with the packet
+        if state.your_turn && !self.was_your_turn {
+            self.turn_flash = 0.0;
+        }
+        self.was_your_turn = state.your_turn;
+        self.turn_flash += dt;
+
         self.hand_flips.retain(|id, _| state.self_board.hand.iter().any(|c| c.entity_id() == *id));
         for card in &state.self_board.hand {
             self.hand_flips.entry(card.entity_id()).or_insert_with(CardFlip::new_drawn);
@@ -276,6 +298,7 @@ impl Anims {
             hand_flips: self.hand_flips.iter().map(|(id, f)| (*id, f.rotation_y.cos())).collect(),
             numbers: &self.numbers,
             flyers: &self.flyers,
+            turn_flash: (self.turn_flash < TURN_FLASH).then(|| self.turn_flash / TURN_FLASH),
         }
     }
 }

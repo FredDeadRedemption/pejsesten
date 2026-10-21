@@ -81,21 +81,6 @@ enum TargetRef {
     MinionEnemy(usize),
 }
 
-#[derive(Clone, Copy)]
-enum PlayerSide {
-    White,
-    Black,
-}
-
-impl PlayerSide {
-    fn other(self) -> Self {
-        match self {
-            PlayerSide::White => PlayerSide::Black,
-            PlayerSide::Black => PlayerSide::White,
-        }
-    }
-}
-
 #[derive(Clone)]
 struct QueuedEffect {
     effect: Effect,
@@ -709,6 +694,23 @@ impl Game {
                 self.fire_omens(OmenTrigger::FriendlyMinionDies, side);
             }
         }
+        self.check_for_defeat();
+    }
+
+    /// A hero at zero ends the game where it stands. Stats are fresh here, and every public
+    /// action ends in the death pass, so no damage can land without passing this.
+    fn check_for_defeat(&mut self) {
+        if !self.playing() {
+            return;
+        }
+        let down = (self.state.white.hero.stats.defence <= 0, self.state.black.hero.stats.defence <= 0);
+        let winner = match down {
+            (false, false) => return,
+            (true, true) => None,
+            (true, false) => Some(PlayerSide::Black),
+            (false, true) => Some(PlayerSide::White),
+        };
+        self.state.phase = GamePhase::Over { winner };
     }
 
     // --- Stats ---
@@ -1061,6 +1063,9 @@ impl Game {
     // --- Public API ---
 
     pub fn end_turn(&mut self) {
+        if !self.playing() {
+            return;
+        }
         let ender = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
         self.fire_omens(OmenTrigger::EnemyEndsTurn, ender.other());
         if !self.state.attacked_this_turn {
@@ -1100,6 +1105,9 @@ impl Game {
     }
 
     pub fn play_card(&mut self, index: usize, target_id: Option<u32>, omen_trigger: Option<usize>) -> bool {
+        if !self.playing() {
+            return false;
+        }
         // Validate without consuming — clone card so mutable borrow can be released before check_requirements
         let card_clone = {
             let source_board = self.source_board_mut();
@@ -1246,6 +1254,9 @@ impl Game {
     }
 
     pub fn attack(&mut self, data: AttackData) -> bool {
+        if !self.playing() {
+            return false;
+        }
         let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
         let attacker_idx = match self.find_target_ref(data.origin_id, owner) {
             Some(TargetRef::MinionSource(i)) => i,
@@ -1342,6 +1353,9 @@ impl Game {
     }
 
     pub fn trade_card(&mut self, index: usize) -> bool {
+        if !self.playing() {
+            return false;
+        }
         {
             let source_board = self.source_board_mut();
             if source_board.mana == 0 || source_board.deck.is_empty() {
@@ -1372,6 +1386,15 @@ impl Game {
         true
     }
 
+    pub fn playing(&self) -> bool {
+        self.state.phase == GamePhase::Playing
+    }
+
+    /// A finished game stays around so the result survives a reload; it just refuses every action.
+    pub fn is_over(&self) -> bool {
+        matches!(self.state.phase, GamePhase::Over { .. })
+    }
+
     pub fn parse_client_state(&self, for_white: bool) -> GameStateClient {
         GameStateClient {
             self_board: if for_white { self.state.white.clone() } else { self.state.black.clone() },
@@ -1383,6 +1406,7 @@ impl Game {
             cards_played_this_turn: self.state.cards_played_this_turn,
             arrivals_played_this_turn: self.state.arrivals_played_this_turn,
             phase: self.state.phase.clone(),
+            you_are_white: for_white,
             mulligan_submitted: if for_white { self.state.mulligan_white_done } else { self.state.mulligan_black_done },
             open_cards: settings::OPEN_CARDS,
             hand_hints: self.hand_hints(for_white),

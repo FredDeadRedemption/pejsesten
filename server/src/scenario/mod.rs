@@ -388,6 +388,10 @@ impl Scenario {
         self.board(side).hero.entity_id
     }
 
+    pub fn phase(&self) -> GamePhase {
+        self.game.state.phase.clone()
+    }
+
     pub fn hp(&self, side: Side) -> i32 {
         self.board(side).hero.stats.defence
     }

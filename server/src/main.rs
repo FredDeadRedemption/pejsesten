@@ -132,7 +132,8 @@ async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<S
             inner.queue.push((me, meta));
             println!("queue length: {}", inner.queue.len());
 
-            if inner.queue.len() >= 2 && inner.game.is_none() {
+            // a finished game sticks around for its result screen, and may be replaced
+            if inner.queue.len() >= 2 && inner.game.as_ref().is_none_or(|g| g.is_over()) {
                 println!("starting game!");
                 let (id1, meta1) = inner.queue.pop().unwrap();
                 let (id2, meta2) = inner.queue.pop().unwrap();
@@ -180,7 +181,7 @@ async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<S
         move |socket: SocketRef, Data::<PlayerMetaData>(meta)| async move {
             let mut inner = state.inner.lock().await;
 
-            if inner.game.is_some() {
+            if inner.game.as_ref().is_some_and(|g| !g.is_over()) {
                 println!("game already in progress, ignoring queueUpBot");
                 return;
             }

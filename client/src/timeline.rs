@@ -333,6 +333,7 @@ mod tests {
             cards_played_this_turn: 0,
             arrivals_played_this_turn: 0,
             phase: GamePhase::Playing,
+            you_are_white: true,
             mulligan_submitted: true,
             open_cards: false,
             hand_hints: vec![],

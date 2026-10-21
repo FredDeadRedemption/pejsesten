@@ -148,6 +148,7 @@ fn ready_to_act(state: &GameStateClient) -> bool {
     match state.phase {
         GamePhase::Mulligan => !state.mulligan_submitted,
         GamePhase::Playing => state.your_turn,
+        GamePhase::Over { .. } => false,
     }
 }
 
