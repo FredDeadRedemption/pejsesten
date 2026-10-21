@@ -466,6 +466,13 @@ impl CardEntity {
             CardEntity::Omen(o) => &o.card.name,
         }
     }
+    pub fn image_url(&self) -> &str {
+        match self {
+            CardEntity::Minion(m) => &m.card.image_url,
+            CardEntity::Incantation(i) => &i.card.image_url,
+            CardEntity::Omen(o) => &o.card.image_url,
+        }
+    }
     pub fn cost_mut(&mut self) -> &mut i32 {
         match self {
             CardEntity::Minion(m) => &mut m.cost,

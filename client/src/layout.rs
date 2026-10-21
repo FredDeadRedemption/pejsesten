@@ -7,13 +7,49 @@ pub const MINION_W: f32 = 100.0;
 pub const MINION_H: f32 = 145.0;
 pub const MINION_GAP: f32 = 8.0;
 
-pub const OMEN_W: f32 = 64.0;
-pub const OMEN_H: f32 = 92.0;
+// a stack of three has to fit between the divider and the mana readout
+pub const OMEN_W: f32 = 56.0;
+pub const OMEN_H: f32 = 80.0;
 pub const OMEN_GAP: f32 = 8.0;
-const OMEN_MARGIN: f32 = 20.0;
+/// Gap between the left column and the omen stacks.
+const OMEN_MARGIN: f32 = 12.0;
 
 pub const HERO_W: f32 = 92.0;
 pub const HERO_H: f32 = 134.0;
+
+/// The left column: the card the opponent just played, over the log of every card played.
+pub const SIDEBAR_W: f32 = 184.0;
+const SIDEBAR_PAD: f32 = 12.0;
+pub const REVEAL_W: f32 = 168.0;
+pub const REVEAL_H: f32 = 244.0;
+pub const REVEAL_Y: f32 = 42.0;
+
+pub fn reveal_rect() -> Rect {
+    Rect::new(SIDEBAR_PAD, REVEAL_Y, REVEAL_W, REVEAL_H)
+}
+
+pub const LOG_TOP: f32 = 316.0;
+pub const LOG_ROW_H: f32 = 32.0;
+const LOG_ROW_GAP: f32 = 4.0;
+
+/// One rect per row the column has room for, newest at the top.
+pub fn log_row_rects(h: f32) -> Vec<Rect> {
+    let pitch = LOG_ROW_H + LOG_ROW_GAP;
+    let count = (((h - 10.0 - LOG_TOP) / pitch).max(0.0)) as usize;
+    (0..count)
+        .map(|i| Rect::new(SIDEBAR_PAD, LOG_TOP + i as f32 * pitch, SIDEBAR_W - SIDEBAR_PAD * 2.0, LOG_ROW_H))
+        .collect()
+}
+
+/// Everything centred sits in what the left column leaves over.
+pub fn board_center_x(w: f32) -> f32 {
+    (SIDEBAR_W + w) / 2.0
+}
+
+/// Mana and ember readouts, clear of the left column.
+pub fn readout_x() -> f32 {
+    SIDEBAR_W + OMEN_MARGIN
+}
 
 /// Dead zone — dropping a card here cancels the play. Extends well above the actual cards.
 pub const HAND_ZONE_PADDING: f32 = 60.0;
@@ -82,7 +118,7 @@ fn fan(count: usize, w: f32, sign: f32) -> Vec<HandSlot> {
     (0..count)
         .map(|i| {
             let angle = (i as f32 - mid) * step;
-            let cx = w / 2.0 + HAND_ARC_R * angle.sin();
+            let cx = board_center_x(w) + HAND_ARC_R * angle.sin();
             let cy = sign * HAND_ARC_R * (1.0 - angle.cos());
             HandSlot {
                 rect: Rect::new(cx - CARD_W / 2.0, cy - CARD_H / 2.0, CARD_W, CARD_H),
@@ -100,26 +136,26 @@ fn shift(slots: &mut [HandSlot], dy: f32) {
 
 pub fn self_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
     let y = h / 2.0 + 18.0;
-    centered_rects(count, MINION_W, MINION_H, MINION_GAP, w / 2.0, y)
+    centered_rects(count, MINION_W, MINION_H, MINION_GAP, board_center_x(w), y)
 }
 
 pub fn enemy_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
     let y = h / 2.0 - MINION_H - 18.0;
-    centered_rects(count, MINION_W, MINION_H, MINION_GAP, w / 2.0, y)
+    centered_rects(count, MINION_W, MINION_H, MINION_GAP, board_center_x(w), y)
 }
 
-/// Omens sit above their owner's hand, left of the centred minion rows.
+/// Omens stack away from the divider at the board's left edge, where no minion row reaches.
 pub fn self_omen_rects(count: usize, h: f32) -> Vec<Rect> {
-    omen_rects(count, h - CARD_H - 10.0 - OMEN_H - 6.0)
+    omen_rects(count, |i| h / 2.0 + 12.0 + i * (OMEN_H + OMEN_GAP))
 }
 
-pub fn enemy_omen_rects(count: usize) -> Vec<Rect> {
-    omen_rects(count, 10.0 + CARD_H + 6.0)
+pub fn enemy_omen_rects(count: usize, h: f32) -> Vec<Rect> {
+    omen_rects(count, |i| h / 2.0 - 12.0 - OMEN_H - i * (OMEN_H + OMEN_GAP))
 }
 
-fn omen_rects(count: usize, y: f32) -> Vec<Rect> {
+fn omen_rects(count: usize, y: impl Fn(f32) -> f32) -> Vec<Rect> {
     (0..count)
-        .map(|i| Rect::new(OMEN_MARGIN + i as f32 * (OMEN_W + OMEN_GAP), y, OMEN_W, OMEN_H))
+        .map(|i| Rect::new(SIDEBAR_W + OMEN_MARGIN, y(i as f32), OMEN_W, OMEN_H))
         .collect()
 }
 

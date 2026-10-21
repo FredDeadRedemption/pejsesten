@@ -14,6 +14,7 @@ mod fx;
 mod glow;
 mod layout;
 mod network;
+mod playlog;
 mod render;
 mod session;
 mod textures;
@@ -25,6 +26,7 @@ use card3d::Card3D;
 use deckbuilder::DeckBuilderState;
 use decks::Deck;
 use network::{NetworkClient, ServerEvent};
+use playlog::PlayLog;
 use render::DragRender;
 use shared::types::{
     AttackData, Card, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
@@ -157,6 +159,7 @@ async fn main() {
     let mut hover_id: Option<u32> = None;
     let mut hover_timer: f32 = 0.0;
     let mut anims = Anims::new();
+    let mut play_log = PlayLog::new();
     let mut scenario: Option<ScenarioFrameInfo> = None;
     let mut omen_pick: Option<OmenPick> = None;
     let mut glow_watcher = glow::Watcher::new();
@@ -188,6 +191,7 @@ async fn main() {
                             _ => {
                                 // entity ids restart with a game, so nothing may outlive the old one
                                 anims = Anims::new();
+                                play_log = PlayLog::new();
                                 screen = Screen::Playing(Timeline::new(update.state));
                             }
                         },
@@ -202,9 +206,11 @@ async fn main() {
         if let Screen::Playing(timeline) = &mut screen {
             let dt = get_frame_time();
             for event in timeline.tick(dt) {
-                anims.spawn(&event, timeline.visual(), w, h);
+                anims.spawn(&event, timeline.visual(), timeline.state(), w, h);
+                play_log.record(&event, timeline.visual());
             }
             anims.tick(dt, timeline.visual());
+            play_log.tick(dt);
         }
 
         if let Some(pick) = &omen_pick {
@@ -309,7 +315,7 @@ async fn main() {
                     && !drag_render.targetable_ids.is_empty()
                     && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
                 show_mouse(!targeting_active);
-                render::draw_game(state, &cache, &drag_render, &anims.overlay());
+                render::draw_game(state, &cache, &drag_render, &anims.overlay(), &play_log);
             }
             Screen::DeckBuilder(db) => {
                 show_mouse(true);
@@ -490,7 +496,7 @@ fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     for (o, r) in state.self_board.omens.iter().zip(self_omens.iter()) {
         if r.contains(mouse) { return Some(o.entity_id); }
     }
-    let enemy_omens = layout::enemy_omen_rects(state.enemy_board.omens.len());
+    let enemy_omens = layout::enemy_omen_rects(state.enemy_board.omens.len(), h);
     for (o, r) in state.enemy_board.omens.iter().zip(enemy_omens.iter()) {
         if r.contains(mouse) { return Some(o.entity_id); }
     }

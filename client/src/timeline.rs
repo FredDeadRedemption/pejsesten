@@ -13,12 +13,15 @@ use shared::types::{Board, CardEntity, GameEvent, GameStateClient, MinionEntity,
 pub fn duration(event: &GameEvent) -> f32 {
     match event {
         GameEvent::OmenFired { .. } => 0.45,
+        // both fly a card across the board, so they get the time that takes to read
+        GameEvent::CardPlayed { .. } => 0.40,
+        GameEvent::CardDrawn { .. } => 0.32,
         GameEvent::Attacked { .. } => 0.38,
-        GameEvent::CardPlayed { .. } | GameEvent::Died { .. } => 0.35,
+        GameEvent::Died { .. } => 0.35,
         GameEvent::Damaged { .. } | GameEvent::Healed { .. } => 0.30,
         GameEvent::MinionSummoned { .. } | GameEvent::ReturnedToHand { .. } => 0.30,
         GameEvent::Buffed { .. } | GameEvent::WardBroken { .. } | GameEvent::TriggerFired { .. } => 0.25,
-        GameEvent::CardDrawn { .. } | GameEvent::CardCreated { .. } | GameEvent::CardTraded { .. } => 0.22,
+        GameEvent::CardCreated { .. } | GameEvent::CardTraded { .. } => 0.22,
         GameEvent::TurnEnded => 0.20,
     }
 }

@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use crate::anim::Overlay;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
 use crate::layout::{self, CARD_H, CARD_W};
+use crate::playlog::{Play, PlayLog};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::fx;
 use crate::glow;
@@ -31,6 +32,8 @@ pub(crate) const COL_DAMAGED: Color = Color::new(1.00, 0.35, 0.35, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
 const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
 const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
+const COL_SIDE_SELF: Color = Color::new(0.42, 0.62, 0.90, 1.0);
+const COL_SIDE_ENEMY: Color = Color::new(0.88, 0.36, 0.34, 1.0);
 
 
 // ── Public entry points ────────────────────────────────────────────────────────
@@ -45,12 +48,13 @@ pub struct DragRender<'a> {
     pub hovered_id: Option<u32>,
 }
 
-pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender, overlay: &Overlay) {
+pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender, overlay: &Overlay, log: &PlayLog) {
     let w = ui::size().x;
     let h = ui::size().y;
     let mid = h / 2.0;
 
-    draw_line(0.0, mid, w, mid, 1.5, COL_DIVIDER);
+    draw_play_log(log, cache, h);
+    draw_line(layout::SIDEBAR_W, mid, w, mid, 1.5, COL_DIVIDER);
     draw_turn_indicator(state, w, mid);
 
     draw_board_half(&state.enemy_board, w, h, false, cache, false, overlay, state.open_cards, &[]);
@@ -60,6 +64,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
         draw_end_turn_button(w, h);
         draw_drop_targets(state, drag, w, h);
     }
+
+    draw_flyers(overlay, cache);
 
     if let Some(hid) = drag.hovered_id {
         draw_entity_preview(hid, state, cache, w, h);
@@ -87,6 +93,20 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     }
 
     draw_numbers(overlay);
+}
+
+/// Cards in flight between zones, over the board they are crossing.
+fn draw_flyers(overlay: &Overlay, cache: &TextureCache) {
+    for flyer in overlay.flyers {
+        let r = flyer.rect();
+        with_rotation(Vec2::new(r.x + r.w / 2.0, r.y + r.h / 2.0), flyer.rotation(), || {
+            fx::soft_shadow(r.x, r.y, r.w, r.h);
+            match &flyer.card {
+                Some(card) => draw_card(card, r.x, r.y, r.w, r.h, cache, flyer.flip_cos()),
+                None => draw_card_back(r.x, r.y, r.w, r.h),
+            }
+        });
+    }
 }
 
 /// Floating damage, heal and buff numbers, over everything on the board.
@@ -273,6 +293,66 @@ pub fn draw_connecting() {
     ui::text(text, w / 2.0 - dims.width / 2.0, h / 2.0, 28.0, GRAY);
 }
 
+// ── Left column ───────────────────────────────────────────────────────────────
+
+/// The opponent's last play, big enough to read, over the log of every card played.
+fn draw_play_log(log: &PlayLog, cache: &TextureCache, h: f32) {
+    let panel_w = layout::SIDEBAR_W - 12.0;
+    fx::fill_round_rect(6.0, 6.0, panel_w, h - 12.0, 8.0, COL_PANEL);
+    fx::stroke_round_rect(6.0, 6.0, panel_w, h - 12.0, 8.0, 1.0, Color::new(1.0, 1.0, 1.0, 0.08));
+
+    let slot = layout::reveal_rect();
+    ui::text("OPPONENT PLAYED", slot.x, slot.y - 12.0, 11.0, COL_SIDE_ENEMY);
+    match log.reveal() {
+        Some(card) => {
+            // settles into the slot, so a fresh reveal catches the eye without moving the layout
+            let p = log.pop();
+            let scale = 0.88 + 0.12 * p;
+            let r = Rect::new(
+                slot.x + slot.w * (1.0 - scale) / 2.0,
+                slot.y + slot.h * (1.0 - scale) / 2.0,
+                slot.w * scale,
+                slot.h * scale,
+            );
+            fx::soft_shadow(r.x, r.y, r.w, r.h);
+            draw_card_entity_preview(card, r.x, r.y, r.w, r.h, cache);
+            if p < 1.0 {
+                draw_rectangle(r.x, r.y, r.w, r.h, Color::new(1.0, 1.0, 1.0, 0.4 * (1.0 - p)));
+            }
+        }
+        None => {
+            fx::stroke_round_rect(slot.x, slot.y, slot.w, slot.h, 6.0, 1.5, Color::new(1.0, 1.0, 1.0, 0.07));
+            draw_text_centered("nothing yet", slot.x + slot.w / 2.0, slot.y + slot.h / 2.0, 12.0, DARKGRAY);
+        }
+    }
+
+    ui::text("PLAYED", slot.x, layout::LOG_TOP - 10.0, 11.0, GRAY);
+    for (play, row) in log.plays().zip(layout::log_row_rects(h)) {
+        draw_log_row(play, row, cache);
+    }
+}
+
+fn draw_log_row(play: &Play, r: Rect, cache: &TextureCache) {
+    let side = if play.mine { COL_SIDE_SELF } else { COL_SIDE_ENEMY };
+    fx::fill_round_rect(r.x, r.y, r.w, r.h, 4.0, Color::new(1.0, 1.0, 1.0, 0.05));
+    draw_rectangle(r.x, r.y + 3.0, 3.0, r.h - 6.0, side);
+
+    let art = Rect::new(r.x + 8.0, r.y + 3.0, r.h - 6.0, r.h - 6.0);
+    match cache.art(play.card.image_url()) {
+        Some(tex) => draw_texture_cover(tex, art.x, art.y, art.w, art.h, WHITE),
+        None => draw_rectangle(art.x, art.y, art.w, art.h, COL_CARD_BG),
+    }
+
+    let baseline = r.y + r.h / 2.0 + 4.0;
+    let cost = play.card.cost().to_string();
+    let cost_x = r.x + r.w - 6.0 - ui::measure(&cost, 12.0).width;
+    ui::text(&cost, cost_x, baseline, 12.0, COL_MANA);
+
+    let name_x = art.x + art.w + 6.0;
+    let name = fit_text(play.card.name(), (cost_x - 4.0 - name_x).max(0.0), 11.0);
+    ui::text(&name, name_x, baseline, 11.0, WHITE);
+}
+
 // ── Drop target highlights ─────────────────────────────────────────────────────
 
 fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32) {
@@ -309,6 +389,7 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 // ── Board halves ──────────────────────────────────────────────────────────────
 
 fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, overlay: &Overlay, open_cards: bool, hand_hints: &[CardHint]) {
+    let readout_x = layout::readout_x();
     if is_self {
         let mana_y = h - 22.0;
         let deck_r = layout::self_deck_rect(w, h);
@@ -317,8 +398,8 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         draw_battlefield(&board.battlefield, w, h, true, cache, overlay);
         draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, overlay, hand_hints);
-        draw_mana(board.mana, board.base_mana, 20.0, mana_y);
-        draw_embers(board.embers, 20.0, mana_y - 24.0);
+        draw_mana(board.mana, board.base_mana, readout_x, mana_y);
+        draw_embers(board.embers, readout_x, mana_y - 24.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, deck_glow);
     } else {
         let mana_y = 18.0;
@@ -326,10 +407,10 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache, overlay);
         draw_battlefield(&board.battlefield, w, h, false, cache, overlay);
-        draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len()), cache, overlay);
+        draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, overlay, hand_hints);
-        draw_mana(board.mana, board.base_mana, 20.0, mana_y);
-        draw_embers(board.embers, 20.0, mana_y + 32.0);
+        draw_mana(board.mana, board.base_mana, readout_x, mana_y);
+        draw_embers(board.embers, readout_x, mana_y + 32.0);
         draw_deck(board.deck.len(), deck_r.x, deck_r.y, false);
     }
 }
@@ -597,10 +678,13 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
             CardEntity::Omen(_) => pw + 6.0 + OMEN_PANEL_W,
             _ => pw,
         };
-        let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(0.0, (w - block_w).max(0.0));
+        let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(layout::SIDEBAR_W, (w - block_w).max(layout::SIDEBAR_W));
         let py = (rect.y - ph - 10.0).max(0.0);
         fx::soft_shadow(px, py, pw, ph);
         draw_card_entity_preview(card, px, py, pw, ph, cache);
+        if let CardEntity::Omen(o) = card {
+            draw_omen_panel(o, px + pw + 6.0, py);
+        }
         return;
     }
 
@@ -611,7 +695,7 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
             .find(|(o, _)| o.entity_id == entity_id)
             .map(|(o, r)| (o, r))
     }.or_else(|| {
-        let rects = layout::enemy_omen_rects(state.enemy_board.omens.len());
+        let rects = layout::enemy_omen_rects(state.enemy_board.omens.len(), h);
         state.enemy_board.omens.iter().zip(rects)
             .find(|(o, _)| o.entity_id == entity_id)
             .map(|(o, r)| (o, r))
@@ -623,6 +707,7 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
         let py = (rect.y + rect.h / 2.0 - ph / 2.0).clamp(0.0, h - ph);
         fx::soft_shadow(px, py, pw, ph);
         draw_omen_preview(omen, px, py, pw, ph, cache);
+        draw_omen_panel(omen, px + pw + 6.0, py);
         return;
     }
 
@@ -741,8 +826,6 @@ fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &
     let desc = card.description.as_deref().unwrap_or("");
     let desc_font = (frame.text.h * 0.20).round();
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
-
-    draw_omen_panel(omen, x + w + 6.0, y);
 }
 
 /// Full-screen choice of which of the three printed triggers to arm.
@@ -835,6 +918,9 @@ fn draw_hand(hand: &[CardEntity], slots: &[layout::HandSlot], face_up: bool, cac
 
     // left to right, so each card overlaps the one before it
     for (i, (card, slot)) in hand.iter().zip(slots).enumerate() {
+        if overlay.in_flight(card.entity_id()) {
+            continue;
+        }
         let (x, y) = (slot.rect.x, slot.rect.y);
         with_rotation(slot.center(), slot.rotation, || {
             fx::soft_shadow(x, y, CARD_W, CARD_H);
@@ -1031,13 +1117,14 @@ fn draw_stat_badge(val: i32, base: i32, x: f32, y: f32, color: Color, scale: f32
 }
 
 fn draw_turn_indicator(state: &GameStateClient, w: f32, mid: f32) {
+    let cx = layout::board_center_x(w);
     let label = if state.your_turn { "YOUR TURN" } else { "OPPONENT'S TURN" };
     let color = if state.your_turn { GREEN } else { GRAY };
     let dims = ui::measure(label, 18.0);
-    ui::text(label, w / 2.0 - dims.width / 2.0, mid - 4.0, 18.0, color);
+    ui::text(label, cx - dims.width / 2.0, mid - 4.0, 18.0, color);
     let turn = format!("Turn {}", state.turn_count);
     let td = ui::measure(&turn, 13.0);
-    ui::text(&turn, w / 2.0 - td.width / 2.0, mid + 12.0, 13.0, GRAY);
+    ui::text(&turn, cx - td.width / 2.0, mid + 12.0, 13.0, GRAY);
 }
 
 fn draw_end_turn_button(w: f32, h: f32) {
