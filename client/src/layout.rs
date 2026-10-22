@@ -17,28 +17,28 @@ const OMEN_MARGIN: f32 = 12.0;
 pub const HERO_W: f32 = 92.0;
 pub const HERO_H: f32 = 134.0;
 
-/// The left column: the card the opponent just played, over the log of every card played.
-pub const SIDEBAR_W: f32 = 184.0;
-const SIDEBAR_PAD: f32 = 12.0;
-pub const REVEAL_W: f32 = 168.0;
-pub const REVEAL_H: f32 = 244.0;
-pub const REVEAL_Y: f32 = 42.0;
+/// The left column: one small art icon per card played, newest at the top.
+pub const SIDEBAR_W: f32 = 52.0;
+const SIDEBAR_PAD: f32 = 8.0;
+pub const ICON: f32 = 36.0;
+const ICON_GAP: f32 = 5.0;
+const ICON_TOP: f32 = 22.0;
 
-pub fn reveal_rect() -> Rect {
-    Rect::new(SIDEBAR_PAD, REVEAL_Y, REVEAL_W, REVEAL_H)
+/// One rect per icon the column has room for, newest at the top.
+pub fn log_icon_rects(h: f32) -> Vec<Rect> {
+    let pitch = ICON + ICON_GAP;
+    let count = (((h - 10.0 - ICON_TOP) / pitch).max(0.0)) as usize;
+    (0..count)
+        .map(|i| Rect::new(SIDEBAR_PAD, ICON_TOP + i as f32 * pitch, ICON, ICON))
+        .collect()
 }
 
-pub const LOG_TOP: f32 = 316.0;
-pub const LOG_ROW_H: f32 = 32.0;
-const LOG_ROW_GAP: f32 = 4.0;
+/// The played card, blown up beside the strip for as long as the play lasts.
+pub const REVEAL_W: f32 = 196.0;
+pub const REVEAL_H: f32 = 284.0;
 
-/// One rect per row the column has room for, newest at the top.
-pub fn log_row_rects(h: f32) -> Vec<Rect> {
-    let pitch = LOG_ROW_H + LOG_ROW_GAP;
-    let count = (((h - 10.0 - LOG_TOP) / pitch).max(0.0)) as usize;
-    (0..count)
-        .map(|i| Rect::new(SIDEBAR_PAD, LOG_TOP + i as f32 * pitch, SIDEBAR_W - SIDEBAR_PAD * 2.0, LOG_ROW_H))
-        .collect()
+pub fn reveal_rect(h: f32) -> Rect {
+    Rect::new(SIDEBAR_W + 10.0, (h - REVEAL_H) / 2.0, REVEAL_W, REVEAL_H)
 }
 
 /// Everything centred sits in what the left column leaves over.

@@ -1,9 +1,12 @@
-//! What the left column shows: the card the opponent played last, and every card played so far.
+//! What the left column shows: a small icon per card played, and the opponent's play blown up
+//! for as long as it is on its way to the board.
 
 use shared::types::{CardEntity, GameEvent, GameStateClient};
 
-/// How long the revealed card takes to settle into its slot.
-const POP_TIME: f32 = 0.3;
+/// Grow, hold, pull back. Long enough to read the card, short enough to stay out of the way.
+const POP_TIME: f32 = 0.22;
+const HOLD_TIME: f32 = 1.3;
+const EXIT_TIME: f32 = 0.3;
 
 /// One card that was played, and whose it was.
 pub struct Play {
@@ -19,7 +22,7 @@ pub struct PlayLog {
 
 impl PlayLog {
     pub fn new() -> Self {
-        Self { plays: vec![], reveal: None, reveal_age: POP_TIME }
+        Self { plays: vec![], reveal: None, reveal_age: 0.0 }
     }
 
     /// `state` is the board as the event starts, so the card is still in the hand it is leaving.
@@ -35,6 +38,9 @@ impl PlayLog {
 
     pub fn tick(&mut self, dt: f32) {
         self.reveal_age += dt;
+        if self.reveal_age > POP_TIME + HOLD_TIME + EXIT_TIME {
+            self.reveal = None;
+        }
     }
 
     /// Newest first, the order the column reads in.
@@ -46,9 +52,14 @@ impl PlayLog {
         self.reveal.as_ref()
     }
 
-    /// 0 the moment a card is revealed, 1 once it has settled.
+    /// 0 the moment a card is revealed, 1 once it has grown to full size.
     pub fn pop(&self) -> f32 {
         (self.reveal_age / POP_TIME).clamp(0.0, 1.0)
+    }
+
+    /// 0 while the card is still being read, 1 once it has pulled all the way back.
+    pub fn exit(&self) -> f32 {
+        ((self.reveal_age - POP_TIME - HOLD_TIME) / EXIT_TIME).clamp(0.0, 1.0)
     }
 }
 

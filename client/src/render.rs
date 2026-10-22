@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::anim::Overlay;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
 use crate::layout::{self, CARD_H, CARD_W};
-use crate::playlog::{Play, PlayLog};
+use crate::playlog::PlayLog;
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::transform::{shade, Transform};
 use crate::fx;
@@ -54,7 +54,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     let h = ui::size().y;
     let mid = h / 2.0;
 
-    draw_play_log(log, cache, h);
+    draw_icon_strip(log, cache, h);
     draw_line(layout::SIDEBAR_W, mid, w, mid, 1.5, COL_DIVIDER);
     // the banner says the same thing, louder, and a finished game has no turn to announce
     if overlay.turn_flash.is_none() && !matches!(state.phase, shared::types::GamePhase::Over { .. }) {
@@ -72,6 +72,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
 
     draw_lunging(state, cache, overlay, w, h);
     draw_flyers(overlay, cache);
+    draw_reveal(log, cache, h);
 
     if let Some(hid) = drag.hovered_id {
         draw_entity_preview(hid, state, cache, w, h);
@@ -338,62 +339,38 @@ pub fn draw_connecting() {
 
 // ── Left column ───────────────────────────────────────────────────────────────
 
-/// The opponent's last play, big enough to read, over the log of every card played.
-fn draw_play_log(log: &PlayLog, cache: &TextureCache, h: f32) {
-    let panel_w = layout::SIDEBAR_W - 12.0;
-    fx::fill_round_rect(6.0, 6.0, panel_w, h - 12.0, 8.0, COL_PANEL);
-    fx::stroke_round_rect(6.0, 6.0, panel_w, h - 12.0, 8.0, 1.0, Color::new(1.0, 1.0, 1.0, 0.08));
+/// A thin strip of art icons, one per card played, newest at the top.
+fn draw_icon_strip(log: &PlayLog, cache: &TextureCache, h: f32) {
+    let panel_w = layout::SIDEBAR_W - 8.0;
+    fx::fill_round_rect(4.0, 6.0, panel_w, h - 12.0, 8.0, COL_PANEL);
+    fx::stroke_round_rect(4.0, 6.0, panel_w, h - 12.0, 8.0, 1.0, Color::new(1.0, 1.0, 1.0, 0.08));
 
-    let slot = layout::reveal_rect();
-    ui::text("OPPONENT PLAYED", slot.x, slot.y - 12.0, 11.0, COL_SIDE_ENEMY);
-    match log.reveal() {
-        Some(card) => {
-            // settles into the slot, so a fresh reveal catches the eye without moving the layout
-            let p = log.pop();
-            let scale = 0.88 + 0.12 * p;
-            let r = Rect::new(
-                slot.x + slot.w * (1.0 - scale) / 2.0,
-                slot.y + slot.h * (1.0 - scale) / 2.0,
-                slot.w * scale,
-                slot.h * scale,
-            );
-            fx::soft_shadow(r.x, r.y, r.w, r.h);
-            draw_card_entity_preview(card, r.x, r.y, r.w, r.h, cache);
-            if p < 1.0 {
-                draw_rectangle(r.x, r.y, r.w, r.h, Color::new(1.0, 1.0, 1.0, 0.4 * (1.0 - p)));
-            }
+    for (play, slot) in log.plays().zip(layout::log_icon_rects(h)) {
+        let side = if play.mine { COL_SIDE_SELF } else { COL_SIDE_ENEMY };
+        match cache.art(play.card.image_url()) {
+            Some(tex) => draw_texture_cover(tex, slot.x, slot.y, slot.w, slot.h, WHITE),
+            None => draw_rectangle(slot.x, slot.y, slot.w, slot.h, COL_CARD_BG),
         }
-        None => {
-            fx::stroke_round_rect(slot.x, slot.y, slot.w, slot.h, 6.0, 1.5, Color::new(1.0, 1.0, 1.0, 0.07));
-            draw_text_centered("nothing yet", slot.x + slot.w / 2.0, slot.y + slot.h / 2.0, 12.0, DARKGRAY);
-        }
-    }
-
-    ui::text("PLAYED", slot.x, layout::LOG_TOP - 10.0, 11.0, GRAY);
-    for (play, row) in log.plays().zip(layout::log_row_rects(h)) {
-        draw_log_row(play, row, cache);
+        draw_rectangle_lines(slot.x, slot.y, slot.w, slot.h, 2.0, side);
     }
 }
 
-fn draw_log_row(play: &Play, r: Rect, cache: &TextureCache) {
-    let side = if play.mine { COL_SIDE_SELF } else { COL_SIDE_ENEMY };
-    fx::fill_round_rect(r.x, r.y, r.w, r.h, 4.0, Color::new(1.0, 1.0, 1.0, 0.05));
-    draw_rectangle(r.x, r.y + 3.0, 3.0, r.h - 6.0, side);
-
-    let art = Rect::new(r.x + 8.0, r.y + 3.0, r.h - 6.0, r.h - 6.0);
-    match cache.art(play.card.image_url()) {
-        Some(tex) => draw_texture_cover(tex, art.x, art.y, art.w, art.h, WHITE),
-        None => draw_rectangle(art.x, art.y, art.w, art.h, COL_CARD_BG),
-    }
-
-    let baseline = r.y + r.h / 2.0 + 4.0;
-    let cost = play.card.cost().to_string();
-    let cost_x = r.x + r.w - 6.0 - ui::measure(&cost, 12.0).width;
-    ui::text(&cost, cost_x, baseline, 12.0, COL_MANA);
-
-    let name_x = art.x + art.w + 6.0;
-    let name = fit_text(play.card.name(), (cost_x - 4.0 - name_x).max(0.0), 11.0);
-    ui::text(&name, name_x, baseline, 11.0, WHITE);
+/// The opponent's card, big enough to read, for as long as the play is on its way to the board.
+fn draw_reveal(log: &PlayLog, cache: &TextureCache, h: f32) {
+    let Some(card) = log.reveal() else { return };
+    let exit = log.exit();
+    let slot = layout::reveal_rect(h);
+    let t = Transform {
+        offset: Vec2::new(-exit * 24.0, 0.0),
+        scale: Vec2::splat((0.86 + 0.14 * log.pop()) * (1.0 - 0.5 * exit)),
+        ..Transform::IDENTITY
+    };
+    t.apply(slot, |r| {
+        fx::soft_shadow(r.x, r.y, r.w, r.h);
+        draw_card_entity_preview(card, r.x, r.y, r.w, r.h, cache);
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, COL_SIDE_ENEMY);
+        flash_over(r, 0.4 * (1.0 - log.pop()));
+    });
 }
 
 // ── Drop target highlights ─────────────────────────────────────────────────────
