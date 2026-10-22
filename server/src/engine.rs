@@ -6,7 +6,7 @@ use rand::Rng;
 use rand::RngExt;
 use rand::seq::{IndexedRandom, SliceRandom};
 use shared::cards;
-use shared::cards::instantiate_minion;
+use shared::cards::{instantiate_incantation, instantiate_minion};
 use shared::types::*;
 use std::collections::HashMap;
 
@@ -22,16 +22,6 @@ impl IdGenerator {
         let id = self.next;
         self.next += 1;
         id
-    }
-}
-
-pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
-    IncantationEntity {
-        entity_id,
-        cost: c.base_cost,
-        discount: 0,
-        arrived_on_turn: None,
-        card: c.clone(),
     }
 }
 
@@ -327,17 +317,7 @@ impl Game {
         }
         None
     }
-    /// A targeted effect with nobody picked lands on one body, never the whole board.
 
-        let mut refs = Self::candidate_target_refs(spec, source, enemy, self_id);
-        if spec.target_mode == TargetMode::Targeted {
-            refs.truncate(1);
-        }
-        refs
-    }
-
-    /// Every target the spec allows, in board order.
-    fn candidate_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
     // --- Target resolution ---
 
     fn filters_match(filters: &[Condition], m: &MinionEntity) -> bool {
@@ -347,7 +327,17 @@ impl Game {
         })
     }
 
+    /// A targeted effect with nobody picked lands on one body, never the whole board.
     fn resolve_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
+        let mut refs = Self::candidate_target_refs(spec, source, enemy, self_id);
+        if spec.target_mode == TargetMode::Targeted {
+            refs.truncate(1);
+        }
+        refs
+    }
+
+    /// Every target the spec allows, in board order.
+    fn candidate_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
         let mut refs = vec![];
 
         if spec.target_mode == TargetMode::SelfOnly {
@@ -423,6 +413,7 @@ impl Game {
             Card::Omen(_) | Card::Hero(_) => return,
         };
         *entity.arrived_on_turn_mut() = Some(self.state.turn_count);
+        self.record(GameEvent::CardReplayed { entity_id, card_id: card.id(), white: owner == PlayerSide::White });
 
         // no room means no body, but the ability still goes off
         if let CardEntity::Minion(minion) = &entity {
@@ -440,11 +431,8 @@ impl Game {
                 continue;
             }
             self.record(GameEvent::TriggerFired { source_id: entity_id });
-    /// Rolls over every allowed target, not the one body a picked effect would settle on.
             for effect in &ability.effects {
                 let target_id = effect_target_spec(effect)
-        let refs = Self::candidate_target_refs(spec, source, enemy, None);
-        let tr = *refs.choose(&mut rand::rng())?;
                     .filter(|ts| ts.target_mode == TargetMode::Targeted)
                     .and_then(|ts| self.random_target_id(ts, owner));
                 self.apply_effect(effect.clone(), owner, target_id, Some(entity_id));
@@ -452,8 +440,11 @@ impl Game {
         }
     }
 
+    /// Rolls over every allowed target, not the one body a picked effect would settle on.
     fn random_target_id(&self, spec: &TargetSpec, owner: PlayerSide) -> Option<u32> {
         let (source, enemy) = self.boards_for(owner);
+        let refs = Self::candidate_target_refs(spec, source, enemy, None);
+        let tr = *refs.choose(&mut rand::rng())?;
         match tr {
             TargetRef::MinionSource(i) => source.battlefield.get(i).map(|m| m.entity_id),
             TargetRef::MinionEnemy(i) => enemy.battlefield.get(i).map(|m| m.entity_id),
@@ -1526,7 +1517,9 @@ impl Game {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scenario::build::{MinionBuild, damage, minion, on_death, on_play, pick_enemy_minion, summon};
+    use crate::scenario::build::{
+        IncantationBuild, MinionBuild, damage, incantation, minion, on_death, on_play, pick_enemy_minion, replay_quickdraws, requiring, summon,
+    };
     use crate::scenario::{Setup, Side};
 
     /// Three beats, in the order a client has to play them: the lunge, each hit, then the body.
@@ -1606,6 +1599,30 @@ mod tests {
                 GameEvent::Damaged { entity_id: target, amount: 2 },
             ]
         );
+    }
+
+    /// A replayed card is in no zone, so the event is the only place its card can be named.
+    #[test]
+    fn a_replayed_card_names_the_card_and_the_side_that_cast_it() {
+        let mut s = Setup::new();
+        let ogre = s.on_board(Side::Black, minion(1, "Ogre", 0, 3, 7));
+        let bolt = incantation(2, "Bolt", 0).does(requiring(on_play(vec![damage(pick_enemy_minion(), 2)]), Requirement::Quickdraw));
+        let bolt_card_id = bolt.id;
+        s.spell_in_hand(Side::White, bolt);
+        s.mark_arrived_this_turn(Side::White, 0);
+        s.in_hand(Side::White, minion(3, "Dentist", 0, 7, 7).does(on_play(vec![replay_quickdraws()])));
+        let mut scn = s.start("replay events");
+
+        assert!(scn.play(0, Some(ogre)));
+        scn.events();
+        assert!(scn.play(0, None));
+
+        let events = scn.events();
+        let replayed: Vec<&GameEvent> = events.iter().filter(|e| matches!(e, GameEvent::CardReplayed { .. })).collect();
+        let [GameEvent::CardReplayed { card_id, white, .. }] = replayed.as_slice() else {
+            panic!("one replay, got {replayed:?}");
+        };
+        assert_eq!((*card_id, *white), (bolt_card_id, true));
     }
 
     /// Nothing recorded means nothing to animate, which is how a refused move must look.

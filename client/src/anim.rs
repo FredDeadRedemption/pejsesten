@@ -248,7 +248,7 @@ impl Anims {
             }
             GameEvent::MinionSummoned { .. } => {}
             GameEvent::ReturnedToHand { .. } | GameEvent::CardTraded { .. } => {}
-            GameEvent::CardCreated { .. } => {}
+            GameEvent::CardCreated { .. } | GameEvent::CardReplayed { .. } => {}
             GameEvent::TurnEnded => {}
         }
     }

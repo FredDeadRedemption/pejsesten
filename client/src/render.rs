@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::anim::Overlay;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
 use crate::layout::{self, CARD_H, CARD_W};
-use crate::playlog::PlayLog;
+use crate::playlog::{Play, PlayLog};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::transform::{shade, Transform};
 use crate::fx;
@@ -54,7 +54,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
     let h = ui::size().y;
     let mid = h / 2.0;
 
-    draw_icon_strip(log, cache, h);
+    draw_icon_strip(log, cache, h, Vec2::new(drag.mx, drag.my));
     draw_line(layout::SIDEBAR_W, mid, w, mid, 1.5, COL_DIVIDER);
     // the banner says the same thing, louder, and a finished game has no turn to announce
     if overlay.turn_flash.is_none() && !matches!(state.phase, shared::types::GamePhase::Over { .. }) {
@@ -72,7 +72,7 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
 
     draw_lunging(state, cache, overlay, w, h);
     draw_flyers(overlay, cache);
-    draw_reveal(log, cache, h);
+    draw_reveal(log, cache, h, Vec2::new(drag.mx, drag.my));
 
     if let Some(hid) = drag.hovered_id {
         draw_entity_preview(hid, state, cache, w, h);
@@ -340,7 +340,7 @@ pub fn draw_connecting() {
 // ── Left column ───────────────────────────────────────────────────────────────
 
 /// A thin strip of art icons, one per card played, newest at the top.
-fn draw_icon_strip(log: &PlayLog, cache: &TextureCache, h: f32) {
+fn draw_icon_strip(log: &PlayLog, cache: &TextureCache, h: f32, mouse: Vec2) {
     let panel_w = layout::SIDEBAR_W - 8.0;
     fx::fill_round_rect(4.0, 6.0, panel_w, h - 12.0, 8.0, COL_PANEL);
     fx::stroke_round_rect(4.0, 6.0, panel_w, h - 12.0, 8.0, 1.0, Color::new(1.0, 1.0, 1.0, 0.08));
@@ -351,15 +351,38 @@ fn draw_icon_strip(log: &PlayLog, cache: &TextureCache, h: f32) {
             Some(tex) => draw_texture_cover(tex, slot.x, slot.y, slot.w, slot.h, WHITE),
             None => draw_rectangle(slot.x, slot.y, slot.w, slot.h, COL_CARD_BG),
         }
-        draw_rectangle_lines(slot.x, slot.y, slot.w, slot.h, 2.0, side);
+        let hovered = slot.contains(mouse);
+        draw_rectangle_lines(slot.x, slot.y, slot.w, slot.h, if hovered { 3.0 } else { 2.0 }, side);
+        if hovered {
+            draw_rectangle(slot.x, slot.y, slot.w, slot.h, Color::new(1.0, 1.0, 1.0, 0.18));
+        }
     }
 }
 
+/// The icon the mouse is over, newest icon to newest play.
+fn hovered_play(log: &PlayLog, h: f32, mouse: Vec2) -> Option<&Play> {
+    layout::log_icon_rects(h)
+        .into_iter()
+        .zip(log.plays())
+        .find(|(r, _)| r.contains(mouse))
+        .map(|(_, play)| play)
+}
+
 /// The opponent's card, big enough to read, for as long as the play is on its way to the board.
-fn draw_reveal(log: &PlayLog, cache: &TextureCache, h: f32) {
-    let Some(card) = log.reveal() else { return };
-    let exit = log.exit();
+fn draw_reveal(log: &PlayLog, cache: &TextureCache, h: f32, mouse: Vec2) {
     let slot = layout::reveal_rect(h);
+    // a hovered icon holds its card still, so the strip can be read back at any time
+    if let Some(play) = hovered_play(log, h, mouse) {
+        let side = if play.mine { COL_SIDE_SELF } else { COL_SIDE_ENEMY };
+        fx::soft_shadow(slot.x, slot.y, slot.w, slot.h);
+        draw_card_entity_preview(&play.card, slot.x, slot.y, slot.w, slot.h, cache);
+        draw_rectangle_lines(slot.x, slot.y, slot.w, slot.h, 2.0, side);
+        return;
+    }
+
+    let Some(card) = log.reveal() else { return };
+    let side = if log.reveal_mine() { COL_SIDE_SELF } else { COL_SIDE_ENEMY };
+    let exit = log.exit();
     let t = Transform {
         offset: Vec2::new(-exit * 24.0, 0.0),
         scale: Vec2::splat((0.86 + 0.14 * log.pop()) * (1.0 - 0.5 * exit)),
@@ -368,7 +391,7 @@ fn draw_reveal(log: &PlayLog, cache: &TextureCache, h: f32) {
     t.apply(slot, |r| {
         fx::soft_shadow(r.x, r.y, r.w, r.h);
         draw_card_entity_preview(card, r.x, r.y, r.w, r.h, cache);
-        draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, COL_SIDE_ENEMY);
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, side);
         flash_over(r, 0.4 * (1.0 - log.pop()));
     });
 }

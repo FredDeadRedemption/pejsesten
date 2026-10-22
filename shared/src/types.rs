@@ -603,7 +603,8 @@ impl CardEntity {
 
 /// One visible change the engine already resolved, in the order it happened. Events carry entity
 /// ids and numbers only, never card payloads or an omen's armed trigger, so they leak nothing the
-/// snapshot beside them does not. The client animates them; it never derives state from them.
+/// snapshot beside them does not. A card id rides along only for a card no zone holds at all, and
+/// is read back out of the catalogue. The client animates them; it never derives state from them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GameEvent {
     CardPlayed { entity_id: u32 },
@@ -620,6 +621,8 @@ pub enum GameEvent {
     CardCreated { entity_id: u32 },
     CardTraded { entity_id: u32 },
     OmenFired { entity_id: u32 },
+    /// A card recast from nowhere, so no zone holds it for the card to be read off.
+    CardReplayed { entity_id: u32, card_id: u32, white: bool },
     /// An ability starting to resolve, so what follows can be read as caused by its source.
     TriggerFired { source_id: u32 },
     TurnEnded,

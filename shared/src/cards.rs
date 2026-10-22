@@ -73,6 +73,16 @@ pub fn instantiate_minion(c: &MinionCard, entity_id: u32) -> MinionEntity {
     }
 }
 
+pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> IncantationEntity {
+    IncantationEntity {
+        entity_id,
+        cost: c.base_cost,
+        discount: 0,
+        arrived_on_turn: None,
+        card: c.clone(),
+    }
+}
+
 pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
     match get_card_by_id(card_id)? {
         Card::Minion(c) => Some(instantiate_minion(c, entity_id)),

@@ -12,8 +12,8 @@ pub mod runner;
 #[cfg(test)]
 mod tests;
 
-use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_incantation, instantiate_omen};
-use shared::cards::instantiate_minion;
+use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_omen};
+use shared::cards::{instantiate_incantation, instantiate_minion};
 use crate::settings;
 use serde::Serialize;
 use shared::types::*;

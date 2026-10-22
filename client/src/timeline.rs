@@ -22,6 +22,8 @@ pub fn duration(event: &GameEvent) -> f32 {
         GameEvent::MinionSummoned { .. } | GameEvent::ReturnedToHand { .. } => 0.30,
         GameEvent::Buffed { .. } | GameEvent::WardBroken { .. } | GameEvent::TriggerFired { .. } => 0.25,
         GameEvent::CardCreated { .. } | GameEvent::CardTraded { .. } => 0.22,
+        // the body arrives on its own event, so this only has to hold the log entry
+        GameEvent::CardReplayed { .. } => 0.35,
         GameEvent::TurnEnded => 0.20,
     }
 }
@@ -295,7 +297,7 @@ fn apply(visual: &mut GameStateClient, target: &GameStateClient, event: &GameEve
                 board(visual, half).omens.retain(|o| o.entity_id != *entity_id);
             }
         }
-        GameEvent::TriggerFired { .. } | GameEvent::TurnEnded => {}
+        GameEvent::CardReplayed { .. } | GameEvent::TriggerFired { .. } | GameEvent::TurnEnded => {}
     }
 }
 
