@@ -4,7 +4,7 @@
 use crate::settings;
 use rand::Rng;
 use rand::RngExt;
-use rand::seq::SliceRandom;
+use rand::seq::{IndexedRandom, SliceRandom};
 use shared::cards;
 use shared::cards::instantiate_minion;
 use shared::types::*;
@@ -327,7 +327,17 @@ impl Game {
         }
         None
     }
+    /// A targeted effect with nobody picked lands on one body, never the whole board.
 
+        let mut refs = Self::candidate_target_refs(spec, source, enemy, self_id);
+        if spec.target_mode == TargetMode::Targeted {
+            refs.truncate(1);
+        }
+        refs
+    }
+
+    /// Every target the spec allows, in board order.
+    fn candidate_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
     // --- Target resolution ---
 
     fn filters_match(filters: &[Condition], m: &MinionEntity) -> bool {
@@ -372,10 +382,6 @@ impl Game {
             }
         }
 
-        match spec.target_mode {
-            TargetMode::Targeted => refs.truncate(1),
-            TargetMode::Auto | TargetMode::SelfOnly => {}
-        }
         refs
     }
 
@@ -434,8 +440,11 @@ impl Game {
                 continue;
             }
             self.record(GameEvent::TriggerFired { source_id: entity_id });
+    /// Rolls over every allowed target, not the one body a picked effect would settle on.
             for effect in &ability.effects {
                 let target_id = effect_target_spec(effect)
+        let refs = Self::candidate_target_refs(spec, source, enemy, None);
+        let tr = *refs.choose(&mut rand::rng())?;
                     .filter(|ts| ts.target_mode == TargetMode::Targeted)
                     .and_then(|ts| self.random_target_id(ts, owner));
                 self.apply_effect(effect.clone(), owner, target_id, Some(entity_id));
@@ -444,8 +453,6 @@ impl Game {
     }
 
     fn random_target_id(&self, spec: &TargetSpec, owner: PlayerSide) -> Option<u32> {
-        let refs = self.get_target_refs(spec, owner, None, None);
-        let tr = *refs.get(rand::rng().random_range(0..refs.len().max(1)))?;
         let (source, enemy) = self.boards_for(owner);
         match tr {
             TargetRef::MinionSource(i) => source.battlefield.get(i).map(|m| m.entity_id),
