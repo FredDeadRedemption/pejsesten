@@ -6,6 +6,7 @@ RUN rustup target add wasm32-unknown-unknown
 COPY Cargo.toml Cargo.lock ./
 # a workspace member cargo must read even when it is not being built
 COPY xtask xtask
+COPY mcp mcp
 COPY shared shared
 COPY client client
 COPY server server
@@ -18,6 +19,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 # a workspace member cargo must read even when it is not being built
 COPY xtask xtask
+COPY mcp mcp
 COPY shared shared
 COPY client client
 COPY server server
