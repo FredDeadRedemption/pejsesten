@@ -1,5 +1,7 @@
+# rust 1.88 is the floor for both stages: the code uses let chains
+
 # Build wasm client
-FROM mirror.gcr.io/library/rust:1.87-slim AS wasm-builder
+FROM mirror.gcr.io/library/rust:1.95-slim AS wasm-builder
 WORKDIR /app
 RUN rustup target add wasm32-unknown-unknown
 # the lock pins versions that build on this image; a fresh resolve picks ones that do not
@@ -13,7 +15,7 @@ COPY server server
 RUN cargo build --locked --release -p client --target wasm32-unknown-unknown
 
 # Build server
-FROM mirror.gcr.io/library/rust:1.87-slim AS server-builder
+FROM mirror.gcr.io/library/rust:1.95-slim AS server-builder
 WORKDIR /app
 # the lock pins versions that build on this image; a fresh resolve picks ones that do not
 COPY Cargo.toml Cargo.lock ./
