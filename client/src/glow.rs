@@ -12,14 +12,14 @@ pub const FILE: &str = "glow.toml";
 #[cfg(not(target_arch = "wasm32"))]
 const TEMPLATE: &str = r#"# Hand-card glow. Saved edits apply straight away, no rebuild.
 
-rings = 18
-# how far past the card edge the outermost ring sits
-spread = 18.0
-# gap between the card edge and the innermost ring; nonzero reads as a hard outline
+# how far past the card edge the band reaches
+spread = 13.0
+# gap between the card edge and the band; nonzero reads as a hard outline
 inset = 0.0
-thickness = 3.0
-# alpha exponent across the rings, higher fades to nothing sooner
-falloff = 2.2
+# corner radius as a fraction of card width, to follow the frame art at any card size
+corner = 0.03
+# alpha exponent across the band, higher fades to nothing sooner
+falloff = 1.4
 # dimmest point of the pulse, as a fraction of full brightness
 pulse_floor = 0.45
 # fraction of the spread that breathes with the pulse
@@ -29,36 +29,43 @@ phase_step = 0.55
 
 # a met condition is the rarer thing to notice, so it outshines plain affordability
 [condition]
-color = [1.0, 0.84, 0.25]
-intensity = 0.42
+# inner is the color against the card, outer the one it grades into going out
+inner = [1.0, 0.78, 0.30]
+outer = [1.0, 0.33, 0.04]
+intensity = 1.0
 speed = 3.0
 
 [playable]
-color = [0.35, 0.65, 1.0]
-intensity = 0.26
+inner = [0.30, 1.0, 0.90]
+outer = [0.10, 0.40, 1.0]
+intensity = 0.85
 speed = 1.6
 "#;
 
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 pub struct Style {
-    pub color: [f32; 3],
+    pub inner: [f32; 3],
+    pub outer: [f32; 3],
     pub intensity: f32,
     pub speed: f32,
 }
 
 impl Style {
-    pub fn color(&self) -> Color {
-        Color::new(self.color[0], self.color[1], self.color[2], 1.0)
+    pub fn inner(&self) -> Color {
+        Color::new(self.inner[0], self.inner[1], self.inner[2], 1.0)
+    }
+
+    pub fn outer(&self) -> Color {
+        Color::new(self.outer[0], self.outer[1], self.outer[2], 1.0)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    pub rings: usize,
     pub spread: f32,
     pub inset: f32,
-    pub thickness: f32,
+    pub corner: f32,
     pub falloff: f32,
     pub pulse_floor: f32,
     pub breathe: f32,
@@ -70,16 +77,15 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            rings: 18,
-            spread: 18.0,
+            spread: 13.0,
             inset: 0.0,
-            thickness: 3.0,
-            falloff: 2.2,
+            corner: 0.03,
+            falloff: 1.4,
             pulse_floor: 0.45,
             breathe: 0.18,
             phase_step: 0.55,
-            condition: Style { color: [1.00, 0.84, 0.25], intensity: 0.42, speed: 3.0 },
-            playable: Style { color: [0.35, 0.65, 1.00], intensity: 0.26, speed: 1.6 },
+            condition: Style { inner: [1.00, 0.78, 0.30], outer: [1.00, 0.33, 0.04], intensity: 1.0, speed: 3.0 },
+            playable: Style { inner: [0.30, 1.00, 0.90], outer: [0.10, 0.40, 1.00], intensity: 0.85, speed: 1.6 },
         }
     }
 }

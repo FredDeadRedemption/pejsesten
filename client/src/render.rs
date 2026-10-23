@@ -284,10 +284,9 @@ pub fn draw_glow_test(cards: &[CardEntity], cache: &TextureCache, reloads: u32) 
     }
 
     let lines = [
-        format!("rings        {}", cfg.rings),
         format!("spread       {:.1}", cfg.spread),
         format!("inset        {:.1}", cfg.inset),
-        format!("thickness    {:.1}", cfg.thickness),
+        format!("corner       {:.3}", cfg.corner),
         format!("falloff      {:.2}", cfg.falloff),
         format!("pulse_floor  {:.2}", cfg.pulse_floor),
         format!("breathe      {:.2}", cfg.breathe),
@@ -1016,15 +1015,16 @@ pub fn draw_glow(cfg: &glow::Config, style: &glow::Style, x: f32, y: f32, w: f32
     let wave = 0.5 + 0.5 * (get_time() as f32 * style.speed + phase).sin();
     let pulse = cfg.pulse_floor + (1.0 - cfg.pulse_floor) * wave;
     let breathe = 1.0 - cfg.breathe + cfg.breathe * pulse;
-    let color = style.color();
 
-    // rings overlap so the alpha layers composite into a falloff instead of banding
-    for i in 1..=cfg.rings {
-        let t = i as f32 / cfg.rings as f32;
-        let pad = cfg.inset + t * cfg.spread * breathe;
-        let a = style.intensity * pulse * fade * (1.0 - t).powf(cfg.falloff);
-        draw_rectangle_lines(x - pad, y - pad, w + pad * 2.0, h + pad * 2.0, cfg.thickness, Color { a, ..color });
-    }
+    fx::draw_aura(Rect::new(x, y, w, h), &fx::Aura {
+        inset: cfg.inset,
+        spread: cfg.spread * breathe,
+        falloff: cfg.falloff,
+        corner: cfg.corner * w,
+        inner: style.inner(),
+        outer: style.outer(),
+        alpha: style.intensity * pulse * fade,
+    });
 }
 
 fn draw_card_back(slot: Rect, t: Transform) {

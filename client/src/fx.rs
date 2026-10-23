@@ -1,10 +1,12 @@
 use macroquad::prelude::*;
+use macroquad::window::miniquad::{BlendFactor, BlendState, BlendValue, Equation};
 use std::cell::RefCell;
 
-// textures baked once on first use; macroquad is single-threaded
+// gpu resources built once on first use; macroquad is single-threaded
 thread_local! {
     static BACKGROUND: RefCell<Option<Texture2D>> = RefCell::new(None);
     static SHADOW: RefCell<Option<Texture2D>> = RefCell::new(None);
+    static AURA: RefCell<Option<Material>> = RefCell::new(None);
 }
 
 const BG_W: u16 = 480;
@@ -91,6 +93,117 @@ fn bake_shadow() -> Texture2D {
     tex.set_filter(FilterMode::Linear);
     tex
 }
+
+/// A band of light hugging a card rect and falling off outward.
+pub struct Aura {
+    /// gap between the card edge and where the band starts
+    pub inset: f32,
+    /// px the band fades out over
+    pub spread: f32,
+    /// alpha exponent across the band, higher fades to nothing sooner
+    pub falloff: f32,
+    /// corner radius in px, to follow the card frame art
+    pub corner: f32,
+    /// rgb at the inner edge of the band
+    pub inner: Color,
+    /// rgb at the outer edge, graded into across the band
+    pub outer: Color,
+    /// brightness at the inner edge
+    pub alpha: f32,
+}
+
+/// One additive quad over the card and its margin, so the band is a true falloff and not a stack
+/// of rings. The sdf is in the quad's own space, so a rotated card carries its aura round with it.
+pub fn draw_aura(r: Rect, aura: &Aura) {
+    let mat = AURA.with(|c| c.borrow_mut().get_or_insert_with(bake_aura).clone());
+    let pad = aura.inset + aura.spread;
+    let half = Vec2::new(r.w, r.h) / 2.0;
+    mat.set_uniform("card_half", half);
+    mat.set_uniform("quad_half", half + Vec2::splat(pad));
+    mat.set_uniform("inset", aura.inset);
+    // a zero spread divides by zero in the shader, a zero falloff is pow(0, 0)
+    mat.set_uniform("spread", aura.spread.max(0.01));
+    mat.set_uniform("falloff", aura.falloff.max(0.01));
+    mat.set_uniform("corner", aura.corner);
+    mat.set_uniform("inner_color", Vec3::new(aura.inner.r, aura.inner.g, aura.inner.b));
+    mat.set_uniform("outer_color", Vec3::new(aura.outer.r, aura.outer.g, aura.outer.b));
+    mat.set_uniform("alpha", aura.alpha);
+
+    gl_use_material(&mat);
+    draw_rectangle(r.x - pad, r.y - pad, r.w + 2.0 * pad, r.h + 2.0 * pad, WHITE);
+    gl_use_default_material();
+}
+
+fn bake_aura() -> Material {
+    load_material(
+        ShaderSource::Glsl { vertex: AURA_VERTEX, fragment: AURA_FRAGMENT },
+        MaterialParams {
+            uniforms: vec![
+                UniformDesc::new("card_half", UniformType::Float2),
+                UniformDesc::new("quad_half", UniformType::Float2),
+                UniformDesc::new("inset", UniformType::Float1),
+                UniformDesc::new("spread", UniformType::Float1),
+                UniformDesc::new("falloff", UniformType::Float1),
+                UniformDesc::new("corner", UniformType::Float1),
+                UniformDesc::new("inner_color", UniformType::Float3),
+                UniformDesc::new("outer_color", UniformType::Float3),
+                UniformDesc::new("alpha", UniformType::Float1),
+            ],
+            // additive, so the band reads as light thrown on the board rather than paint over it
+            pipeline_params: PipelineParams {
+                color_blend: Some(BlendState::new(
+                    Equation::Add,
+                    BlendFactor::Value(BlendValue::SourceAlpha),
+                    BlendFactor::One,
+                )),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .expect("aura shader")
+}
+
+// glsl es 100 throughout: the web build runs on webgl1, which takes nothing newer
+const AURA_VERTEX: &str = r#"#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
+
+varying mediump vec2 uv;
+
+uniform mat4 Model;
+uniform mat4 Projection;
+
+void main() {
+    gl_Position = Projection * Model * vec4(position, 1);
+    uv = texcoord;
+}"#;
+
+const AURA_FRAGMENT: &str = r#"#version 100
+precision mediump float;
+
+varying vec2 uv;
+
+uniform vec2 card_half;
+uniform vec2 quad_half;
+uniform float inset;
+uniform float spread;
+uniform float falloff;
+uniform float corner;
+uniform vec3 inner_color;
+uniform vec3 outer_color;
+uniform float alpha;
+
+void main() {
+    vec2 p = (uv - 0.5) * 2.0 * quad_half;
+    vec2 q = abs(p) - card_half + corner;
+    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - corner;
+    float band = clamp((d - inset) / spread, 0.0, 1.0);
+    // feathered, else the brightest edge of the band aliases hard along the card
+    float a = pow(1.0 - band, falloff) * smoothstep(0.0, 1.5, d - inset);
+    // graded on sqrt, so the inner color does not win the whole visible part of the band
+    gl_FragColor = vec4(mix(inner_color, outer_color, sqrt(band)), alpha * a);
+}"#;
 
 /// Non-overlapping pieces, so translucent colors blend once everywhere.
 pub fn fill_round_rect(x: f32, y: f32, w: f32, h: f32, r: f32, color: Color) {
