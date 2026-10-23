@@ -90,6 +90,7 @@ pub fn all() -> Vec<Case> {
         case("requirements", "a traded card arrives armed", quickdraw_arms_a_traded_card),
         case("requirements", "is holding checks the rest of the hand", is_holding_gate),
         case("requirements", "only a quickdraw that fires raises the counter", counter_counts_quickdraw_plays),
+        case("triggers", "a follow-up quickdraw wakes the watchers", follow_up_quickdraw_wakes_watchers),
         case("requirements", "a counter gate opens once the tally is reached", counter_gate),
         case("requirements", "controls other does not count the minion itself", controls_other_ignores_self),
         case("requirements", "an arrival played this turn opens the gate", arrival_played_gate),
@@ -847,6 +848,20 @@ fn follow_up_gate_lights_the_hint() -> Scenario {
     s.mark_arrived_this_turn(Side::White, trick);
     let mut scn = s.start("follow-up hint");
     scn.expect("a freshly drawn card lights the follow-up gate", scn.hint_condition_met(Side::White, 0));
+    scn
+}
+
+fn follow_up_quickdraw_wakes_watchers() -> Scenario {
+    let mut s = Setup::new();
+    s.mana(Side::White, 3);
+    let smith = s.on_board(Side::White, minion(1, "Smith", 0, 1, 3).does(on_quickdraw(vec![buff(itself(), 1, 1)])));
+    let trick = s.spell_in_hand(Side::White, hat_trick_style_spell(2));
+    s.in_deck(Side::White, minion(3, "Fresh", 1, 1, 1));
+    s.mark_arrived_this_turn(Side::White, trick);
+    let mut scn = s.start("follow-up quickdraw watcher");
+    scn.play(trick, None);
+    scn.expect_eq("the watcher grew", scn.attack_of(smith), Some(2));
+    scn.expect_eq("the follow-up quickdraw counted", scn.counter(Side::White, Counter::QuickdrawsPlayed), 1);
     scn
 }
 

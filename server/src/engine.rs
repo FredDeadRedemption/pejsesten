@@ -481,6 +481,17 @@ impl Game {
     }
 
     /// A follow-up with unmet requirements is dropped, leaving the effect it rides on intact.
+    /// Hat Trick style: the quickdraw gate sits on the draw's follow-up rather than on the ability.
+    fn follow_up_quickdraw_lands(&self, effect: &Effect, card: &CardEntity) -> bool {
+        match effect {
+            Effect::Draw { follow_up: Some(fu), .. } => {
+                fu.requirements.contains(&Requirement::Quickdraw)
+                    && self.check_requirements(&fu.requirements, card)
+            }
+            _ => false,
+        }
+    }
+
     fn resolve_follow_up(&self, effect: &Effect, card: &CardEntity) -> Effect {
         match effect {
             Effect::Draw { draw_amount, follow_up: Some(fu) } if !self.check_requirements(&fu.requirements, card) => {
@@ -1214,7 +1225,9 @@ impl Game {
                 continue;
             }
             let is_quickdraw = ability.requirements.contains(&Requirement::Quickdraw);
-            quickdraw_fired |= is_quickdraw;
+            // a follow-up gate is still a quickdraw landed, even though only the follow-up doubles
+            quickdraw_fired |= is_quickdraw
+                || ability.effects.iter().any(|e| self.follow_up_quickdraw_lands(e, &consumed));
             let copies = if is_quickdraw && quickdraw_doubled { 2 } else { 1 };
             for _ in 0..copies {
                 for (n, effect) in ability.effects.iter().enumerate() {
