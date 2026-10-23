@@ -37,7 +37,7 @@ copies exist to kill a Gargoyle Vigil or a Silverguard Knight the Rat cannot rea
 
 Menagerie Keeper and Dire Matriarch are the grind. The Keeper's aura lifts every Beast
 while it lives, which turns Pack Instinct's rats into real bodies and makes killing the
-Keeper the opponent's problem. Note the board cap of 5 - hold Pack Instinct's rats and the
+Keeper the opponent's problem. Note the board cap of 7 - hold Pack Instinct's rats and the
 Matriarch's hounds apart or the extra tokens are lost.
 
 Pack Instinct on *friendly minion dies* nearly always fires the turn they clear your

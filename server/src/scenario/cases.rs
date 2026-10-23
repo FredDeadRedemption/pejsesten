@@ -1415,7 +1415,8 @@ fn replay_drops_the_body_on_a_full_board() -> Scenario {
     s.in_hand(Side::White, thrower);
     s.mark_arrived_this_turn(Side::White, 0);
     s.in_hand(Side::White, minion(2, "Dentist", 0, 7, 7).does(on_play(vec![replay_quickdraws()])));
-    for i in 0..3 {
+    // the two played bodies take the last two slots themselves
+    for i in 0..settings::MAX_BOARD_SIZE as u32 - 2 {
         s.on_board(Side::White, minion(10 + i, "Filler", 0, 1, 1));
     }
     let mut scn = s.start("replay on a full board");

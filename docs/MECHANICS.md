@@ -46,7 +46,7 @@ Prod values, with the dev profile in brackets where it differs (`server/src/sett
 | ✅ | Embers | start 1, +1 per turn, cap 5 | Tracked and shown, but nothing spends them yet |
 | ⬜ | Actions | 1 to 3 embers each | The menu embers are meant to pay for. See Concepts |
 | ✅ | Hand | start 3 (dev 7), cap 9 | Second player gets one extra card instead of a coin. Cards that arrive at a full hand are dropped, not sent to the graveyard |
-| ✅ | Board | cap 5 minions | Playing over the cap is rejected, a summon over the cap is skipped |
+| ✅ | Board | cap 7 minions | Playing over the cap is rejected, a summon over the cap is skipped |
 | ✅ | Omens | cap 3 armed | Playing over the cap is rejected |
 | ✅ | Mulligan | on | Replacements are drawn before the returned cards are shuffled back |
 | ⬜ | Corpse | - | Second resource gained when your own minions die, spent alongside mana |
