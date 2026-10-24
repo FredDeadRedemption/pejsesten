@@ -91,6 +91,7 @@ pub fn all() -> Vec<Case> {
         case("requirements", "is holding checks the rest of the hand", is_holding_gate),
         case("requirements", "only a quickdraw that fires raises the counter", counter_counts_quickdraw_plays),
         case("triggers", "a follow-up quickdraw wakes the watchers", follow_up_quickdraw_wakes_watchers),
+        case("triggers", "a deathwish lands before the next trigger", a_deathwish_lands_before_the_next_trigger),
         case("requirements", "a counter gate opens once the tally is reached", counter_gate),
         case("requirements", "controls other does not count the minion itself", controls_other_ignores_self),
         case("requirements", "an arrival played this turn opens the gate", arrival_played_gate),
@@ -848,6 +849,33 @@ fn follow_up_gate_lights_the_hint() -> Scenario {
     s.mark_arrived_this_turn(Side::White, trick);
     let mut scn = s.start("follow-up hint");
     scn.expect("a freshly drawn card lights the follow-up gate", scn.hint_condition_met(Side::White, 0));
+    scn
+}
+
+/// A deathwish settles before the next queued trigger reads the board, so the watcher the same
+/// play woke sees what the deathwish left behind rather than the body it replaced.
+fn a_deathwish_lands_before_the_next_trigger() -> Scenario {
+    let mut s = Setup::new();
+    s.mana(Side::White, 3);
+    let rat = minion(1, "Rat", 1, 1, 1);
+    s.summonable(rat.clone());
+    let cage = s.on_board(Side::Black, minion(2, "Cage", 1, 0, 2).does(on_death(vec![summon(&rat, 2)])));
+    s.on_board(
+        Side::White,
+        minion(3, "Watcher", 0, 1, 4)
+            .does(on_quickdraw(vec![damage(spec(TargetMode::Auto, TargetSide::Enemy, EntityType::Minion), 1)])),
+    );
+    let thrower = s.in_hand(
+        Side::White,
+        minion(4, "Thrower", 1, 1, 1).does(requiring(on_play(vec![damage(pick_enemy_minion(), 2)]), Requirement::Quickdraw)),
+    );
+    s.mark_arrived_this_turn(Side::White, thrower);
+
+    let mut scn = s.start("deathwish before the next trigger");
+    scn.play(thrower, Some(cage));
+    // the rats exist by the time the watcher fires, so its 1 damage finishes them
+    scn.expect_eq("nothing of the cage is left standing", scn.board_len(Side::Black), 0);
+    scn.expect_eq("the cage and both rats are in the graveyard", scn.graveyard_len(Side::Black), 3);
     scn
 }
 

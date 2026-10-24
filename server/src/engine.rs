@@ -647,6 +647,9 @@ impl Game {
         while !self.effect_queue.is_empty() {
             let queued = self.effect_queue.remove(0);
             if queued.starts_block {
+                // a body killed by the last block is gone, and its deathwish has resolved, before
+                // the next one reads the board
+                self.check_for_deaths();
                 if let Some(source_id) = queued.self_id {
                     self.record(GameEvent::TriggerFired { source_id });
                 }
@@ -706,7 +709,8 @@ impl Game {
             for entity_id in dead_ids {
                 self.record(GameEvent::Died { entity_id });
             }
-            self.effect_queue.extend(to_queue);
+            // in front of whatever is still queued, so a deathwish resolves before the next trigger
+            self.effect_queue.splice(0..0, to_queue);
             if !any_died {
                 break;
             }
