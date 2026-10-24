@@ -205,6 +205,31 @@ void main() {
     gl_FragColor = vec4(mix(inner_color, outer_color, sqrt(band)), alpha * a);
 }"#;
 
+/// A skull over a card that died, sized to whatever rect it is given.
+pub fn draw_skull(r: Rect, color: Color) {
+    let u = r.h.min(r.w) / 10.0;
+    let cx = r.x + r.w / 2.0;
+    let cy = r.y + r.h / 2.0;
+
+    draw_circle(cx, cy - u * 0.6, u * 2.2, color);
+    fill_round_rect(cx - u * 1.3, cy + u * 0.9, u * 2.6, u * 1.9, u * 0.5, color);
+
+    let socket = Color { r: 0.0, g: 0.0, b: 0.0, a: color.a };
+    draw_circle(cx - u * 0.85, cy - u * 0.8, u * 0.72, socket);
+    draw_circle(cx + u * 0.85, cy - u * 0.8, u * 0.72, socket);
+    draw_triangle(
+        Vec2::new(cx, cy + u * 0.1),
+        Vec2::new(cx - u * 0.4, cy + u * 0.8),
+        Vec2::new(cx + u * 0.4, cy + u * 0.8),
+        socket,
+    );
+    // teeth, else the jaw reads as a chin
+    for i in 0..3 {
+        let x = cx - u * 0.95 + i as f32 * u * 0.95;
+        draw_line(x, cy + u * 0.9, x, cy + u * 2.6, u * 0.22, socket);
+    }
+}
+
 /// Non-overlapping pieces, so translucent colors blend once everywhere.
 pub fn fill_round_rect(x: f32, y: f32, w: f32, h: f32, r: f32, color: Color) {
     let r = r.min(w / 2.0).min(h / 2.0);

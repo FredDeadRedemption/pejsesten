@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::anim::Overlay;
 use crate::deckbuilder::{card_cost, card_image_url, card_meta, DeckBuilderState};
 use crate::layout::{self, CARD_H, CARD_W};
-use crate::playlog::{Play, PlayLog};
+use crate::playlog::{Play, PlayLog, Target};
 use crate::textures::{draw_texture_cover, TextureCache};
 use crate::transform::{shade, Transform};
 use crate::fx;
@@ -31,6 +31,7 @@ const COL_DEF: Color = Color::new(0.70, 0.25, 0.25, 1.0);
 pub(crate) const COL_BUFFED: Color = Color::new(0.40, 1.00, 0.45, 1.0);
 pub(crate) const COL_DAMAGED: Color = Color::new(1.00, 0.35, 0.35, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
+const COL_TARGET_CHIP: Color = Color::new(0.72, 0.74, 0.80, 0.85);
 const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
 const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
 const COL_SIDE_SELF: Color = Color::new(0.42, 0.62, 0.90, 1.0);
@@ -376,6 +377,7 @@ fn draw_reveal(log: &PlayLog, cache: &TextureCache, h: f32, mouse: Vec2) {
         fx::soft_shadow(slot.x, slot.y, slot.w, slot.h);
         draw_card_entity_preview(&play.card, slot.x, slot.y, slot.w, slot.h, cache);
         draw_rectangle_lines(slot.x, slot.y, slot.w, slot.h, 2.0, side);
+        draw_reveal_targets(&play.targets, cache, h, 1.0);
         return;
     }
 
@@ -393,6 +395,25 @@ fn draw_reveal(log: &PlayLog, cache: &TextureCache, h: f32, mouse: Vec2) {
         draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, side);
         flash_over(r, 0.4 * (1.0 - log.pop()));
     });
+    if let Some(targets) = log.reveal_targets() {
+        draw_reveal_targets(targets, cache, h, 1.0 - log.exit());
+    }
+}
+
+/// What the play landed on, beside it and smaller, with the dead marked.
+fn draw_reveal_targets(targets: &[Target], cache: &TextureCache, h: f32, fade: f32) {
+    if fade <= 0.0 {
+        return;
+    }
+    for (target, r) in targets.iter().zip(layout::reveal_target_rects(targets.len(), h)) {
+        fx::soft_shadow(r.x, r.y, r.w, r.h);
+        draw_card_entity_preview(&target.card, r.x, r.y, r.w, r.h, cache);
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, Color { a: fade, ..COL_TARGET_CHIP });
+        if target.died {
+            draw_rectangle(r.x, r.y, r.w, r.h, Color::new(0.0, 0.0, 0.0, 0.55 * fade));
+            fx::draw_skull(r, Color::new(0.92, 0.90, 0.86, 0.95 * fade));
+        }
+    }
 }
 
 // ── Drop target highlights ─────────────────────────────────────────────────────

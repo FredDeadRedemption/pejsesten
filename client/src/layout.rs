@@ -41,6 +41,27 @@ pub fn reveal_rect(h: f32) -> Rect {
     Rect::new(SIDEBAR_W + 10.0, (h - REVEAL_H) / 2.0, REVEAL_W, REVEAL_H)
 }
 
+const TARGET_GAP: f32 = 6.0;
+const TARGET_MARGIN: f32 = 10.0;
+/// Biggest a chip gets, so a lone target does not read as a second played card.
+const TARGET_H_MAX: f32 = REVEAL_H * 0.5;
+
+/// Chips beside the reveal, shrunk to keep the whole column inside its height.
+pub fn reveal_target_rects(count: usize, h: f32) -> Vec<Rect> {
+    if count == 0 {
+        return vec![];
+    }
+    let reveal = reveal_rect(h);
+    let gaps = (count - 1) as f32 * TARGET_GAP;
+    let ch = ((reveal.h - gaps) / count as f32).min(TARGET_H_MAX);
+    let cw = ch * REVEAL_W / REVEAL_H;
+    let x = reveal.x + reveal.w + TARGET_MARGIN;
+    let top = reveal.y + (reveal.h - (count as f32 * ch + gaps)) / 2.0;
+    (0..count)
+        .map(|i| Rect::new(x, top + i as f32 * (ch + TARGET_GAP), cw, ch))
+        .collect()
+}
+
 /// Everything centred sits in what the left column leaves over.
 pub fn board_center_x(w: f32) -> f32 {
     (SIDEBAR_W + w) / 2.0
