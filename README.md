@@ -13,7 +13,12 @@ Two players, one hero each, 25 card decks. Mana buys the board, embers buy infor
 - No excessively mana cheats, smaller cheats kept for combo-style decks.
 - No random targets unless spell is being **replayed**.
 - Discourage RnG - encourage **disruption** and **hard counters**.
-- Reward player interaction with mechanics like **Counter** and **Secret**. 
+- Nobody acts on the opponent's turn, so the defender must be given a **choice** instead.
+- Denial is public (Wager), value may be hidden (Omen), a standing effect needs a body.
+- No Secrets: hiding the card as well leaves nothing to play around.
+
+The reasoning behind the last three, and what it means for removal and win conditions, is in
+[docs/PHILOSOPHY.md](docs/PHILOSOPHY.md).
 
 ---
 
@@ -21,6 +26,7 @@ Two players, one hero each, 25 card decks. Mana buys the board, embers buy infor
 
 | Doc | What is in it |
 |---|---|
+| [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) | Why the game is shaped as it is, and which slot a reactive card belongs in |
 | [docs/MECHANICS.md](docs/MECHANICS.md) | Every mechanic, built or not, with its Hearthstone or Magic name, what it does, and a status symbol |
 | [docs/CONCEPTS.md](docs/CONCEPTS.md) | The designs not built yet: embers and actions, Wager, Sigils, Escalate, Fuse, Triad, Bequeath |
 | [docs/GAMEMODES.md](docs/GAMEMODES.md) | Single Match and the Crucible roster format |
