@@ -133,8 +133,10 @@ still resolves. Filters (`Condition`) are `IsRace { race }` and `HasAttribute { 
 
 ## Effects
 
-`Effect`. Every built effect carries a `TargetSpec`: mode (`Targeted`, `Auto`, `SelfOnly`),
-side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and filters.
+`Effect`. Every built effect carries a `TargetSpec`: mode (`Targeted`, `Auto`, `SelfOnly`,
+`Rightmost`), side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and
+filters. `Rightmost` picks automatically, so it is the one mode a trigger with no chosen
+target can still aim.
 
 | | Name | Equivalent | Code | Effect |
 |---|---|---|---|---|
@@ -144,6 +146,7 @@ side (`Friendly`, `Enemy`, `All`), entity type (`Minion`, `Hero`, `All`), and fi
 | ✅ | Draw | Draw | `Draw` | Draws cards, with an optional follow-up applied to what was drawn |
 | ✅ | Return to hand | Bounce / Sap, Unsummon | `ReturnToHand` | Returns a minion to its owner's hand, fully reset, with an optional flat cost reduction |
 | ✅ | Destroy | Destroy | `Destroy` | Marks the target doomed, so it dies in the next death check whatever its defence. Heroes are immune |
+| ✅ | Take control | Mind Control | `TakeControl` | Moves an enemy minion onto your board, damage and buffs intact. It arrives exhausted and has not survived a turn, so it cannot reach the hero yet. Skipped if your board is at the cap |
 | ✅ | Summon | Summon, Create token | `Summon` | Puts n copies of a minion card id on your board, exhausted unless it has Blitz. Stops at the board cap |
 | ✅ | Reverse deck | - | `ReverseDeck` | Flips the draw order of your own deck |
 | ✅ | Generate omen | "add a random Secret" | `AddRandomOmen` | Adds a random collectible omen to your hand |
@@ -258,6 +261,7 @@ An omen firing cannot arm or fire another omen, so death cascades cannot chain t
 | ✅ | Retaliation | Combat damage | Attacker and defender damage each other at once. A 0 attack defender deals nothing and does not break the attacker's Ward |
 | ✅ | Guard check | Taunt | Attacks must pick a Guard while a visible one exists on the defending board |
 | ✅ | Death check | State-based actions | After every action: refresh stats, remove anything at 0 defence or doomed, queue its Deathwishes, repeat until nothing dies |
+| ✅ | Board position | Minion placement | A minion is played into a chosen slot in your row, clamped to the end. Summons and steals always land on the right |
 | ✅ | Trade | Tradeable | 1 mana, card to the bottom of the deck, draw one. Needs mana and a non-empty deck |
 | ✅ | Mulligan | Mulligan | Pick any number of cards, replacements are drawn first, then the returned cards are shuffled back |
 

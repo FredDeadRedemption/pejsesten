@@ -1399,6 +1399,34 @@ pub fn build_cards() -> Vec<Card> {
             cost_scaling: None,
             is_token: false,
         }),
+        Card::Minion(MinionCard {
+            id: 61,
+            color: Color::Black,
+            name: "Talent Scout".to_string(),
+            description: Some("<strong>Deathwish:</strong> Take control of the rightmost enemy minion".to_string()),
+            flavor_text: Some("Dies owed a finder's fee, and collects it anyway.".to_string()),
+            base_cost: 6,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![],
+            base_attack: 5,
+            base_defence: 5,
+            attributes: vec![],
+            abilities: vec![Ability {
+                trigger: Trigger::OnDeath,
+                requirements: vec![],
+                effects: vec![Effect::TakeControl {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Rightmost,
+                        side: TargetSide::Enemy,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                }],
+            }],
+            cost_scaling: None,
+            is_token: false,
+        }),
         // ── TOKENS ───────────────────────────────────────────────
         Card::Minion(MinionCard {
             id: BRAMBLE_ID,

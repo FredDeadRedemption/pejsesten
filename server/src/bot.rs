@@ -212,6 +212,11 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
                     score -= 20;
                 }
             }
+            Effect::TakeControl { .. } => {
+                if !enemy_board.battlefield.is_empty() {
+                    score += 20;
+                }
+            }
             Effect::Heal { heal, .. } => {
                 score += heal;
             }
@@ -322,7 +327,7 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
             None => break,
         };
 
-        if !game.play_card(idx, target, omen_trigger) {
+        if !game.play_card(idx, target, omen_trigger, None) {
             break;
         }
 

@@ -102,6 +102,7 @@ fn effect_target_spec(effect: &Effect) -> Option<&TargetSpec> {
         Effect::Heal { target_spec, .. } => Some(target_spec),
         Effect::ReturnToHand { target_spec, .. } => Some(target_spec),
         Effect::Destroy { target_spec } => Some(target_spec),
+        Effect::TakeControl { target_spec } => Some(target_spec),
         Effect::Draw { .. } => None,
         Effect::Summon { .. } => None,
         Effect::ReverseDeck => None,
@@ -330,8 +331,10 @@ impl Game {
     /// A targeted effect with nobody picked lands on one body, never the whole board.
     fn resolve_target_refs(spec: &TargetSpec, source: &Board, enemy: &Board, self_id: Option<u32>) -> Vec<TargetRef> {
         let mut refs = Self::candidate_target_refs(spec, source, enemy, self_id);
-        if spec.target_mode == TargetMode::Targeted {
-            refs.truncate(1);
+        match spec.target_mode {
+            TargetMode::Targeted => refs.truncate(1),
+            TargetMode::Rightmost => refs = refs.pop().into_iter().collect(),
+            _ => {}
         }
         refs
     }
@@ -377,6 +380,10 @@ impl Game {
 
     fn get_target_refs(&self, spec: &TargetSpec, owner: PlayerSide, target_id: Option<u32>, self_id: Option<u32>) -> Vec<TargetRef> {
         if spec.target_mode == TargetMode::SelfOnly {
+            let (source, enemy) = self.boards_for(owner);
+            return Self::resolve_target_refs(spec, source, enemy, self_id);
+        }
+        if spec.target_mode == TargetMode::Rightmost {
             let (source, enemy) = self.boards_for(owner);
             return Self::resolve_target_refs(spec, source, enemy, self_id);
         }
@@ -1083,6 +1090,34 @@ impl Game {
                     self.record(GameEvent::MinionSummoned { entity_id });
                 }
             }
+
+            Effect::TakeControl { target_spec } => {
+                let refs = self.get_target_refs(&target_spec, owner, target_id, self_id);
+
+                let mut taken: Vec<u32> = vec![];
+                let (source, enemy) = self.boards_for_mut(owner);
+
+                for tr in refs.into_iter().rev() {
+                    if source.battlefield.len() >= settings::MAX_BOARD_SIZE {
+                        break;
+                    }
+                    let TargetRef::MinionEnemy(i) = tr else { continue };
+                    if i >= enemy.battlefield.len() {
+                        continue;
+                    }
+                    let mut minion = enemy.battlefield.remove(i);
+                    // the same body changing sides, so damage and buffs ride along; only its
+                    // right to act is new, and it has not survived a turn on this board yet
+                    minion.exhausted = !minion.card.attributes.contains(&MinionAttribute::Charge);
+                    minion.turns_on_board = 0;
+                    taken.push(minion.entity_id);
+                    source.battlefield.push(minion);
+                }
+
+                for entity_id in taken {
+                    self.record(GameEvent::ControlTaken { entity_id });
+                }
+            }
         }
     }
 
@@ -1131,7 +1166,8 @@ impl Game {
         //self.process_effect_queue();
     }
 
-    pub fn play_card(&mut self, index: usize, target_id: Option<u32>, omen_trigger: Option<usize>) -> bool {
+    /// `position` is where a minion slots into your battlefield, clamped to the end.
+    pub fn play_card(&mut self, index: usize, target_id: Option<u32>, omen_trigger: Option<usize>, position: Option<usize>) -> bool {
         if !self.playing() {
             return false;
         }
@@ -1208,7 +1244,8 @@ impl Game {
         if let CardEntity::Minion(mut minion) = consumed.clone() {
             minion.exhausted = !minion.card.attributes.contains(&MinionAttribute::Charge);
             let source_board = self.source_board_mut();
-            source_board.battlefield.push(minion);
+            let at = position.unwrap_or(usize::MAX).min(source_board.battlefield.len());
+            source_board.battlefield.insert(at, minion);
         }
 
         // Arm omen face down

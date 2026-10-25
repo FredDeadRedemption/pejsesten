@@ -211,6 +211,10 @@ pub fn itself() -> TargetSpec {
     spec(TargetMode::SelfOnly, TargetSide::Friendly, EntityType::Minion)
 }
 
+pub fn take_control(target_spec: TargetSpec) -> Effect {
+    Effect::TakeControl { target_spec }
+}
+
 pub fn summon(card: &MinionCard, summon_amount: usize) -> Effect {
     Effect::Summon { minion_card_id: card.id, summon_amount }
 }

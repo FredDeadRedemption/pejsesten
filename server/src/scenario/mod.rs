@@ -276,14 +276,21 @@ impl Scenario {
     // --- steps ---
 
     pub fn play(&mut self, index: usize, target: Option<u32>) -> bool {
-        let ok = self.game.play_card(index, target, None);
+        let ok = self.game.play_card(index, target, None, None);
         self.record(FrameKind::Action, format!("play hand[{index}] -> {}", ok), true);
+        ok
+    }
+
+    /// Plays a minion into a chosen battlefield slot, 0 being leftmost.
+    pub fn play_at(&mut self, index: usize, position: usize) -> bool {
+        let ok = self.game.play_card(index, None, None, Some(position));
+        self.record(FrameKind::Action, format!("play hand[{index}] at {position} -> {ok}"), true);
         ok
     }
 
     /// Plays an omen from hand, arming the trigger at `trigger` in its printed list.
     pub fn play_omen(&mut self, index: usize, trigger: usize) -> bool {
-        let ok = self.game.play_card(index, None, Some(trigger));
+        let ok = self.game.play_card(index, None, Some(trigger), None);
         self.record(FrameKind::Action, format!("play omen hand[{index}] trigger {trigger} -> {ok}"), true);
         ok
     }

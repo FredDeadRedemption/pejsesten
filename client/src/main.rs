@@ -141,6 +141,13 @@ struct OmenPick {
     card: OmenCard,
 }
 
+/// A minion dropped into a slot, waiting for the fanfare target that the same drop cannot name.
+struct TargetPick {
+    hand_index: usize,
+    entity_id: u32,
+    position: usize,
+}
+
 fn window_conf() -> Conf {
     Conf {
         window_title: "pejsesten".to_string(),
@@ -163,6 +170,7 @@ async fn main() {
     let mut play_log = PlayLog::new();
     let mut scenario: Option<ScenarioFrameInfo> = None;
     let mut omen_pick: Option<OmenPick> = None;
+    let mut target_pick: Option<TargetPick> = None;
     let mut glow_watcher = glow::Watcher::new();
 
     loop {
@@ -214,15 +222,18 @@ async fn main() {
             play_log.tick(dt);
         }
 
-        if let Some(pick) = &omen_pick {
+        let holding: Option<(usize, u32)> = omen_pick.as_ref().map(|p| (p.hand_index, p.entity_id))
+            .or_else(|| target_pick.as_ref().map(|p| (p.hand_index, p.entity_id)));
+        if let Some((hand_index, entity_id)) = holding {
             let still_there = match &screen {
                 Screen::Playing(timeline) => {
-                    timeline.state().self_board.hand.get(pick.hand_index).map(|c| c.entity_id()) == Some(pick.entity_id)
+                    timeline.state().self_board.hand.get(hand_index).map(|c| c.entity_id()) == Some(entity_id)
                 }
                 _ => false,
             };
             if !still_there {
                 omen_pick = None;
+                target_pick = None;
             }
         }
 
@@ -258,7 +269,7 @@ async fn main() {
         }
 
         // --- Input ---
-        handle_input(&mut screen, &mut net, &mut drag, &mut scenario, &mut omen_pick, mx, my, w, h);
+        handle_input(&mut screen, &mut net, &mut drag, &mut scenario, &mut omen_pick, &mut target_pick, mx, my, w, h);
 
         // egui lays the deck builder out and consumes its input before anything is painted
         let deck_builder = match &mut screen {
@@ -311,7 +322,7 @@ async fn main() {
                     hover_id = None;
                     hover_timer = 0.0;
                 }
-                let drag_render = make_drag_render(&drag, state, mx, my, hover_id, hover_timer);
+                let drag_render = make_drag_render(&drag, &target_pick, state, mx, my, hover_id, hover_timer);
                 let targeting_active = drag_render.card.is_some()
                     && !drag_render.targetable_ids.is_empty()
                     && !layout::hand_zone_rect(w, h).contains(Vec2::new(mx, my));
@@ -379,6 +390,7 @@ fn target_spec_from_effect(effect: &Effect) -> Option<&TargetSpec> {
         Effect::Heal { target_spec, .. } => Some(target_spec),
         Effect::ReturnToHand { target_spec, .. } => Some(target_spec),
         Effect::Destroy { target_spec, .. } => Some(target_spec),
+        Effect::TakeControl { target_spec } => Some(target_spec),
         Effect::Draw { .. } | Effect::Summon { .. } | Effect::ReverseDeck => None,
         Effect::AddRandomOmen | Effect::ReplayQuickdraws => None,
     }
@@ -508,7 +520,19 @@ fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     None
 }
 
-fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32) -> DragRender<'a> {
+fn make_drag_render<'a>(drag: &'a Option<DragState>, target_pick: &Option<TargetPick>, state: &'a GameStateClient, mx: f32, my: f32, hover_id: Option<u32>, hover_timer: f32) -> DragRender<'a> {
+    // the body is not on the board yet, so the row stays parted while its target is chosen
+    if let Some(pick) = target_pick {
+        return DragRender {
+            card: state.self_board.hand.get(pick.hand_index),
+            minion_id: None,
+            mx, my,
+            targetable_ids: compute_targetable_ids(&Some(DragState::Card { index: pick.hand_index }), state),
+            trade_drop_active: false,
+            hovered_id: None,
+            drop_slot: Some(pick.position),
+        };
+    }
     let targetable_ids = compute_targetable_ids(drag, state);
     let trade_drop_active = match drag {
         Some(DragState::Card { index }) => state.self_board.hand.get(*index)
@@ -517,6 +541,17 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
         _ => false,
     };
     let hovered_id = if hover_timer >= 0.25 { hover_id } else { None };
+    let (w, h) = (ui::size().x, ui::size().y);
+    let mouse = Vec2::new(mx, my);
+    let drop_slot = match drag {
+        Some(DragState::Card { index })
+            if matches!(state.self_board.hand.get(*index), Some(CardEntity::Minion(_)))
+                && !layout::hand_zone_rect(w, h).contains(mouse) =>
+        {
+            Some(layout::drop_slot(state.self_board.battlefield.len(), w, h, mouse))
+        }
+        _ => None,
+    };
     match drag {
         Some(DragState::Card { index }) => DragRender {
             card: state.self_board.hand.get(*index),
@@ -525,6 +560,7 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             targetable_ids,
             trade_drop_active,
             hovered_id,
+            drop_slot,
         },
         Some(DragState::Minion { entity_id }) => DragRender {
             card: None,
@@ -533,8 +569,9 @@ fn make_drag_render<'a>(drag: &'a Option<DragState>, state: &'a GameStateClient,
             targetable_ids,
             trade_drop_active,
             hovered_id,
+            drop_slot: None,
         },
-        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_id },
+        None => DragRender { card: None, minion_id: None, mx, my, targetable_ids, trade_drop_active, hovered_id, drop_slot: None },
     }
 }
 
@@ -544,6 +581,7 @@ fn handle_input(
     drag: &mut Option<DragState>,
     scenario: &mut Option<ScenarioFrameInfo>,
     omen_pick: &mut Option<OmenPick>,
+    target_pick: &mut Option<TargetPick>,
     mx: f32, my: f32,
     w: f32, h: f32,
 ) {
@@ -565,7 +603,7 @@ fn handle_input(
         if is_mouse_button_released(MouseButton::Left) {
             let rects = layout::omen_pick_rects(w, h);
             if let Some(trigger) = rects.iter().position(|r| r.contains(Vec2::new(mx, my))) {
-                net.play_card(pick.hand_index, None, Some(trigger));
+                net.play_card(pick.hand_index, None, Some(trigger), None);
                 *omen_pick = None;
             }
         }
@@ -659,6 +697,23 @@ fn handle_input(
                 return;
             }
 
+            // the slot is already chosen, so this click only answers the fanfare
+            if let Some(pick) = target_pick {
+                if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
+                    *target_pick = None;
+                    return;
+                }
+                if is_mouse_button_released(MouseButton::Left) {
+                    let ids = compute_targetable_ids(&Some(DragState::Card { index: pick.hand_index }), state);
+                    let target = find_target(Vec2::new(mx, my), state, w, h, &ids, Some(pick.position));
+                    if let Some(target) = target {
+                        net.play_card(pick.hand_index, Some(target), None, Some(pick.position));
+                        *target_pick = None;
+                    }
+                }
+                return;
+            }
+
             let clicked = is_mouse_button_released(MouseButton::Left) && drag.is_none();
             if is_key_pressed(KeyCode::E) || (clicked && layout::end_turn_rect(w, h).contains(Vec2::new(mx, my))) {
                 net.end_turn();
@@ -709,15 +764,27 @@ fn handle_input(
                                                 card: o.card.clone(),
                                             });
                                         }
+                                        Some(CardEntity::Minion(m)) => {
+                                            let position = layout::drop_slot(state.self_board.battlefield.len(), w, h, mouse);
+                                            if targets.is_empty() {
+                                                net.play_card(index, None, None, Some(position));
+                                            } else {
+                                                *target_pick = Some(TargetPick {
+                                                    hand_index: index,
+                                                    entity_id: m.entity_id,
+                                                    position,
+                                                });
+                                            }
+                                        }
                                         _ => {
-                                            let target = find_target(mouse, state, w, h, &targets);
-                                            net.play_card(index, target, None);
+                                            let target = find_target(mouse, state, w, h, &targets, None);
+                                            net.play_card(index, target, None, None);
                                         }
                                     }
                                 }
                             }
                             DragState::Minion { entity_id } => {
-                                if let Some(target_id) = find_target(mouse, state, w, h, &targets) {
+                                if let Some(target_id) = find_target(mouse, state, w, h, &targets, None) {
                                     net.attack(&AttackData { origin_id: entity_id, target_id });
                                 }
                             }
@@ -744,7 +811,7 @@ fn handle_input(
 
 /// Returns the entity_id under the mouse if it's in the targetable set.
 /// If the set is empty (card needs no target), returns None regardless of position.
-fn find_target(mouse: Vec2, state: &GameStateClient, w: f32, h: f32, ids: &HashSet<u32>) -> Option<u32> {
+fn find_target(mouse: Vec2, state: &GameStateClient, w: f32, h: f32, ids: &HashSet<u32>, drop_slot: Option<usize>) -> Option<u32> {
     if ids.is_empty() { return None; }
 
     let enemy_rects = layout::enemy_minion_rects(state.enemy_board.battlefield.len(), w, h);
@@ -754,7 +821,7 @@ fn find_target(mouse: Vec2, state: &GameStateClient, w: f32, h: f32, ids: &HashS
     let eh = state.enemy_board.hero.entity_id;
     if layout::enemy_hero_rect(w, h).contains(mouse) && ids.contains(&eh) { return Some(eh); }
 
-    let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+    let self_rects = layout::self_minion_rects_parted(state.self_board.battlefield.len(), drop_slot, w, h);
     for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
         if r.contains(mouse) && ids.contains(&m.entity_id) { return Some(m.entity_id); }
     }

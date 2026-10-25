@@ -20,6 +20,8 @@ pub fn duration(event: &GameEvent) -> f32 {
         GameEvent::Died { .. } => 0.35,
         GameEvent::Damaged { .. } | GameEvent::Healed { .. } => 0.30,
         GameEvent::MinionSummoned { .. } | GameEvent::ReturnedToHand { .. } => 0.30,
+        // the body crosses the whole board, so it gets longer than a summon
+        GameEvent::ControlTaken { .. } => 0.40,
         GameEvent::Buffed { .. } | GameEvent::WardBroken { .. } | GameEvent::TriggerFired { .. } => 0.25,
         GameEvent::CardCreated { .. } | GameEvent::CardTraded { .. } => 0.22,
         // the body arrives on its own event, so this only has to hold the log entry
@@ -181,6 +183,18 @@ fn take_from_hand(state: &mut GameStateClient, id: u32) -> Option<(Half, CardEnt
     None
 }
 
+/// Lands a body at the index the truth holds it at, so a chosen board slot is never shown wrong.
+fn place_as_in_truth(visual: &mut GameStateClient, target: &GameStateClient, half: Half, minion: MinionEntity) {
+    let truth = match half {
+        Half::Own => &target.self_board,
+        Half::Enemy => &target.enemy_board,
+    };
+    let at = truth.battlefield.iter().position(|m| m.entity_id == minion.entity_id);
+    let bf = &mut board(visual, half).battlefield;
+    let at = at.unwrap_or(bf.len()).min(bf.len());
+    bf.insert(at, minion);
+}
+
 fn take_from_battlefield(state: &mut GameStateClient, id: u32) -> Option<(Half, MinionEntity)> {
     for half in [Half::Own, Half::Enemy] {
         let b = board(state, half);
@@ -225,7 +239,7 @@ fn apply(visual: &mut GameStateClient, target: &GameStateClient, event: &GameEve
             // an incantation is in neither zone afterwards, so it simply leaves the hand
             if let Some((half, minion)) = find_minion(target, *entity_id) {
                 let minion = minion.clone();
-                board(visual, half).battlefield.push(minion);
+                place_as_in_truth(visual, target, half, minion);
             } else if let Some((half, omen)) = find_omen(target, *entity_id) {
                 let omen = omen.clone();
                 board(visual, half).omens.push(omen);
@@ -263,6 +277,13 @@ fn apply(visual: &mut GameStateClient, target: &GameStateClient, event: &GameEve
         GameEvent::Died { entity_id } => {
             if let Some((half, minion)) = take_from_battlefield(visual, *entity_id) {
                 board(visual, half).graveyard.push(minion);
+            }
+        }
+        GameEvent::ControlTaken { entity_id } => {
+            take_from_battlefield(visual, *entity_id);
+            if let Some((half, minion)) = find_minion(target, *entity_id) {
+                let minion = minion.clone();
+                place_as_in_truth(visual, target, half, minion);
             }
         }
         GameEvent::ReturnedToHand { entity_id } => {

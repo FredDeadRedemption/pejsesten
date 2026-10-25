@@ -52,9 +52,10 @@ pub enum Trigger {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TargetMode {
-    Targeted, // player must choose a target
-    Auto,     // resolves automatically
-    SelfOnly, // the entity the ability sits on
+    Targeted,  // player must choose a target
+    Auto,      // resolves automatically
+    SelfOnly,  // the entity the ability sits on
+    Rightmost, // resolves automatically to the last matching entity in board order
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -149,6 +150,7 @@ pub enum Effect {
     ReturnToHand { target_spec: TargetSpec, cost_reduction: Option<i32> },
     Destroy { target_spec: TargetSpec },
     Summon { minion_card_id: u32, summon_amount: usize },
+    TakeControl { target_spec: TargetSpec },
     ReverseDeck,
     AddRandomOmen,
     ReplayQuickdraws,
@@ -616,6 +618,8 @@ pub enum GameEvent {
     WardBroken { entity_id: u32 },
     Died { entity_id: u32 },
     ReturnedToHand { entity_id: u32 },
+    /// A minion that changed sides, so it leaves one battlefield and joins the other.
+    ControlTaken { entity_id: u32 },
     CardDrawn { entity_id: u32 },
     /// A card that appeared in hand from nowhere, so no deck was spent on it.
     CardCreated { entity_id: u32 },

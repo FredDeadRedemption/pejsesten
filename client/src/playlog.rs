@@ -98,7 +98,8 @@ impl PlayLog {
             | GameEvent::Healed { entity_id, .. }
             | GameEvent::Buffed { entity_id, .. }
             | GameEvent::MinionSummoned { entity_id }
-            | GameEvent::ReturnedToHand { entity_id } => (*entity_id, false),
+            | GameEvent::ReturnedToHand { entity_id }
+            | GameEvent::ControlTaken { entity_id } => (*entity_id, false),
             GameEvent::Died { entity_id } => (*entity_id, true),
             // never the opponent's, so the strip cannot be read as a peek at their hand
             GameEvent::CardDrawn { entity_id } | GameEvent::CardCreated { entity_id } if play.mine => {

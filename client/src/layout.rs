@@ -155,9 +155,27 @@ fn shift(slots: &mut [HandSlot], dy: f32) {
     }
 }
 
+fn self_row_y(h: f32) -> f32 {
+    h / 2.0 + 18.0
+}
+
 pub fn self_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
-    let y = h / 2.0 + 18.0;
-    centered_rects(count, MINION_W, MINION_H, MINION_GAP, board_center_x(w), y)
+    centered_rects(count, MINION_W, MINION_H, MINION_GAP, board_center_x(w), self_row_y(h))
+}
+
+/// Where a dragged minion would slot in: how many of your minions sit left of the mouse.
+pub fn drop_slot(count: usize, w: f32, h: f32, mouse: Vec2) -> usize {
+    self_minion_rects(count, w, h).iter().filter(|r| r.center().x < mouse.x).count()
+}
+
+/// Your row as it is drawn while a card is held over it: the bodies lay themselves out as if the
+/// newcomer were already there, so the gap under the cursor is the slot it will take.
+pub fn self_minion_rects_parted(count: usize, slot: Option<usize>, w: f32, h: f32) -> Vec<Rect> {
+    let Some(slot) = slot.filter(|s| *s <= count) else {
+        return self_minion_rects(count, w, h);
+    };
+    let spread = self_minion_rects(count + 1, w, h);
+    (0..count).map(|i| spread[if i < slot { i } else { i + 1 }]).collect()
 }
 
 pub fn enemy_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
@@ -270,4 +288,56 @@ fn centered_rects(count: usize, rw: f32, rh: f32, gap: f32, cx: f32, y: f32) -> 
     (0..count)
         .map(|i| Rect::new(start_x + i as f32 * (rw + gap), y, rw, rh))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const W: f32 = 1280.0;
+    const H: f32 = 720.0;
+
+    /// The gap a slot opens must be exactly one body wide, and must sit where the slot says.
+    fn gap_before(count: usize, slot: usize) -> f32 {
+        let parted = self_minion_rects_parted(count, Some(slot), W, H);
+        let spread = self_minion_rects(count + 1, W, H);
+        assert_eq!(parted.len(), count);
+        for (i, r) in parted.iter().enumerate() {
+            let expected = spread[if i < slot { i } else { i + 1 }];
+            assert!((r.x - expected.x).abs() < 1e-3, "body {i} at {} wanted {}", r.x, expected.x);
+        }
+        spread[slot].x
+    }
+
+    #[test]
+    fn a_slot_opens_a_body_wide_gap_where_it_was_asked_for() {
+        for slot in 0..=3 {
+            let gap_x = gap_before(3, slot);
+            let parted = self_minion_rects_parted(3, Some(slot), W, H);
+            let left = parted.iter().filter(|r| r.x < gap_x).count();
+            assert_eq!(left, slot, "slot {slot} should have {slot} bodies to its left");
+        }
+    }
+
+    #[test]
+    fn no_slot_leaves_the_row_where_it_was() {
+        let plain = self_minion_rects(4, W, H);
+        let parted = self_minion_rects_parted(4, None, W, H);
+        assert_eq!(plain.len(), parted.len());
+        assert!(plain.iter().zip(&parted).all(|(a, b)| (a.x - b.x).abs() < 1e-6));
+    }
+
+    #[test]
+    fn a_slot_past_the_end_is_ignored_rather_than_panicking() {
+        let parted = self_minion_rects_parted(2, Some(9), W, H);
+        assert_eq!(parted.len(), 2);
+    }
+
+    #[test]
+    fn the_drop_slot_counts_the_bodies_left_of_the_mouse() {
+        let rects = self_minion_rects(3, W, H);
+        assert_eq!(drop_slot(3, W, H, Vec2::new(rects[0].x - 50.0, 0.0)), 0);
+        assert_eq!(drop_slot(3, W, H, Vec2::new(rects[1].center().x - 1.0, 0.0)), 1);
+        assert_eq!(drop_slot(3, W, H, Vec2::new(rects[2].x + rects[2].w + 50.0, 0.0)), 3);
+    }
 }

@@ -53,6 +53,8 @@ struct PlayArgs {
     target: Option<u32>,
     /// Which of an omen's three triggers to arm, 0 to 2. Required to play an omen.
     omen_trigger: Option<usize>,
+    /// Where a minion slots into your board, 0 being leftmost. Defaults to the right end.
+    position: Option<usize>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -196,9 +198,9 @@ impl Pejsesten {
         self.act("submitMulligan", json!({ "indices": args.indices })).await
     }
 
-    #[tool(description = "Play a card from hand, with an entity id as target and a trigger index for an omen.")]
+    #[tool(description = "Play a card from hand, with an entity id as target, a trigger index for an omen, and a board position for a minion.")]
     async fn play_card(&self, Parameters(args): Parameters<PlayArgs>) -> Result<String, ErrorData> {
-        let data = json!({ "index": args.index, "target": args.target, "omen_trigger": args.omen_trigger });
+        let data = json!({ "index": args.index, "target": args.target, "omen_trigger": args.omen_trigger, "position": args.position });
         self.act("playCard", data).await
     }
 

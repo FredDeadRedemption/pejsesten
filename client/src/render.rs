@@ -48,6 +48,8 @@ pub struct DragRender<'a> {
     pub targetable_ids: HashSet<u32>,
     pub trade_drop_active: bool,
     pub hovered_id: Option<u32>,
+    /// Where a dragged minion would slot into your board, absent while it is not over one.
+    pub drop_slot: Option<usize>,
 }
 
 pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRender, overlay: &Overlay, log: &PlayLog) {
@@ -62,8 +64,8 @@ pub fn draw_game(state: &GameStateClient, cache: &TextureCache, drag: &DragRende
         draw_turn_indicator(state, w, mid);
     }
 
-    draw_board_half(&state.enemy_board, w, h, false, cache, false, overlay, state.open_cards, &[]);
-    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, overlay, state.open_cards, &state.hand_hints);
+    draw_board_half(&state.enemy_board, w, h, false, cache, false, overlay, state.open_cards, &[], None);
+    draw_board_half(&state.self_board, w, h, true, cache, drag.trade_drop_active, overlay, state.open_cards, &state.hand_hints, drag.drop_slot);
 
     let over = state.outcome().is_some();
     if state.your_turn && !over {
@@ -435,7 +437,7 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
         draw_rectangle_lines(er.x, er.y, er.w, er.h, 2.0, GREEN);
     }
 
-    let self_rects = layout::self_minion_rects(state.self_board.battlefield.len(), w, h);
+    let self_rects = layout::self_minion_rects_parted(state.self_board.battlefield.len(), drag.drop_slot, w, h);
     for (m, r) in state.self_board.battlefield.iter().zip(self_rects.iter()) {
         if ids.contains(&m.entity_id) {
             draw_rectangle(r.x, r.y, r.w, r.h, COL_TARGET);
@@ -451,14 +453,14 @@ fn draw_drop_targets(state: &GameStateClient, drag: &DragRender, w: f32, h: f32)
 
 // ── Board halves ──────────────────────────────────────────────────────────────
 
-fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, overlay: &Overlay, open_cards: bool, hand_hints: &[CardHint]) {
+fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &TextureCache, deck_glow: bool, overlay: &Overlay, open_cards: bool, hand_hints: &[CardHint], drop_slot: Option<usize>) {
     let readout_x = layout::readout_x();
     if is_self {
         let mana_y = h - 22.0;
         let deck_r = layout::self_deck_rect(w, h);
 
         draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache, overlay.transform(board.hero.entity_id));
-        draw_battlefield(&board.battlefield, w, h, true, cache, overlay);
+        draw_battlefield(&board.battlefield, w, h, true, cache, overlay, drop_slot);
         draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, readout_x, mana_y);
@@ -469,7 +471,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
         let deck_r = layout::enemy_deck_rect(w, h);
 
         draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache, overlay.transform(board.hero.entity_id));
-        draw_battlefield(&board.battlefield, w, h, false, cache, overlay);
+        draw_battlefield(&board.battlefield, w, h, false, cache, overlay, None);
         draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, readout_x, mana_y);
@@ -966,8 +968,8 @@ fn draw_card_preview(minion: &MinionEntity, x: f32, y: f32, w: f32, h: f32, cach
     draw_stat_badge(minion.stats.defence, minion.card.base_defence, x + w - 22.0, y + h - 5.0, COL_DEF, 1.0, WHITE);
 }
 
-fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, overlay: &Overlay) {
-    for (minion, rect) in minions.iter().zip(minion_rects(minions.len(), w, h, is_self)) {
+fn draw_battlefield(minions: &[MinionEntity], w: f32, h: f32, is_self: bool, cache: &TextureCache, overlay: &Overlay, drop_slot: Option<usize>) {
+    for (minion, rect) in minions.iter().zip(row_rects(minions.len(), w, h, is_self, drop_slot)) {
         // the one that is lunging comes back in a pass of its own, over both rows
         if !overlay.lunging(minion.entity_id) {
             draw_minion(minion, rect, cache, overlay);
@@ -988,8 +990,12 @@ fn draw_lunging(state: &GameStateClient, cache: &TextureCache, overlay: &Overlay
 }
 
 fn minion_rects(count: usize, w: f32, h: f32, is_self: bool) -> Vec<Rect> {
+    row_rects(count, w, h, is_self, None)
+}
+
+fn row_rects(count: usize, w: f32, h: f32, is_self: bool, drop_slot: Option<usize>) -> Vec<Rect> {
     match is_self {
-        true => layout::self_minion_rects(count, w, h),
+        true => layout::self_minion_rects_parted(count, drop_slot, w, h),
         false => layout::enemy_minion_rects(count, w, h),
     }
 }

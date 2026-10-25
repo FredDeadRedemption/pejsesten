@@ -44,6 +44,11 @@ pub fn all() -> Vec<Case> {
         case("effects", "return to hand resets a buffed minion", bounce_resets_stats),
         case("effects", "return to hand can set a reduced cost", bounce_cost_reduction),
         case("effects", "returning an enemy minion puts it in the enemy hand", bounce_enemy_goes_to_enemy_hand),
+        case("effects", "a minion lands in the board slot it was played into", play_lands_in_the_chosen_slot),
+        case("effects", "a slot past the end of the board lands on the right", play_slot_clamps_to_the_end),
+        case("effects", "take control moves the rightmost enemy minion over", take_control_takes_the_rightmost),
+        case("effects", "a stolen minion arrives exhausted", take_control_arrives_exhausted),
+        case("effects", "take control stops at a full board", take_control_stops_at_full_board),
         case("effects", "summon mints from the scenario pool", summon_from_pool),
         case("effects", "summon stops at a full board", summon_stops_at_full_board),
         case("effects", "a summoned minion arrives exhausted", summon_arrives_exhausted),
@@ -508,6 +513,91 @@ fn bounce_enemy_goes_to_enemy_hand() -> Scenario {
     scn.expect("left the board", !scn.alive(target));
     scn.expect("in the enemy hand", scn.in_hand(Side::Black, target));
     scn.expect_eq("not in our hand", scn.hand_len(Side::White), 0);
+    scn
+}
+
+fn play_lands_in_the_chosen_slot() -> Scenario {
+    let mut s = Setup::new();
+    let left = s.on_board(Side::White, minion(1, "Left", 1, 1, 1));
+    let right = s.on_board(Side::White, minion(2, "Right", 1, 1, 1));
+    let idx = s.in_hand(Side::White, minion(3, "Wedge", 1, 1, 1));
+    let mut scn = s.start("board slot");
+    scn.play_at(idx, 1);
+    let order: Vec<u32> = scn.board(Side::White).battlefield.iter().map(|m| m.entity_id).collect();
+    scn.expect("the old pair kept its order", order[0] == left && order[2] == right);
+    scn.expect_eq("three on the board", scn.board_len(Side::White), 3);
+    scn
+}
+
+fn play_slot_clamps_to_the_end() -> Scenario {
+    let mut s = Setup::new();
+    s.on_board(Side::White, minion(1, "Left", 1, 1, 1));
+    let idx = s.in_hand(Side::White, minion(2, "Late", 1, 1, 1));
+    let mut scn = s.start("board slot clamp");
+    scn.play_at(idx, 9);
+    let last = scn.board(Side::White).battlefield.last().map(|m| m.card.name.clone());
+    scn.expect("landed on the right end", last.as_deref() == Some("Late"));
+    scn
+}
+
+/// Steals on a deathwish, which is the only trigger the printed card uses.
+fn poacher() -> MinionCard {
+    minion(1, "Poacher", 2, 1, 1).does(on_death(vec![take_control(spec(
+        TargetMode::Rightmost,
+        TargetSide::Enemy,
+        EntityType::Minion,
+    ))]))
+}
+
+fn take_control_takes_the_rightmost() -> Scenario {
+    let mut s = Setup::new();
+    let left = s.on_board(Side::Black, minion(2, "Left", 1, 1, 1));
+    let right = s.on_board(Side::Black, minion(3, "Right", 4, 4, 4));
+    let poacher = s.on_board(Side::White, poacher());
+    let card = s.spell_in_hand(
+        Side::White,
+        incantation(4, "Sacrifice", 0).does(on_play(vec![destroy(pick_friendly_minion())])),
+    );
+    let mut scn = s.start("take control");
+    scn.play(card, Some(poacher));
+    scn.expect("the right one changed sides", scn.board(Side::White).battlefield.iter().any(|m| m.entity_id == right));
+    scn.expect_eq("the enemy kept only the left one", scn.board_len(Side::Black), 1);
+    scn.expect("the left one stayed put", scn.board(Side::Black).battlefield[0].entity_id == left);
+    scn
+}
+
+fn take_control_arrives_exhausted() -> Scenario {
+    let mut s = Setup::new();
+    let prey = s.on_board(Side::Black, minion(2, "Prey", 4, 4, 4));
+    let poacher = s.on_board(Side::White, poacher());
+    let card = s.spell_in_hand(
+        Side::White,
+        incantation(4, "Sacrifice", 0).does(on_play(vec![destroy(pick_friendly_minion())])),
+    );
+    let mut scn = s.start("stolen exhausted");
+    scn.play(card, Some(poacher));
+    scn.expect("cannot swing the turn it changed sides", scn.exhausted(prey));
+    scn
+}
+
+fn take_control_stops_at_full_board() -> Scenario {
+    let mut s = Setup::new();
+    let prey = s.on_board(Side::Black, minion(2, "Prey", 4, 4, 4));
+    for i in 0..settings::MAX_BOARD_SIZE {
+        s.on_board(Side::White, minion(10 + i as u32, "Filler", 1, 1, 1));
+    }
+    let card = s.spell_in_hand(
+        Side::White,
+        incantation(4, "Press Gang", 0).does(on_play(vec![take_control(spec(
+            TargetMode::Rightmost,
+            TargetSide::Enemy,
+            EntityType::Minion,
+        ))])),
+    );
+    let mut scn = s.start("take control cap");
+    scn.play(card, None);
+    scn.expect("no room, so it stayed", scn.board(Side::Black).battlefield.iter().any(|m| m.entity_id == prey));
+    scn.expect_eq("our board held at the cap", scn.board_len(Side::White), settings::MAX_BOARD_SIZE);
     scn
 }
 

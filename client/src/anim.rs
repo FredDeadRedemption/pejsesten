@@ -246,7 +246,7 @@ impl Anims {
             GameEvent::CardDrawn { entity_id } => {
                 self.flyers.extend(draw_flyer(*entity_id, state, truth, w, h, life));
             }
-            GameEvent::MinionSummoned { .. } => {}
+            GameEvent::MinionSummoned { .. } | GameEvent::ControlTaken { .. } => {}
             GameEvent::ReturnedToHand { .. } | GameEvent::CardTraded { .. } => {}
             GameEvent::CardCreated { .. } | GameEvent::CardReplayed { .. } => {}
             GameEvent::TurnEnded => {}
