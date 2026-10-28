@@ -17,7 +17,7 @@ pub struct Card3D {
 
 impl Card3D {
     pub async fn load() -> Self {
-        let front_path = format!("{}{}", MEDIA_ROOT, "Assassin.png");
+        let front_path = format!("{}{}", MEDIA_ROOT, "Sylvanas.png");
         let back_path = format!("{}{}", MEDIA_ROOT, "cards/card-bg-purple.png");
         let texture_front = load_texture(&front_path).await.unwrap();
         let texture_back = load_texture(&back_path).await.unwrap();
