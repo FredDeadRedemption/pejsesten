@@ -42,15 +42,6 @@ struct Auth {
 struct PlayerToken(String);
 
 #[derive(Deserialize)]
-struct PlayCardData {
-    index: usize,
-    target: Option<u32>,
-    rite_trigger: Option<usize>,
-    #[serde(default)]
-    position: Option<usize>,
-}
-
-#[derive(Deserialize)]
 struct TradeCardData {
     index: usize,
 }

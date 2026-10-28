@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use shared::types::{AttackData, PlayerMetaData, ScenarioFrameInfo, StateUpdate};
+use shared::types::{AttackData, PlayCardData, PlayerMetaData, ScenarioFrameInfo, StateUpdate};
 
 pub enum ServerEvent {
     GameState(StateUpdate),
@@ -123,8 +123,8 @@ impl NetworkClient {
         self.emit("endTurn", Value::Null);
     }
 
-    pub fn play_card(&mut self, index: usize, target: Option<u32>, omen_trigger: Option<usize>, position: Option<usize>) {
-        let data = serde_json::json!({ "index": index, "target": target, "omen_trigger": omen_trigger, "position": position });
+    pub fn play_card(&mut self, index: usize, target: Option<u32>, rite_trigger: Option<usize>, position: Option<usize>) {
+        let data = serde_json::to_value(PlayCardData { index, target, rite_trigger, position }).unwrap();
         self.emit("playCard", data);
     }
 

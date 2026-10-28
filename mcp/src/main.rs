@@ -13,7 +13,7 @@ use rmcp::{ErrorData, ServerHandler, ServiceExt, tool, tool_handler, tool_router
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use shared::types::{GamePhase, GameStateClient, PlayerMetaData};
+use shared::types::{GamePhase, GameStateClient, PlayCardData, PlayerMetaData};
 use tokio::sync::Mutex;
 
 const INSTRUCTIONS: &str = "Play a game of Pejsesten against the person at the browser client. \
@@ -200,7 +200,13 @@ impl Pejsesten {
 
     #[tool(description = "Play a card from hand, with an entity id as target, a trigger index for an omen, and a board position for a minion.")]
     async fn play_card(&self, Parameters(args): Parameters<PlayArgs>) -> Result<String, ErrorData> {
-        let data = json!({ "index": args.index, "target": args.target, "omen_trigger": args.omen_trigger, "position": args.position });
+        let data = serde_json::to_value(PlayCardData {
+            index: args.index,
+            target: args.target,
+            rite_trigger: args.omen_trigger,
+            position: args.position,
+        })
+        .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
         self.act("playCard", data).await
     }
 

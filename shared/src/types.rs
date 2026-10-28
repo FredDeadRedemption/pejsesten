@@ -501,6 +501,18 @@ pub struct PlayerMetaData {
     pub avatar: String,
 }
 
+/// The play action as it crosses the socket. Server, client and mcp all use this one struct,
+/// so a renamed field cannot break only one sender.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlayCardData {
+    pub index: usize,
+    pub target: Option<u32>,
+    /// Which of an omen's three printed triggers to arm. Every other form ignores it.
+    pub rite_trigger: Option<usize>,
+    #[serde(default)]
+    pub position: Option<usize>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttackData {
     pub origin_id: u32,
