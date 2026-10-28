@@ -43,7 +43,8 @@ pub enum Race {
 pub enum Trigger {
     OnPlay,
     OnDeath,
-    OnOmenFired,
+    /// Fires after an omen or a wager resolves, on both boards whoever owned it.
+    OnRiteFired,
     /// Fires on the friendly board after a quickdraw ability resolves, once per card played.
     OnQuickdraw,
     /// Fires on the friendly board after a trade resolves, once per card traded.
@@ -179,7 +180,7 @@ pub enum MinionAttribute {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PassiveEffect {
     QuickdrawTriggersTwice,
-    Aura { filters: Vec<Condition>, attack: i32, defence: i32 },
+    Aura { side: TargetSide, filters: Vec<Condition>, attack: i32, defence: i32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -207,6 +208,43 @@ pub struct MinionCard {
     pub is_token: bool,
 }
 
+/// How an incantation is delivered. A Cast resolves and goes; the other three linger in the
+/// rites row, and the hidden/public line falls on the trigger count: an omen prints three so
+/// the armed one has something to hide among, a wager prints the one it is openly offering.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IncantationForm {
+    Cast,
+    Omen { triggers: [RiteTrigger; 3], effects: Vec<Effect> },
+    Wager { trigger: RiteTrigger, effects: Vec<Effect> },
+    Aura { turns: u32 },
+}
+
+impl IncantationForm {
+    /// Stays in the rites row after it is played instead of resolving and leaving.
+    pub fn lingers(&self) -> bool {
+        !matches!(self, IncantationForm::Cast)
+    }
+    /// What the opponent may not see. Only an omen keeps its armed trigger secret.
+    pub fn hides_trigger(&self) -> bool {
+        matches!(self, IncantationForm::Omen { .. })
+    }
+    /// The triggers a player may arm at play time, in printed order.
+    pub fn armable(&self) -> &[RiteTrigger] {
+        match self {
+            IncantationForm::Omen { triggers, .. } => triggers,
+            IncantationForm::Wager { trigger, .. } => std::slice::from_ref(trigger),
+            IncantationForm::Cast | IncantationForm::Aura { .. } => &[],
+        }
+    }
+    /// What resolves when the armed trigger comes up, which is nothing for the forms that never wait.
+    pub fn deferred_effects(&self) -> &[Effect] {
+        match self {
+            IncantationForm::Omen { effects, .. } | IncantationForm::Wager { effects, .. } => effects,
+            IncantationForm::Cast | IncantationForm::Aura { .. } => &[],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IncantationCard {
     pub id: u32,
@@ -216,14 +254,17 @@ pub struct IncantationCard {
     pub color: Color,
     pub base_cost: i32,
     pub image_url: String,
+    pub form: IncantationForm,
     pub abilities: Vec<Ability>,
+    /// Live while the card sits in the rites row, so only an aura ever carries one.
+    pub passives: Vec<PassiveEffect>,
     pub attributes: Vec<IncantationAttribute>,
     pub is_token: bool,
 }
 
-/// The event an omen watches for. Always read from the omen owner's side.
+/// The event a waiting rite watches for. Always read from the rite owner's side.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub enum OmenTrigger {
+pub enum RiteTrigger {
     EnemyPlaysMinion,
     EnemyPlaysIncantation,
     EnemyAttacksHero,
@@ -234,53 +275,25 @@ pub enum OmenTrigger {
     EnemyBoardReachesThree,
 }
 
-impl OmenTrigger {
+impl RiteTrigger {
     pub fn label(&self) -> &'static str {
         match self {
-            OmenTrigger::EnemyPlaysMinion => "After the enemy plays a minion",
-            OmenTrigger::EnemyPlaysIncantation => "After the enemy plays an incantation",
-            OmenTrigger::EnemyAttacksHero => "After your hero is attacked",
-            OmenTrigger::EnemyAttacksMinion => "After one of your minions is attacked",
-            OmenTrigger::FriendlyMinionDies => "After one of your minions dies",
-            OmenTrigger::EnemyEndsTurn => "When the enemy ends their turn",
-            OmenTrigger::EnemyEndsTurnWithoutAttacking => "When the enemy ends their turn without attacking",
-            OmenTrigger::EnemyBoardReachesThree => "After the enemy has three or more minions",
+            RiteTrigger::EnemyPlaysMinion => "After the enemy plays a minion",
+            RiteTrigger::EnemyPlaysIncantation => "After the enemy plays an incantation",
+            RiteTrigger::EnemyAttacksHero => "After your hero is attacked",
+            RiteTrigger::EnemyAttacksMinion => "After one of your minions is attacked",
+            RiteTrigger::FriendlyMinionDies => "After one of your minions dies",
+            RiteTrigger::EnemyEndsTurn => "When the enemy ends their turn",
+            RiteTrigger::EnemyEndsTurnWithoutAttacking => "When the enemy ends their turn without attacking",
+            RiteTrigger::EnemyBoardReachesThree => "After the enemy has three or more minions",
         }
     }
-}
-
-/// Effects are public card text, the armed trigger is not. They resolve on the
-/// opponent's turn, so every effect must be auto-targeted.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OmenCard {
-    pub id: u32,
-    pub name: String,
-    pub description: Option<String>,
-    pub flavor_text: Option<String>,
-    pub color: Color,
-    pub base_cost: i32,
-    pub image_url: String,
-    pub effects: Vec<Effect>,
-    pub triggers: [OmenTrigger; 3],
-    pub is_token: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OmenEntity {
-    pub entity_id: u32,
-    pub cost: i32,
-    pub discount: i32,
-    pub arrived_on_turn: Option<u32>,
-    pub card: OmenCard,
-    // none in hand, and stripped before the opponent sees an armed one
-    pub armed_trigger: Option<OmenTrigger>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Card {
     Minion(MinionCard),
     Incantation(IncantationCard),
-    Omen(OmenCard),
     Hero(HeroCard),
 }
 
@@ -289,7 +302,6 @@ impl Card {
         match self {
             Card::Minion(m) => m.id,
             Card::Incantation(i) => i.id,
-            Card::Omen(o) => o.id,
             Card::Hero(h) => h.id,
         }
     }
@@ -342,13 +354,16 @@ pub struct IncantationEntity {
     pub discount: i32,
     pub arrived_on_turn: Option<u32>,
     pub card: IncantationCard,
+    // none in hand, and stripped before the opponent sees an armed omen
+    pub armed_trigger: Option<RiteTrigger>,
+    /// An aura's public clock, ticked at the start of its owner's turn and gone at zero.
+    pub turns_left: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CardEntity {
     Minion(MinionEntity),
     Incantation(IncantationEntity),
-    Omen(OmenEntity),
 }
 
 /// In the card pool like any other card, but never drawn and never in a zone:
@@ -381,7 +396,7 @@ pub struct Board {
     pub hand: Vec<CardEntity>,
     pub graveyard: Vec<MinionEntity>,
     pub battlefield: Vec<MinionEntity>,
-    pub omens: Vec<OmenEntity>,
+    pub rites: Vec<IncantationEntity>,
     pub hero: Hero,
     pub base_mana: i32,
     pub mana: i32,
@@ -391,6 +406,17 @@ pub struct Board {
     pub fatigue: i32,
     /// Every quickdraw this board landed, in the order they were played.
     pub quickdraw_log: Vec<Card>,
+}
+
+impl Board {
+    /// Every passive live on this board: minions carry theirs while they stand, auras while
+    /// their clock runs.
+    pub fn live_passives(&self) -> impl Iterator<Item = &PassiveEffect> {
+        self.battlefield
+            .iter()
+            .flat_map(|m| m.card.passives.iter())
+            .chain(self.rites.iter().flat_map(|r| r.card.passives.iter()))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -492,83 +518,72 @@ impl CardEntity {
         match self {
             CardEntity::Minion(m) => m.card.id,
             CardEntity::Incantation(i) => i.card.id,
-            CardEntity::Omen(o) => o.card.id,
         }
     }
     pub fn cost(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.cost,
             CardEntity::Incantation(i) => i.cost,
-            CardEntity::Omen(o) => o.cost,
         }
     }
     pub fn name(&self) -> &str {
         match self {
             CardEntity::Minion(m) => &m.card.name,
             CardEntity::Incantation(i) => &i.card.name,
-            CardEntity::Omen(o) => &o.card.name,
         }
     }
     pub fn image_url(&self) -> &str {
         match self {
             CardEntity::Minion(m) => &m.card.image_url,
             CardEntity::Incantation(i) => &i.card.image_url,
-            CardEntity::Omen(o) => &o.card.image_url,
         }
     }
     pub fn cost_mut(&mut self) -> &mut i32 {
         match self {
             CardEntity::Minion(m) => &mut m.cost,
             CardEntity::Incantation(i) => &mut i.cost,
-            CardEntity::Omen(o) => &mut o.cost,
         }
     }
     pub fn card(&self) -> Card {
         match self {
             CardEntity::Minion(m) => Card::Minion(m.card.clone()),
             CardEntity::Incantation(i) => Card::Incantation(i.card.clone()),
-            CardEntity::Omen(o) => Card::Omen(o.card.clone()),
         }
     }
     pub fn discount_mut(&mut self) -> &mut i32 {
         match self {
             CardEntity::Minion(m) => &mut m.discount,
             CardEntity::Incantation(i) => &mut i.discount,
-            CardEntity::Omen(o) => &mut o.discount,
         }
     }
     pub fn discount(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.discount,
             CardEntity::Incantation(i) => i.discount,
-            CardEntity::Omen(o) => o.discount,
         }
     }
     pub fn cost_scaling(&self) -> Option<&ScaledAmount> {
         match self {
             CardEntity::Minion(m) => m.card.cost_scaling.as_ref(),
-            CardEntity::Incantation(_) | CardEntity::Omen(_) => None,
+            CardEntity::Incantation(_) => None,
         }
     }
     pub fn base_cost(&self) -> i32 {
         match self {
             CardEntity::Minion(m) => m.card.base_cost,
             CardEntity::Incantation(i) => i.card.base_cost,
-            CardEntity::Omen(o) => o.card.base_cost,
         }
     }
     pub fn entity_id(&self) -> u32 {
         match self {
             CardEntity::Minion(m) => m.entity_id,
             CardEntity::Incantation(i) => i.entity_id,
-            CardEntity::Omen(o) => o.entity_id,
         }
     }
     pub fn entity_id_mut(&mut self) -> &mut u32 {
         match self {
             CardEntity::Minion(m) => &mut m.entity_id,
             CardEntity::Incantation(i) => &mut i.entity_id,
-            CardEntity::Omen(o) => &mut o.entity_id,
         }
     }
     /// None for the cards the game deals before the first turn; they never arrived during play.
@@ -576,14 +591,12 @@ impl CardEntity {
         match self {
             CardEntity::Minion(m) => &mut m.arrived_on_turn,
             CardEntity::Incantation(i) => &mut i.arrived_on_turn,
-            CardEntity::Omen(o) => &mut o.arrived_on_turn,
         }
     }
     pub fn arrived_this_turn(&self, turn: u32) -> bool {
         let arrived = match self {
             CardEntity::Minion(m) => m.arrived_on_turn,
             CardEntity::Incantation(i) => i.arrived_on_turn,
-            CardEntity::Omen(o) => o.arrived_on_turn,
         };
         arrived == Some(turn)
     }
@@ -591,14 +604,12 @@ impl CardEntity {
         match self {
             CardEntity::Minion(m) => &m.card.abilities,
             CardEntity::Incantation(i) => &i.card.abilities,
-            CardEntity::Omen(_) => &[],
         }
     }
     pub fn is_tradeable(&self) -> bool {
         match self {
             CardEntity::Minion(m) => m.card.attributes.contains(&MinionAttribute::Tradeable),
             CardEntity::Incantation(i) => i.card.attributes.contains(&IncantationAttribute::Tradeable),
-            CardEntity::Omen(_) => false,
         }
     }
 }
@@ -624,7 +635,9 @@ pub enum GameEvent {
     /// A card that appeared in hand from nowhere, so no deck was spent on it.
     CardCreated { entity_id: u32 },
     CardTraded { entity_id: u32 },
-    OmenFired { entity_id: u32 },
+    RiteFired { entity_id: u32 },
+    /// An aura's clock ran out, so it leaves the rites row with nothing resolving.
+    RiteExpired { entity_id: u32 },
     /// A card recast from nowhere, so no zone holds it for the card to be read off.
     CardReplayed { entity_id: u32, card_id: u32, white: bool },
     /// An ability starting to resolve, so what follows can be read as caused by its source.

@@ -10,7 +10,7 @@ use crate::transform::{shade, Transform};
 use crate::fx;
 use crate::glow;
 use crate::ui;
-use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, MinionEntity, OmenCard, OmenEntity, Outcome, ScenarioFrameInfo};
+use shared::types::{Board, Card, CardEntity, CardHint, Color as CardColor, GameStateClient, IncantationCard, IncantationEntity, IncantationForm, MinionEntity, Outcome, ScenarioFrameInfo};
 
 
 // mana gem as a fraction of card height, stat badge as a multiple of its base size
@@ -32,7 +32,7 @@ pub(crate) const COL_BUFFED: Color = Color::new(0.40, 1.00, 0.45, 1.0);
 pub(crate) const COL_DAMAGED: Color = Color::new(1.00, 0.35, 0.35, 1.0);
 const COL_TARGET: Color = Color::new(0.0, 1.0, 0.4, 0.55);
 const COL_TARGET_CHIP: Color = Color::new(0.72, 0.74, 0.80, 0.85);
-const COL_OMEN: Color = Color::new(0.62, 0.45, 0.85, 0.95);
+const COL_RITE: Color = Color::new(0.62, 0.45, 0.85, 0.95);
 const COL_PANEL: Color = Color::new(0.06, 0.05, 0.10, 0.92);
 const COL_SIDE_SELF: Color = Color::new(0.42, 0.62, 0.90, 1.0);
 const COL_SIDE_ENEMY: Color = Color::new(0.88, 0.36, 0.34, 1.0);
@@ -461,7 +461,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, layout::self_hero_rect(w, h), true, cache, overlay.transform(board.hero.entity_id));
         draw_battlefield(&board.battlefield, w, h, true, cache, overlay, drop_slot);
-        draw_omen_row(&board.omens, &layout::self_omen_rects(board.omens.len(), h), cache, overlay);
+        draw_rite_row(&board.rites, &layout::self_rite_rects(board.rites.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::hand_slots(board.hand.len(), w, h), true, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, readout_x, mana_y);
         draw_embers(board.embers, readout_x, mana_y - 24.0);
@@ -472,7 +472,7 @@ fn draw_board_half(board: &Board, w: f32, h: f32, is_self: bool, cache: &Texture
 
         draw_hero(&board.hero, layout::enemy_hero_rect(w, h), false, cache, overlay.transform(board.hero.entity_id));
         draw_battlefield(&board.battlefield, w, h, false, cache, overlay, None);
-        draw_omen_row(&board.omens, &layout::enemy_omen_rects(board.omens.len(), h), cache, overlay);
+        draw_rite_row(&board.rites, &layout::enemy_rite_rects(board.rites.len(), h), cache, overlay);
         draw_hand(&board.hand, &layout::enemy_hand_slots(board.hand.len(), w), open_cards, cache, overlay, hand_hints);
         draw_mana(board.mana, board.base_mana, readout_x, mana_y);
         draw_embers(board.embers, readout_x, mana_y + 32.0);
@@ -564,14 +564,6 @@ fn draw_card(card: &CardEntity, slot: Rect, cache: &TextureCache, t: Transform) 
             i.card.base_cost,
             i.card.description.as_deref().unwrap_or(""),
         ),
-        CardEntity::Omen(o) => (
-            &o.card.color,
-            o.card.image_url.as_str(),
-            o.card.name.as_str(),
-            o.cost,
-            o.card.base_cost,
-            o.card.description.as_deref().unwrap_or(""),
-        ),
     };
 
     t.apply(slot, |r| {
@@ -583,7 +575,10 @@ fn draw_card(card: &CardEntity, slot: Rect, cache: &TextureCache, t: Transform) 
             draw_stat_badge(m.stats.attack, m.card.base_attack, r.x + 2.0 + 2.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_ATK, badge, t.tint);
             draw_stat_badge(m.stats.defence, m.card.base_defence, r.x + r.w - 2.0 - 18.0 * badge, r.y + r.h - 2.0 - 5.0 * badge, COL_DEF, badge, t.tint);
         } else if t.scale.x > 0.6 {
-            let sl = if matches!(card, CardEntity::Omen(_)) { "omen" } else { "incantation" };
+            let sl = match card {
+                CardEntity::Incantation(i) => form_label(&i.card.form),
+                CardEntity::Minion(_) => "minion",
+            };
             let font = 10.0 * t.scale.x;
             let sd = ui::measure(sl, font);
             ui::text(sl, r.x + r.w / 2.0 - sd.width / 2.0, r.y + r.h - 6.0, font, shade(DARKGRAY, t.tint));
@@ -749,41 +744,41 @@ fn draw_entity_preview(entity_id: u32, state: &GameStateClient, cache: &TextureC
         .find(|(c, _)| c.entity_id() == entity_id)
         .map(|(c, s)| (c, s.rect))
     {
-        // an omen puts its trigger panel beside the card, so the pair has to fit across
+        // a rite puts its trigger panel beside the card, so the pair has to fit across
         let block_w = match card {
-            CardEntity::Omen(_) => pw + 6.0 + OMEN_PANEL_W,
+            CardEntity::Incantation(i) if i.card.form.lingers() => pw + 6.0 + RITE_PANEL_W,
             _ => pw,
         };
         let px = (rect.x + rect.w / 2.0 - pw / 2.0).clamp(layout::SIDEBAR_W, (w - block_w).max(layout::SIDEBAR_W));
         let py = (rect.y - ph - 10.0).max(0.0);
         fx::soft_shadow(px, py, pw, ph);
         draw_card_entity_preview(card, px, py, pw, ph, cache);
-        if let CardEntity::Omen(o) = card {
-            draw_omen_panel(o, px + pw + 6.0, py);
+        if let CardEntity::Incantation(i) = card
+            && i.card.form.lingers()
+        {
+            draw_rite_panel(i, px + pw + 6.0, py);
         }
         return;
     }
 
-    // Omens: the preview and its trigger panel both sit to the right of the board omen.
-    let omen = {
-        let rects = layout::self_omen_rects(state.self_board.omens.len(), h);
-        state.self_board.omens.iter().zip(rects)
-            .find(|(o, _)| o.entity_id == entity_id)
-            .map(|(o, r)| (o, r))
+    // Rites: the preview and its trigger panel both sit to the right of the laid card.
+    let rite = {
+        let rects = layout::self_rite_rects(state.self_board.rites.len(), h);
+        state.self_board.rites.iter().zip(rects)
+            .find(|(r, _)| r.entity_id == entity_id)
     }.or_else(|| {
-        let rects = layout::enemy_omen_rects(state.enemy_board.omens.len(), h);
-        state.enemy_board.omens.iter().zip(rects)
-            .find(|(o, _)| o.entity_id == entity_id)
-            .map(|(o, r)| (o, r))
+        let rects = layout::enemy_rite_rects(state.enemy_board.rites.len(), h);
+        state.enemy_board.rites.iter().zip(rects)
+            .find(|(r, _)| r.entity_id == entity_id)
     });
 
-    if let Some((omen, rect)) = omen {
-        let block_w = pw + 6.0 + OMEN_PANEL_W;
+    if let Some((rite, rect)) = rite {
+        let block_w = pw + 6.0 + RITE_PANEL_W;
         let px = (rect.x + rect.w + 10.0).min((w - block_w).max(0.0));
         let py = (rect.y + rect.h / 2.0 - ph / 2.0).clamp(0.0, h - ph);
         fx::soft_shadow(px, py, pw, ph);
-        draw_omen_preview(omen, px, py, pw, ph, cache);
-        draw_omen_panel(omen, px + pw + 6.0, py);
+        draw_incantation_preview(rite, px, py, pw, ph, cache);
+        draw_rite_panel(rite, px + pw + 6.0, py);
         return;
     }
 
@@ -817,11 +812,10 @@ fn draw_card_entity_preview(card: &CardEntity, x: f32, y: f32, w: f32, h: f32, c
     match card {
         CardEntity::Minion(m) => draw_card_preview(m, x, y, w, h, cache),
         CardEntity::Incantation(i) => draw_incantation_preview(i, x, y, w, h, cache),
-        CardEntity::Omen(o) => draw_omen_preview(o, x, y, w, h, cache),
     }
 }
 
-fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
+fn draw_incantation_preview(inc: &IncantationEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
     let card = &inc.card;
     let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
 
@@ -832,7 +826,7 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
     ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
 
-    let sl = "incantation";
+    let sl = form_label(&card.form);
     let sd = ui::measure(sl, 14.0);
     ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, frame.type_bar.y + frame.type_bar.h * 0.75, 14.0, DARKGRAY);
 
@@ -841,74 +835,77 @@ fn draw_incantation_preview(inc: &shared::types::IncantationEntity, x: f32, y: f
     draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 }
 
-fn draw_omen_row(omens: &[OmenEntity], rects: &[Rect], cache: &TextureCache, overlay: &Overlay) {
-    for (omen, slot) in omens.iter().zip(rects.iter()) {
-        let t = overlay.transform(omen.entity_id);
+fn form_label(form: &IncantationForm) -> &'static str {
+    match form {
+        IncantationForm::Cast => "incantation",
+        IncantationForm::Omen { .. } => "omen",
+        IncantationForm::Wager { .. } => "wager",
+        IncantationForm::Aura { .. } => "aura",
+    }
+}
+
+fn draw_rite_row(rites: &[IncantationEntity], rects: &[Rect], cache: &TextureCache, overlay: &Overlay) {
+    for (rite, slot) in rites.iter().zip(rects.iter()) {
+        let t = overlay.transform(rite.entity_id);
         t.apply(*slot, |r| {
             fx::soft_shadow_tinted(r.x, r.y, r.w, r.h, t.tint);
-            let frame = draw_card_frame(r.x, r.y, r.w, r.h, &omen.card.color, &omen.card.image_url, cache, t.tint);
+            let frame = draw_card_frame(r.x, r.y, r.w, r.h, &rite.card.color, &rite.card.image_url, cache, t.tint);
             let gem = (r.h * GEM_BOARD).min(r.w * 0.4);
             draw_mana_gem(frame.title.x, frame.title.y, gem, t.tint);
-            draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), shade(cost_color(omen.cost, omen.card.base_cost), t.tint));
-            let name = fit_text(&omen.card.name, frame.text.w, 9.0);
+            draw_text_centered(&rite.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.72, (gem * 0.7).round(), shade(cost_color(rite.cost, rite.card.base_cost), t.tint));
+            let name = fit_text(&rite.card.name, frame.text.w, 9.0);
             ui::text(&name, frame.text.x, frame.text.y + 9.0, 9.0, shade(BLACK, t.tint));
-            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, shade(COL_OMEN, t.tint));
+            draw_rectangle_lines(r.x, r.y, r.w, r.h, 2.0, shade(COL_RITE, t.tint));
+            // an aura's clock is public, so the number rides on the card itself
+            if let Some(turns) = rite.turns_left {
+                let d = r.w * 0.34;
+                draw_rectangle(r.x + r.w - d, r.y + r.h - d, d, d, shade(COL_RITE, t.tint));
+                draw_text_centered(&turns.to_string(), r.x + r.w - d / 2.0, r.y + r.h - d * 0.25, (d * 0.78).round(), shade(WHITE, t.tint));
+            }
             flash_over(r, t.flash);
         });
     }
 }
 
-const OMEN_PANEL_W: f32 = 230.0;
-const OMEN_PANEL_FONT: f32 = 11.0;
-const OMEN_PANEL_LINE: f32 = 15.0;
-const OMEN_PANEL_PAD: f32 = 7.0;
+const RITE_PANEL_W: f32 = 230.0;
+const RITE_PANEL_FONT: f32 = 11.0;
+const RITE_PANEL_LINE: f32 = 15.0;
+const RITE_PANEL_PAD: f32 = 7.0;
 
-/// Your own omen shows what it is armed on; an enemy omen only narrows it to three.
-fn omen_panel_lines(omen: &OmenEntity) -> Vec<String> {
-    match omen.armed_trigger {
-        Some(t) => vec![format!("Armed: {}", t.label())],
-        None => {
-            let mut lines = vec!["Watching one of:".to_string()];
-            lines.extend(omen.card.triggers.iter().map(|t| format!("- {}", t.label())));
-            lines
-        }
+/// A wager and an aura say everything to both players. An omen says it to its owner, and to
+/// the enemy only narrows it to three.
+fn rite_panel_lines(rite: &IncantationEntity) -> Vec<String> {
+    match &rite.card.form {
+        IncantationForm::Wager { trigger, .. } => vec![format!("Wager: {}", trigger.label())],
+        IncantationForm::Aura { .. } => vec![format!("Aura: {} turns left", rite.turns_left.unwrap_or(0))],
+        IncantationForm::Omen { triggers, .. } => match rite.armed_trigger {
+            Some(t) => vec![format!("Armed: {}", t.label())],
+            None => std::iter::once("Watching one of:".to_string())
+                .chain(triggers.iter().map(|t| format!("- {}", t.label())))
+                .collect(),
+        },
+        IncantationForm::Cast => vec![],
     }
 }
 
-fn draw_omen_panel(omen: &OmenEntity, x: f32, y: f32) {
-    let lines = omen_panel_lines(omen);
-    let h = lines.len() as f32 * OMEN_PANEL_LINE + OMEN_PANEL_PAD * 2.0;
-    draw_rectangle(x, y, OMEN_PANEL_W, h, COL_PANEL);
-    draw_rectangle_lines(x, y, OMEN_PANEL_W, h, 1.5, COL_OMEN);
+fn draw_rite_panel(rite: &IncantationEntity, x: f32, y: f32) {
+    let lines = rite_panel_lines(rite);
+    if lines.is_empty() {
+        return;
+    }
+    let h = lines.len() as f32 * RITE_PANEL_LINE + RITE_PANEL_PAD * 2.0;
+    draw_rectangle(x, y, RITE_PANEL_W, h, COL_PANEL);
+    draw_rectangle_lines(x, y, RITE_PANEL_W, h, 1.5, COL_RITE);
+    let guessing = rite.card.form.hides_trigger() && rite.armed_trigger.is_none();
     for (i, line) in lines.iter().enumerate() {
-        let fitted = fit_text(line, OMEN_PANEL_W - OMEN_PANEL_PAD * 2.0, OMEN_PANEL_FONT);
-        let color = if i == 0 && omen.armed_trigger.is_none() { GRAY } else { WHITE };
-        ui::text(&fitted, x + OMEN_PANEL_PAD, y + OMEN_PANEL_PAD + (i as f32 + 0.8) * OMEN_PANEL_LINE, OMEN_PANEL_FONT, color);
+        let fitted = fit_text(line, RITE_PANEL_W - RITE_PANEL_PAD * 2.0, RITE_PANEL_FONT);
+        let color = if i == 0 && guessing { GRAY } else { WHITE };
+        ui::text(&fitted, x + RITE_PANEL_PAD, y + RITE_PANEL_PAD + (i as f32 + 0.8) * RITE_PANEL_LINE, RITE_PANEL_FONT, color);
     }
-}
-
-fn draw_omen_preview(omen: &OmenEntity, x: f32, y: f32, w: f32, h: f32, cache: &TextureCache) {
-    let card = &omen.card;
-    let frame = draw_card_frame(x, y, w, h, &card.color, &card.image_url, cache, WHITE);
-
-    let gem = frame.title.h;
-    draw_mana_gem(frame.title.x, frame.title.y, gem, WHITE);
-    draw_text_centered(&omen.cost.to_string(), frame.title.x + gem / 2.0, frame.title.y + gem * 0.78, 22.0, cost_color(omen.cost, card.base_cost));
-
-    let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 18.0);
-    ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 18.0, BLACK);
-
-    let sl = "omen";
-    let sd = ui::measure(sl, 14.0);
-    ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, frame.type_bar.y + frame.type_bar.h * 0.75, 14.0, DARKGRAY);
-
-    let desc = card.description.as_deref().unwrap_or("");
-    let desc_font = (frame.text.h * 0.20).round();
-    draw_wrapped_text(&strip_html(desc), frame.text.x + 4.0, frame.text.y + desc_font, frame.text.w - 8.0, desc_font, BLACK);
 }
 
 /// Full-screen choice of which of the three printed triggers to arm.
-pub fn draw_omen_picker(card: &OmenCard, mx: f32, my: f32, cache: &TextureCache) {
+pub fn draw_omen_picker(card: &IncantationCard, mx: f32, my: f32, cache: &TextureCache) {
     let w = ui::size().x;
     let h = ui::size().y;
     draw_rectangle(0.0, 0.0, w, h, Color::new(0.0, 0.0, 0.0, 0.72));
@@ -932,11 +929,11 @@ pub fn draw_omen_picker(card: &OmenCard, mx: f32, my: f32, cache: &TextureCache)
         let name_fit = fit_text(&card.name, frame.title.w - gem - 6.0, 13.0);
         ui::text(&name_fit, frame.title.x + gem + 4.0, frame.title.y + frame.title.h * 0.78, 13.0, BLACK);
 
-        let sl = "omen";
+        let sl = form_label(&card.form);
         let sd = ui::measure(sl, 11.0);
         ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, frame.type_bar.y + frame.type_bar.h * 0.75, 11.0, DARKGRAY);
 
-        let label = card.triggers[i].label();
+        let label = card.form.armable()[i].label();
         draw_wrapped_text(label, frame.text.x + 3.0, frame.text.y + 12.0, frame.text.w - 6.0, 11.0, BLACK);
 
         if hovered {
@@ -1278,7 +1275,10 @@ fn draw_catalog_card(card: &Card, x: f32, y: f32, w: f32, h: f32, cache: &Textur
         draw_text_centered(&m.base_attack.to_string(), frame.type_bar.x + 8.0, label_y, 10.0, Color::new(0.8, 0.6, 0.1, 1.0));
         draw_text_centered(&m.base_defence.to_string(), frame.type_bar.right() - 8.0, label_y, 10.0, Color::new(0.8, 0.25, 0.25, 1.0));
     } else {
-        let sl = if matches!(card, Card::Omen(_)) { "omen" } else { "spell" };
+        let sl = match card {
+            Card::Incantation(i) => form_label(&i.form),
+            _ => "spell",
+        };
         let sd = ui::measure(sl, 8.0);
         ui::text(sl, frame.type_bar.x + frame.type_bar.w / 2.0 - sd.width / 2.0, label_y, 8.0, DARKGRAY);
     }

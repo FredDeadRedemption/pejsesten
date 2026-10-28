@@ -20,14 +20,14 @@ pub enum FilterType {
     All,
     Minions,
     Incantations,
-    Omens,
+    Rites,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CardKind {
     Minion,
     Incantation,
-    Omen,
+    Rite,
     Hero,
 }
 
@@ -97,7 +97,7 @@ impl DeckBuilderState {
             match &self.filter_type {
                 FilterType::Minions if kind != CardKind::Minion => return None,
                 FilterType::Incantations if kind != CardKind::Incantation => return None,
-                FilterType::Omens if kind != CardKind::Omen => return None,
+                FilterType::Rites if kind != CardKind::Rite => return None,
                 _ => {}
             }
             match &self.filter_color {
@@ -250,8 +250,9 @@ pub fn card_id(card: &Card) -> u32 {
 pub fn card_meta(card: &Card) -> (&str, &CardColor, CardKind) {
     match card {
         Card::Minion(m) => (m.name.as_str(), &m.color, CardKind::Minion),
+        // a lingering form sits in the rites row, which is the line a deckbuilder cares about
+        Card::Incantation(i) if i.form.lingers() => (i.name.as_str(), &i.color, CardKind::Rite),
         Card::Incantation(i) => (i.name.as_str(), &i.color, CardKind::Incantation),
-        Card::Omen(o) => (o.name.as_str(), &o.color, CardKind::Omen),
         Card::Hero(h) => (h.name.as_str(), &h.color, CardKind::Hero),
     }
 }
@@ -260,7 +261,6 @@ pub fn card_image_url(card: &Card) -> &str {
     match card {
         Card::Minion(m) => m.image_url.as_str(),
         Card::Incantation(i) => i.image_url.as_str(),
-        Card::Omen(o) => o.image_url.as_str(),
         Card::Hero(h) => h.image_url.as_str(),
     }
 }
@@ -269,7 +269,6 @@ pub fn card_cost(card: &Card) -> i32 {
     match card {
         Card::Minion(m) => m.base_cost,
         Card::Incantation(i) => i.base_cost,
-        Card::Omen(o) => o.base_cost,
         Card::Hero(_) => 0,
     }
 }

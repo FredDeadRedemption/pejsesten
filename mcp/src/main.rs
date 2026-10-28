@@ -51,7 +51,7 @@ struct PlayArgs {
     index: usize,
     /// Entity id to aim a targeted ability at.
     target: Option<u32>,
-    /// Which of an omen's three triggers to arm, 0 to 2. Required to play an omen.
+    /// Which of an omen's three triggers to arm, 0 to 2. Required to play an omen; ignored by every other card.
     omen_trigger: Option<usize>,
     /// Where a minion slots into your board, 0 being leftmost. Defaults to the right end.
     position: Option<usize>,

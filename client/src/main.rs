@@ -31,7 +31,7 @@ use playlog::PlayLog;
 use render::DragRender;
 use shared::types::{
     AttackData, Card, CardEntity, Condition, Effect, EntityType, GamePhase, GameStateClient,
-    MinionAttribute, MinionEntity, OmenCard, PlayerMetaData, Requirement,
+    IncantationCard, IncantationForm, MinionAttribute, MinionEntity, PlayerMetaData, Requirement,
     TargetMode, ScenarioFrameInfo, TargetSide, TargetSpec,
 };
 use textures::TextureCache;
@@ -134,11 +134,12 @@ enum DragState {
     Minion { entity_id: u32 },
 }
 
-/// An omen dropped on the board waits here until its trigger is picked.
+/// An omen dropped on the board waits here until its trigger is picked. No other form asks:
+/// a wager prints the one it offers and an aura watches nothing.
 struct OmenPick {
     hand_index: usize,
     entity_id: u32,
-    card: OmenCard,
+    card: IncantationCard,
 }
 
 /// A minion dropped into a slot, waiting for the fanfare target that the same drop cannot name.
@@ -378,7 +379,7 @@ fn load_glow_samples(cache: &mut TextureCache) -> Vec<CardEntity> {
         .enumerate()
         .filter_map(|(i, card)| match card {
             Card::Minion(m) => shared::cards::instantiate_minion_by_id(m.id, i as u32).map(CardEntity::Minion),
-            Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None,
+            Card::Incantation(_) | Card::Hero(_) => None,
         })
         .collect()
 }
@@ -509,13 +510,13 @@ fn find_hovered_entity(mouse: Vec2, state: &GameStateClient, w: f32, h: f32) -> 
     for (m, r) in state.enemy_board.battlefield.iter().zip(enemy_rects.iter()) {
         if r.contains(mouse) { return Some(m.entity_id); }
     }
-    let self_omens = layout::self_omen_rects(state.self_board.omens.len(), h);
-    for (o, r) in state.self_board.omens.iter().zip(self_omens.iter()) {
-        if r.contains(mouse) { return Some(o.entity_id); }
+    let self_rites = layout::self_rite_rects(state.self_board.rites.len(), h);
+    for (rite, r) in state.self_board.rites.iter().zip(self_rites.iter()) {
+        if r.contains(mouse) { return Some(rite.entity_id); }
     }
-    let enemy_omens = layout::enemy_omen_rects(state.enemy_board.omens.len(), h);
-    for (o, r) in state.enemy_board.omens.iter().zip(enemy_omens.iter()) {
-        if r.contains(mouse) { return Some(o.entity_id); }
+    let enemy_rites = layout::enemy_rite_rects(state.enemy_board.rites.len(), h);
+    for (rite, r) in state.enemy_board.rites.iter().zip(enemy_rites.iter()) {
+        if r.contains(mouse) { return Some(rite.entity_id); }
     }
     None
 }
@@ -757,11 +758,13 @@ fn handle_input(
                                     }
                                 } else if !layout::hand_zone_rect(w, h).contains(mouse) {
                                     match state.self_board.hand.get(index) {
-                                        Some(CardEntity::Omen(o)) => {
+                                        Some(CardEntity::Incantation(i))
+                                            if matches!(i.card.form, IncantationForm::Omen { .. }) =>
+                                        {
                                             *omen_pick = Some(OmenPick {
                                                 hand_index: index,
-                                                entity_id: o.entity_id,
-                                                card: o.card.clone(),
+                                                entity_id: i.entity_id,
+                                                card: i.card.clone(),
                                             });
                                         }
                                         Some(CardEntity::Minion(m)) => {

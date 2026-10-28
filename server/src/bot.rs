@@ -144,35 +144,38 @@ fn resolve_card_target(card: &CardEntity, bot_board: &Board, enemy_board: &Board
 }
 
 fn card_effects(card: &CardEntity) -> Vec<&Effect> {
-    match card {
-        CardEntity::Omen(o) => o.card.effects.iter().collect(),
-        _ => card
-            .abilities()
-            .iter()
-            .filter(|a| a.trigger == Trigger::OnPlay)
-            .flat_map(|a| a.effects.iter())
-            .collect(),
+    let deferred = match card {
+        CardEntity::Incantation(i) => i.card.form.deferred_effects(),
+        CardEntity::Minion(_) => &[],
+    };
+    if !deferred.is_empty() {
+        return deferred.iter().collect();
     }
+    card.abilities()
+        .iter()
+        .filter(|a| a.trigger == Trigger::OnPlay)
+        .flat_map(|a| a.effects.iter())
+        .collect()
 }
 
 /// Picks the trigger most likely to fire against the board in front of the bot.
-fn pick_omen_trigger(omen: &OmenEntity, bot_board: &Board, enemy_board: &Board) -> usize {
+fn pick_rite_trigger(armable: &[RiteTrigger], bot_board: &Board, enemy_board: &Board) -> usize {
     let enemy_has_minions = !enemy_board.battlefield.is_empty();
     let bot_has_minions = !bot_board.battlefield.is_empty();
 
-    let likelihood = |t: &OmenTrigger| match t {
-        OmenTrigger::EnemyEndsTurn => 2,
-        OmenTrigger::EnemyPlaysMinion => 3,
-        OmenTrigger::EnemyPlaysIncantation => 2,
-        OmenTrigger::EnemyAttacksHero => if enemy_has_minions { 3 } else { 1 },
-        OmenTrigger::EnemyAttacksMinion => if enemy_has_minions && bot_has_minions { 3 } else { 1 },
-        OmenTrigger::FriendlyMinionDies => if bot_has_minions && enemy_has_minions { 3 } else { 1 },
-        OmenTrigger::EnemyEndsTurnWithoutAttacking => if enemy_has_minions { 1 } else { 3 },
-        OmenTrigger::EnemyBoardReachesThree => if enemy_board.battlefield.len() >= 2 { 3 } else { 1 },
+    let likelihood = |t: &RiteTrigger| match t {
+        RiteTrigger::EnemyEndsTurn => 2,
+        RiteTrigger::EnemyPlaysMinion => 3,
+        RiteTrigger::EnemyPlaysIncantation => 2,
+        RiteTrigger::EnemyAttacksHero => if enemy_has_minions { 3 } else { 1 },
+        RiteTrigger::EnemyAttacksMinion => if enemy_has_minions && bot_has_minions { 3 } else { 1 },
+        RiteTrigger::FriendlyMinionDies => if bot_has_minions && enemy_has_minions { 3 } else { 1 },
+        RiteTrigger::EnemyEndsTurnWithoutAttacking => if enemy_has_minions { 1 } else { 3 },
+        RiteTrigger::EnemyBoardReachesThree => if enemy_board.battlefield.len() >= 2 { 3 } else { 1 },
     };
 
-    let best = omen.card.triggers.iter().map(likelihood).max().unwrap_or(0);
-    let tied: Vec<usize> = omen.card.triggers.iter().enumerate()
+    let best = armable.iter().map(likelihood).max().unwrap_or(0);
+    let tied: Vec<usize> = armable.iter().enumerate()
         .filter(|(_, t)| likelihood(t) == best)
         .map(|(i, _)| i)
         .collect();
@@ -237,8 +240,8 @@ fn card_play_score(card: &CardEntity, bot_board: &Board, enemy_board: &Board) ->
         }
     }
 
-    // an omen pays off a turn later at the earliest, and only if the trigger comes up
-    if matches!(card, CardEntity::Omen(_)) {
+    // a waiting rite pays off a turn later at the earliest, and only if the trigger comes up
+    if matches!(card, CardEntity::Incantation(i) if !i.card.form.armable().is_empty()) {
         score /= 2;
     }
 
@@ -307,27 +310,30 @@ pub async fn make_bot_move(game: &mut Game, bot_is_white: bool, io: &SocketIo) {
         let play_action: Option<(usize, Option<u32>, Option<usize>)> = {
             let (bot_board, enemy_board) = bot_boards(game, bot_is_white);
             let board_full = bot_board.battlefield.len() >= settings::MAX_BOARD_SIZE;
-            let omens_full = bot_board.omens.len() >= settings::MAX_OMENS;
+            let rites_full = bot_board.rites.len() >= settings::MAX_RITES;
             bot_board.hand.iter().enumerate()
                 .filter(|(_, c)| c.cost() <= bot_board.mana)
                 .filter(|(_, c)| !(board_full && matches!(c, CardEntity::Minion(_))))
-                .filter(|(_, c)| !(omens_full && matches!(c, CardEntity::Omen(_))))
+                .filter(|(_, c)| !(rites_full && matches!(c, CardEntity::Incantation(i) if i.card.form.lingers())))
                 .max_by_key(|(_, c)| card_play_score(c, bot_board, enemy_board))
                 .map(|(idx, card)| {
                     let trigger = match card {
-                        CardEntity::Omen(o) => Some(pick_omen_trigger(o, bot_board, enemy_board)),
-                        _ => None,
+                        CardEntity::Incantation(i) => match i.card.form.armable() {
+                            [] => None,
+                            armable => Some(pick_rite_trigger(armable, bot_board, enemy_board)),
+                        },
+                        CardEntity::Minion(_) => None,
                     };
                     (idx, resolve_card_target(card, bot_board, enemy_board), trigger)
                 })
         };
 
-        let (idx, target, omen_trigger) = match play_action {
+        let (idx, target, rite_trigger) = match play_action {
             Some(a) => a,
             None => break,
         };
 
-        if !game.play_card(idx, target, omen_trigger, None) {
+        if !game.play_card(idx, target, rite_trigger, None) {
             break;
         }
 

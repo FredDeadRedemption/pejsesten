@@ -98,8 +98,8 @@ impl TextureCache {
         for minion in board.battlefield.iter().chain(board.graveyard.iter()) {
             self.queue_art(&minion.card.image_url);
         }
-        for omen in &board.omens {
-            self.queue_art(&omen.card.image_url);
+        for rite in &board.rites {
+            self.queue_art(&rite.card.image_url);
         }
     }
 
@@ -179,7 +179,6 @@ fn card_entity_image_url(card: &CardEntity) -> &str {
     match card {
         CardEntity::Minion(m) => &m.card.image_url,
         CardEntity::Incantation(i) => &i.card.image_url,
-        CardEntity::Omen(o) => &o.card.image_url,
     }
 }
 
@@ -187,7 +186,6 @@ fn card_image_url(card: &Card) -> &str {
     match card {
         Card::Minion(m) => &m.image_url,
         Card::Incantation(i) => &i.image_url,
-        Card::Omen(o) => &o.image_url,
         Card::Hero(h) => &h.image_url,
     }
 }

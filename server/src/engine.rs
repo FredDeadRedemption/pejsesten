@@ -25,17 +25,6 @@ impl IdGenerator {
     }
 }
 
-pub fn instantiate_omen(c: &OmenCard, entity_id: u32) -> OmenEntity {
-    OmenEntity {
-        entity_id,
-        cost: c.base_cost,
-        discount: 0,
-        arrived_on_turn: None,
-        card: c.clone(),
-        armed_trigger: None,
-    }
-}
-
 pub fn instantiate_hero(c: &HeroCard, entity_id: u32) -> Hero {
     let hp = settings::starting_hp(c);
     Hero {
@@ -55,7 +44,6 @@ pub fn deck_to_cards(deck: &[u32], ids: &mut IdGenerator) -> Vec<CardEntity> {
         .filter_map(|card| match card {
             Card::Minion(c) => Some(CardEntity::Minion(instantiate_minion(c, ids.next_id()))),
             Card::Incantation(c) => Some(CardEntity::Incantation(instantiate_incantation(c, ids.next_id()))),
-            Card::Omen(c) => Some(CardEntity::Omen(instantiate_omen(c, ids.next_id()))),
             Card::Hero(_) => None,
         })
         .collect()
@@ -87,8 +75,8 @@ pub struct Game {
     events: Vec<GameEvent>,
     effect_queue: Vec<QueuedEffect>,
     ids: IdGenerator,
-    // omen effects must not arm further omens, or a death cascade chains the whole zone
-    omens_firing: bool,
+    // a firing rite must not fire another, or a death cascade chains the whole row
+    rites_firing: bool,
     // summon looks here before the global card registry, so scenarios can summon cards that aren't in cards.rs
     summon_pool: HashMap<u32, MinionCard>,
 }
@@ -137,7 +125,7 @@ impl Game {
                     hand: white_hand,
                     graveyard: vec![],
                     battlefield: vec![],
-                    omens: vec![],
+                    rites: vec![],
                     hero: instantiate_hero(&white.hero, ids.next_id()),
                     base_mana: settings::STARTING_MANA,
                     mana: settings::STARTING_MANA,
@@ -151,7 +139,7 @@ impl Game {
                     hand: black_hand,
                     graveyard: vec![],
                     battlefield: vec![],
-                    omens: vec![],
+                    rites: vec![],
                     hero: instantiate_hero(&black.hero, ids.next_id()),
                     base_mana: settings::STARTING_MANA - 1,
                     mana: settings::STARTING_MANA - 1,
@@ -174,7 +162,7 @@ impl Game {
             events: vec![],
             effect_queue: vec![],
             ids: ids,
-            omens_firing: false,
+            rites_firing: false,
             summon_pool: HashMap::new(),
         }
     }
@@ -182,7 +170,7 @@ impl Game {
     /// Builds a game from an exact state. Bypasses the shuffle and opening deal in `new`.
     /// Caller owns id continuity: pass a generator already past the state's entity ids.
     pub fn from_state(state: GameStateServer, ids: IdGenerator) -> Self {
-        let mut game = Game { state, events: vec![], effect_queue: vec![], ids, omens_firing: false, summon_pool: HashMap::new() };
+        let mut game = Game { state, events: vec![], effect_queue: vec![], ids, rites_firing: false, summon_pool: HashMap::new() };
         game.refresh_stats();
         game.refresh_costs();
         game
@@ -416,8 +404,10 @@ impl Game {
         let entity_id = self.ids.next_id();
         let mut entity = match card {
             Card::Minion(m) => CardEntity::Minion(instantiate_minion(m, entity_id)),
+            // a lingering rite has a trigger to arm and a replay has nobody to pick it
+            Card::Incantation(i) if i.form.lingers() => return,
             Card::Incantation(i) => CardEntity::Incantation(instantiate_incantation(i, entity_id)),
-            Card::Omen(_) | Card::Hero(_) => return,
+            Card::Hero(_) => return,
         };
         *entity.arrived_on_turn_mut() = Some(self.state.turn_count);
         self.record(GameEvent::CardReplayed { entity_id, card_id: card.id(), white: owner == PlayerSide::White });
@@ -476,15 +466,14 @@ impl Game {
                 let source_board = self.source_board();
                 source_board.hand.iter().any(|c| match c {
                     CardEntity::Minion(m) => Self::filters_match(filters, m),
-                    CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
+                    CardEntity::Incantation(_) => false,
                 })
             }
         })
     }
 
-    /// A passive is live while any friendly minion carrying it is on the board.
     fn has_passive(board: &Board, passive: PassiveEffect) -> bool {
-        board.battlefield.iter().any(|m| m.card.passives.contains(&passive))
+        board.live_passives().any(|p| *p == passive)
     }
 
     /// A follow-up with unmet requirements is dropped, leaving the effect it rides on intact.
@@ -512,11 +501,11 @@ impl Game {
         requirements.iter().all(|r| match r {
             Condition::IsRace { race } => match card {
                 CardEntity::Minion(m) => m.card.races.contains(race),
-                CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
+                CardEntity::Incantation(_) => false,
             },
             Condition::HasAttribute { attribute } => match card {
                 CardEntity::Minion(m) => m.card.attributes.contains(attribute),
-                CardEntity::Incantation(_) | CardEntity::Omen(_) => false,
+                CardEntity::Incantation(_) => false,
             },
         })
     }
@@ -584,8 +573,8 @@ impl Game {
         self.effect_queue.extend(to_queue);
     }
 
-    /// Minions that react to an omen resolving, on both boards whoever it belonged to.
-    fn fire_omen_watchers(&mut self) {
+    /// Minions that react to a rite resolving, on both boards whoever it belonged to.
+    fn fire_rite_watchers(&mut self) {
         for side in [PlayerSide::White, PlayerSide::Black] {
             let reactions: Vec<(u32, Effect, bool)> = self
                 .source_board_for(side)
@@ -596,7 +585,7 @@ impl Game {
                     m.card
                         .abilities
                         .iter()
-                        .filter(|a| a.trigger == Trigger::OnOmenFired)
+                        .filter(|a| a.trigger == Trigger::OnRiteFired)
                         .flat_map(move |a| a.effects.iter().enumerate().map(move |(i, e)| (id, e.clone(), i == 0)))
                 })
                 .collect();
@@ -611,24 +600,25 @@ impl Game {
     }
 
     /// A board can widen from a play or from a deathwish summon, so both paths check it.
-    fn fire_wide_board_omens(&mut self, actor: PlayerSide) {
+    fn fire_wide_board_rites(&mut self, actor: PlayerSide) {
         if self.source_board_for(actor).battlefield.len() >= 3 {
-            self.fire_omens(OmenTrigger::EnemyBoardReachesThree, actor.other());
+            self.fire_rites(RiteTrigger::EnemyBoardReachesThree, actor.other());
         }
     }
 
-    /// Resolves every armed omen of `owner` watching `trigger`. Omens are consumed when they fire.
-    fn fire_omens(&mut self, trigger: OmenTrigger, owner: PlayerSide) {
-        if self.omens_firing {
+    /// Resolves every rite of `owner` armed on `trigger`, omen or wager alike. A rite is consumed
+    /// when it fires; an aura arms nothing, so the row keeps it.
+    fn fire_rites(&mut self, trigger: RiteTrigger, owner: PlayerSide) {
+        if self.rites_firing {
             return;
         }
 
         let board = self.source_board_for_mut(owner);
-        let mut fired: Vec<OmenEntity> = vec![];
+        let mut fired: Vec<IncantationEntity> = vec![];
         let mut i = 0;
-        while i < board.omens.len() {
-            if board.omens[i].armed_trigger == Some(trigger) {
-                fired.push(board.omens.remove(i));
+        while i < board.rites.len() {
+            if board.rites[i].armed_trigger == Some(trigger) {
+                fired.push(board.rites.remove(i));
             } else {
                 i += 1;
             }
@@ -637,16 +627,16 @@ impl Game {
             return;
         }
 
-        self.omens_firing = true;
-        for omen in &fired {
-            self.record(GameEvent::OmenFired { entity_id: omen.entity_id });
-            for effect in &omen.card.effects {
+        self.rites_firing = true;
+        for rite in &fired {
+            self.record(GameEvent::RiteFired { entity_id: rite.entity_id });
+            for effect in rite.card.form.deferred_effects() {
                 self.apply_effect(effect.clone(), owner, None, None);
             }
-            self.fire_omen_watchers();
+            self.fire_rite_watchers();
         }
         self.check_for_deaths();
-        self.omens_firing = false;
+        self.rites_firing = false;
     }
 
     fn process_effect_queue(&mut self) {
@@ -727,7 +717,7 @@ impl Game {
 
         for (side, lost) in [(PlayerSide::White, died[0]), (PlayerSide::Black, died[1])] {
             if lost {
-                self.fire_omens(OmenTrigger::FriendlyMinionDies, side);
+                self.fire_rites(RiteTrigger::FriendlyMinionDies, side);
             }
         }
         self.check_for_defeat();
@@ -810,12 +800,19 @@ impl Game {
         }
     }
 
-    /// What a minion gets from the auras on its own board, itself included when it matches.
-    fn aura_for(board: &Board, minion: &MinionEntity) -> Buff {
+    /// What a minion gets from every live aura: the ones on its own board, and the ones the
+    /// opponent is pointing at it. A source includes itself when it matches its own filters.
+    fn aura_for(own: &Board, enemy: &Board, minion: &MinionEntity) -> Buff {
         let mut total = Buff::default();
-        for passive in board.battlefield.iter().flat_map(|m| m.card.passives.iter()) {
-            if let PassiveEffect::Aura { filters, attack, defence } = passive {
-                if Self::filters_match(filters, minion) {
+        for (board, is_own) in [(own, true), (enemy, false)] {
+            for passive in board.live_passives() {
+                let PassiveEffect::Aura { side, filters, attack, defence } = passive else { continue };
+                let reaches = match side {
+                    TargetSide::Friendly => is_own,
+                    TargetSide::Enemy => !is_own,
+                    TargetSide::All => true,
+                };
+                if reaches && Self::filters_match(filters, minion) {
                     total.attack += attack;
                     total.defence += defence;
                 }
@@ -830,8 +827,8 @@ impl Game {
     /// between actions; nothing may read `stats` mid-action and expect a fresh number.
     fn refresh_stats(&mut self) {
         for side in [PlayerSide::White, PlayerSide::Black] {
-            let board = self.source_board_for(side);
-            let auras: Vec<Buff> = board.battlefield.iter().map(|m| Self::aura_for(board, m)).collect();
+            let (own, enemy) = self.boards_for(side);
+            let auras: Vec<Buff> = own.battlefield.iter().map(|m| Self::aura_for(own, enemy, m)).collect();
 
             let board = self.source_board_for_mut(side);
             for (minion, aura) in board.battlefield.iter_mut().zip(auras) {
@@ -1038,18 +1035,18 @@ impl Game {
             }
 
             Effect::AddRandomOmen => {
-                let omens: Vec<OmenCard> = cards::get_collectible_cards()
+                let omens: Vec<IncantationCard> = cards::get_collectible_cards()
                     .into_iter()
                     .filter_map(|c| match c {
-                        Card::Omen(o) => Some(o),
+                        Card::Incantation(i) if matches!(i.form, IncantationForm::Omen { .. }) => Some(i),
                         _ => None,
                     })
                     .collect();
                 if let Some(pick) = omens.get(rand::rng().random_range(0..omens.len().max(1))) {
-                    let omen = instantiate_omen(pick, self.ids.next_id());
+                    let omen = instantiate_incantation(pick, self.ids.next_id());
                     let turn = self.state.turn_count;
                     let board = self.source_board_for_mut(owner);
-                    let landed = Self::add_to_hand(board, Some(turn), [CardEntity::Omen(omen)]);
+                    let landed = Self::add_to_hand(board, Some(turn), [CardEntity::Incantation(omen)]);
                     for entity_id in landed {
                         self.record(GameEvent::CardCreated { entity_id });
                     }
@@ -1128,9 +1125,9 @@ impl Game {
             return;
         }
         let ender = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
-        self.fire_omens(OmenTrigger::EnemyEndsTurn, ender.other());
+        self.fire_rites(RiteTrigger::EnemyEndsTurn, ender.other());
         if !self.state.attacked_this_turn {
-            self.fire_omens(OmenTrigger::EnemyEndsTurnWithoutAttacking, ender.other());
+            self.fire_rites(RiteTrigger::EnemyEndsTurnWithoutAttacking, ender.other());
         }
 
         self.record(GameEvent::TurnEnded);
@@ -1157,22 +1154,41 @@ impl Game {
             self.record(GameEvent::CardDrawn { entity_id });
         }
 
+        // an aura's clock drops at the start of its owner's turn, so it covers three full rounds
+        let expired = {
+            let mut expired = vec![];
+            self.source_board_mut().rites.retain_mut(|rite| {
+                let Some(left) = rite.turns_left else { return true };
+                let left = left.saturating_sub(1);
+                rite.turns_left = Some(left);
+                if left == 0 {
+                    expired.push(rite.entity_id);
+                }
+                left > 0
+            });
+            expired
+        };
+        for entity_id in expired {
+            self.record(GameEvent::RiteExpired { entity_id });
+        }
+
         self.state.cards_played_this_turn = 0;
         self.state.arrivals_played_this_turn = 0;
         self.state.attacked_this_turn = false;
-        // fatigue can take the last point of hp, so the turn ends in the death pass like any action
+        // fatigue can take the last point of hp, and a lapsed aura moves stats, so the turn ends
+        // in the death pass like any action
         self.check_for_deaths();
         //self.enqueue_trigger(Trigger::OnDraw);
         //self.process_effect_queue();
     }
 
     /// `position` is where a minion slots into your battlefield, clamped to the end.
-    pub fn play_card(&mut self, index: usize, target_id: Option<u32>, omen_trigger: Option<usize>, position: Option<usize>) -> bool {
+    pub fn play_card(&mut self, index: usize, target_id: Option<u32>, rite_trigger: Option<usize>, position: Option<usize>) -> bool {
         if !self.playing() {
             return false;
         }
         // Validate without consuming — clone card so mutable borrow can be released before check_requirements
-        let card_clone = {
+        let (card_clone, armed) = {
             let source_board = self.source_board_mut();
             let card = match source_board.hand.get(index) {
                 Some(c) => c,
@@ -1184,17 +1200,25 @@ impl Game {
             if matches!(card, CardEntity::Minion(_)) && source_board.battlefield.len() >= settings::MAX_BOARD_SIZE {
                 return false;
             }
-            if let CardEntity::Omen(o) = card {
-                if source_board.omens.len() >= settings::MAX_OMENS {
+            let mut armed = None;
+            if let CardEntity::Incantation(i) = card
+                && i.card.form.lingers()
+            {
+                if source_board.rites.len() >= settings::MAX_RITES {
                     return false;
                 }
-                // the trigger is picked at play time, so an omen without one is not a legal play
-                match omen_trigger {
-                    Some(i) if i < o.card.triggers.len() => {}
-                    _ => return false,
-                }
+                armed = match &i.card.form {
+                    // an omen is armed at play time, so one played without a pick is not a legal play
+                    IncantationForm::Omen { triggers, .. } => match rite_trigger.and_then(|k| triggers.get(k)) {
+                        Some(trigger) => Some(*trigger),
+                        None => return false,
+                    },
+                    // a wager offers the one trigger it prints, so there is nothing to pick
+                    IncantationForm::Wager { trigger, .. } => Some(*trigger),
+                    IncantationForm::Cast | IncantationForm::Aura { .. } => None,
+                };
             }
-            card.clone()
+            (card.clone(), armed)
         };
         let is_minion = matches!(card_clone, CardEntity::Minion(_));
         let owner = if self.state.white_turn { PlayerSide::White } else { PlayerSide::Black };
@@ -1248,11 +1272,16 @@ impl Game {
             source_board.battlefield.insert(at, minion);
         }
 
-        // Arm omen face down
-        if let CardEntity::Omen(mut omen) = consumed.clone() {
-            omen.armed_trigger = omen_trigger.map(|i| omen.card.triggers[i]);
-            let source_board = self.source_board_mut();
-            source_board.omens.push(omen);
+        // Lay a lingering rite in the row, armed if its form waits on something
+        if let CardEntity::Incantation(mut rite) = consumed.clone()
+            && rite.card.form.lingers()
+        {
+            rite.armed_trigger = armed;
+            rite.turns_left = match rite.card.form {
+                IncantationForm::Aura { turns } => Some(turns),
+                _ => None,
+            };
+            self.source_board_mut().rites.push(rite);
         }
 
         // Enqueue onPlay effects
@@ -1310,11 +1339,11 @@ impl Game {
 
         match consumed {
             CardEntity::Minion(_) => {
-                self.fire_omens(OmenTrigger::EnemyPlaysMinion, owner.other());
-                self.fire_wide_board_omens(owner);
+                self.fire_rites(RiteTrigger::EnemyPlaysMinion, owner.other());
+                self.fire_wide_board_rites(owner);
             }
-            CardEntity::Incantation(_) => self.fire_omens(OmenTrigger::EnemyPlaysIncantation, owner.other()),
-            CardEntity::Omen(_) => {}
+            // every form is an incantation play, so an omen, a wager and an aura all count
+            CardEntity::Incantation(_) => self.fire_rites(RiteTrigger::EnemyPlaysIncantation, owner.other()),
         }
         true
     }
@@ -1408,11 +1437,11 @@ impl Game {
 
         self.state.attacked_this_turn = true;
         self.check_for_deaths();
-        self.fire_wide_board_omens(owner);
+        self.fire_wide_board_rites(owner);
 
         match target_ref {
-            TargetRef::HeroEnemy => self.fire_omens(OmenTrigger::EnemyAttacksHero, owner.other()),
-            TargetRef::MinionEnemy(_) => self.fire_omens(OmenTrigger::EnemyAttacksMinion, owner.other()),
+            TargetRef::HeroEnemy => self.fire_rites(RiteTrigger::EnemyAttacksHero, owner.other()),
+            TargetRef::MinionEnemy(_) => self.fire_rites(RiteTrigger::EnemyAttacksMinion, owner.other()),
             _ => {}
         }
         true
@@ -1464,7 +1493,7 @@ impl Game {
     pub fn parse_client_state(&self, for_white: bool) -> GameStateClient {
         GameStateClient {
             self_board: if for_white { self.state.white.clone() } else { self.state.black.clone() },
-            enemy_board: Self::hide_armed_triggers(if for_white { &self.state.black } else { &self.state.white }),
+            enemy_board: Self::hide_omen_triggers(if for_white { &self.state.black } else { &self.state.white }),
             white_player_id: self.state.white_player_id.clone(),
             black_player_id: self.state.black_player_id.clone(),
             your_turn: for_white == self.state.white_turn,
@@ -1479,11 +1508,12 @@ impl Game {
         }
     }
 
-    /// An omen's effect is public but its armed trigger is not.
-    fn hide_armed_triggers(board: &Board) -> Board {
+    /// Every rite shows its card text. A wager shows its trigger too; only an omen hides which
+    /// of its three it armed.
+    fn hide_omen_triggers(board: &Board) -> Board {
         let mut board = board.clone();
-        for omen in board.omens.iter_mut() {
-            omen.armed_trigger = None;
+        for rite in board.rites.iter_mut().filter(|r| r.card.form.hides_trigger()) {
+            rite.armed_trigger = None;
         }
         board
     }
@@ -1498,8 +1528,7 @@ impl Game {
         board.hand.iter().map(|card| {
             let has_room = match card {
                 CardEntity::Minion(_) => board.battlefield.len() < settings::MAX_BOARD_SIZE,
-                CardEntity::Omen(_) => board.omens.len() < settings::MAX_OMENS,
-                CardEntity::Incantation(_) => true,
+                CardEntity::Incantation(i) => !i.card.form.lingers() || board.rites.len() < settings::MAX_RITES,
             };
             CardHint {
                 playable: card.cost() <= board.mana && has_room,

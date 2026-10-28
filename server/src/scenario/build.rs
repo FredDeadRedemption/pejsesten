@@ -38,25 +38,24 @@ pub fn incantation(id: u32, name: &str, cost: i32) -> IncantationCard {
         color: Color::White,
         base_cost: cost,
         image_url: String::new(),
+        form: IncantationForm::Cast,
         abilities: vec![],
+        passives: vec![],
         attributes: vec![],
         is_token: false,
     }
 }
 
-pub fn omen(id: u32, name: &str, cost: i32, triggers: [OmenTrigger; 3], effects: Vec<Effect>) -> OmenCard {
-    OmenCard {
-        id: SCENARIO_ID_BASE + id,
-        name: name.to_string(),
-        description: None,
-        flavor_text: None,
-        color: Color::White,
-        base_cost: cost,
-        image_url: String::new(),
-        effects,
-        triggers,
-        is_token: false,
-    }
+pub fn omen(id: u32, name: &str, cost: i32, triggers: [RiteTrigger; 3], effects: Vec<Effect>) -> IncantationCard {
+    IncantationCard { form: IncantationForm::Omen { triggers, effects }, ..incantation(id, name, cost) }
+}
+
+pub fn wager(id: u32, name: &str, cost: i32, trigger: RiteTrigger, effects: Vec<Effect>) -> IncantationCard {
+    IncantationCard { form: IncantationForm::Wager { trigger, effects }, ..incantation(id, name, cost) }
+}
+
+pub fn aura(id: u32, name: &str, cost: i32, turns: u32, passives: Vec<PassiveEffect>) -> IncantationCard {
+    IncantationCard { form: IncantationForm::Aura { turns }, passives, ..incantation(id, name, cost) }
 }
 
 pub trait MinionBuild: Sized {

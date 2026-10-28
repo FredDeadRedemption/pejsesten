@@ -239,7 +239,7 @@ impl Anims {
             GameEvent::Died { entity_id } => self.fades.push(Timed::new(*entity_id, life)),
             GameEvent::WardBroken { entity_id } => self.flashes.push(Timed::new(*entity_id, life)),
             GameEvent::TriggerFired { source_id } => self.flashes.push(Timed::new(*source_id, life)),
-            GameEvent::OmenFired { entity_id } => self.flashes.push(Timed::new(*entity_id, life)),
+            GameEvent::RiteFired { entity_id } | GameEvent::RiteExpired { entity_id } => self.flashes.push(Timed::new(*entity_id, life)),
             GameEvent::CardPlayed { entity_id } => {
                 self.flyers.extend(play_flyer(*entity_id, state, w, h, life));
             }
@@ -414,16 +414,16 @@ fn play_flyer(entity_id: u32, state: &GameStateClient, w: f32, h: f32, life: f32
             .into_iter()
             .nth(n)?
         }
-        CardEntity::Omen(_) => {
-            let n = board.omens.len();
+        CardEntity::Incantation(i) if i.card.form.lingers() => {
+            let n = board.rites.len();
             match mine {
-                true => layout::self_omen_rects(n + 1, h),
-                false => layout::enemy_omen_rects(n + 1, h),
+                true => layout::self_rite_rects(n + 1, h),
+                false => layout::enemy_rite_rects(n + 1, h),
             }
             .into_iter()
             .nth(n)?
         }
-        // an incantation lands in no zone, so it grows over its owner's half and is gone
+        // a cast lands in no zone, so it grows over its owner's half and is gone
         CardEntity::Incantation(_) => {
             let size = Vec2::new(layout::CARD_W, layout::CARD_H) * INCANTATION_GROW;
             let cy = match mine {

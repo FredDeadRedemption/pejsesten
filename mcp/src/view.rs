@@ -31,8 +31,8 @@ pub fn render(s: &GameStateClient) -> String {
 
     battlefield(&mut o, "your board", &s.self_board.battlefield);
     battlefield(&mut o, "enemy board", &s.enemy_board.battlefield);
-    omens(&mut o, "your omens", &s.self_board.omens);
-    omens(&mut o, "enemy omens", &s.enemy_board.omens);
+    rites(&mut o, "your rites", &s.self_board.rites);
+    rites(&mut o, "enemy rites", &s.enemy_board.rites);
     hand(&mut o, "your hand", &s.self_board.hand, &s.hand_hints);
     if s.open_cards {
         hand(&mut o, "enemy hand (open cards is on in this profile)", &s.enemy_board.hand, &[]);
@@ -104,17 +104,18 @@ fn flags(m: &MinionEntity) -> String {
     format!(" ({})", f.join(", "))
 }
 
-fn omens(o: &mut String, title: &str, armed: &[OmenEntity]) {
-    if armed.is_empty() {
+fn rites(o: &mut String, title: &str, laid: &[IncantationEntity]) {
+    if laid.is_empty() {
         return;
     }
     let _ = writeln!(o, "{title}:");
-    for omen in armed {
-        let trigger = match omen.armed_trigger {
-            Some(t) => t.label().to_string(),
-            None => "trigger hidden".to_string(),
+    for rite in laid {
+        let state = match (rite.armed_trigger, rite.turns_left) {
+            (Some(t), _) => t.label().to_string(),
+            (None, Some(n)) => format!("aura, {n} turns left"),
+            (None, None) => "trigger hidden".to_string(),
         };
-        let _ = writeln!(o, "  [{}] {} ({trigger}){}", omen.entity_id, omen.card.name, text(&omen.card.description));
+        let _ = writeln!(o, "  [{}] {} ({state}){}", rite.entity_id, rite.card.name, text(&rite.card.description));
     }
 }
 
@@ -127,8 +128,12 @@ fn hand(o: &mut String, title: &str, cards: &[CardEntity], hints: &[CardHint]) {
     for (i, card) in cards.iter().enumerate() {
         let kind = match card {
             CardEntity::Minion(m) => format!("minion {}", stats(m)),
-            CardEntity::Incantation(_) => "incantation".to_string(),
-            CardEntity::Omen(_) => "omen".to_string(),
+            CardEntity::Incantation(i) => match i.card.form {
+                IncantationForm::Cast => "incantation".to_string(),
+                IncantationForm::Omen { .. } => "omen".to_string(),
+                IncantationForm::Wager { .. } => "wager".to_string(),
+                IncantationForm::Aura { turns } => format!("aura, {turns} turns"),
+            },
         };
         let hint = match hints.get(i) {
             Some(h) if !h.playable => " - cannot play now".to_string(),
@@ -139,13 +144,20 @@ fn hand(o: &mut String, title: &str, cards: &[CardEntity], hints: &[CardHint]) {
         let description = match card {
             CardEntity::Minion(m) => text(&m.card.description),
             CardEntity::Incantation(c) => text(&c.card.description),
-            CardEntity::Omen(c) => text(&c.card.description),
         };
         let _ = writeln!(o, "  {i}. {} - {kind}, {} mana{hint}{description}", card.name(), card.cost());
-        if let CardEntity::Omen(omen) = card {
-            for (t, trigger) in omen.card.triggers.iter().enumerate() {
-                let _ = writeln!(o, "       omen_trigger {t}: {}", trigger.label());
+        // a wager prints the one it offers, so only an omen is worth listing choices for
+        if let CardEntity::Incantation(i) = card
+            && matches!(i.card.form, IncantationForm::Omen { .. })
+        {
+            for (t, trigger) in i.card.form.armable().iter().enumerate() {
+                let _ = writeln!(o, "       rite_trigger {t}: {}", trigger.label());
             }
+        }
+        if let CardEntity::Incantation(i) = card
+            && let IncantationForm::Wager { trigger, .. } = &i.card.form
+        {
+            let _ = writeln!(o, "       wager: {}", trigger.label());
         }
     }
 }

@@ -45,7 +45,7 @@ struct PlayerToken(String);
 struct PlayCardData {
     index: usize,
     target: Option<u32>,
-    omen_trigger: Option<usize>,
+    rite_trigger: Option<usize>,
     #[serde(default)]
     position: Option<usize>,
 }
@@ -268,7 +268,7 @@ async fn on_connect(socket: SocketRef, auth: Option<Auth>, State(state): State<S
             if !validate_turn(&player_id(&socket), game) {
                 return;
             }
-            game.play_card(data.index, data.target, data.omen_trigger, data.position);
+            game.play_card(data.index, data.target, data.rite_trigger, data.position);
             broadcast(&io, game).await;
         }
     });

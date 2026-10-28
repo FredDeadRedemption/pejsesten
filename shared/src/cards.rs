@@ -16,7 +16,6 @@ pub fn get_collectible_cards() -> Vec<Card> {
         .filter(|c| match c {
             Card::Minion(m) => !m.is_token,
             Card::Incantation(i) => !i.is_token,
-            Card::Omen(o) => !o.is_token,
             Card::Hero(_) => false,
         })
         .collect()
@@ -79,6 +78,8 @@ pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> Incantati
         cost: c.base_cost,
         discount: 0,
         arrived_on_turn: None,
+        armed_trigger: None,
+        turns_left: None,
         card: c.clone(),
     }
 }
@@ -86,15 +87,16 @@ pub fn instantiate_incantation(c: &IncantationCard, entity_id: u32) -> Incantati
 pub fn instantiate_minion_by_id(card_id: u32, entity_id: u32) -> Option<MinionEntity> {
     match get_card_by_id(card_id)? {
         Card::Minion(c) => Some(instantiate_minion(c, entity_id)),
-        Card::Incantation(_) | Card::Omen(_) | Card::Hero(_) => None, // only minions can be summoned
+        Card::Incantation(_) | Card::Hero(_) => None, // only minions can be summoned
     }
 }
 
-/// Token ids the summon effects point at.
-const RAT_ID: u32 = 23;
-const HOUND_ID: u32 = 24;
-const BRAMBLE_ID: u32 = 59;
-const BIG_RAT_ID: u32 = 60;
+/// Token ids the summon effects point at, in their own band so a collectible id can never
+/// land on one and overwrite it in the catalogue.
+const RAT_ID: u32 = 201;
+const HOUND_ID: u32 = 202;
+const BRAMBLE_ID: u32 = 203;
+const BIG_RAT_ID: u32 = 204;
 
 pub fn build_cards() -> Vec<Card> {
     vec![
@@ -247,6 +249,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: None,
             base_cost: 1,
             image_url: "Smite.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![
                 Ability {
@@ -288,6 +292,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: None,
             base_cost: 3,
             image_url: "Good Friday.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -313,6 +319,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: None,
             base_cost: 4,
             image_url: "Divine Power.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -331,7 +339,7 @@ pub fn build_cards() -> Vec<Card> {
             is_token: false,
         }),
         // ── WHITE OMENS ──────────────────────────────────────────
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 11,
             color: Color::White,
             name: "Grove Vigil".to_string(),
@@ -339,17 +347,22 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("The forest keeps its own watch.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
-            effects: vec![Effect::Buff {
-                target_spec: TargetSpec {
-                    target_mode: TargetMode::Auto,
-                    side: TargetSide::Friendly,
-                    entity_type: EntityType::Minion,
-                    filters: vec![],
-                },
-                attack: 1,
-                defence: 1,
-            }],
-            triggers: [OmenTrigger::EnemyPlaysMinion, OmenTrigger::EnemyAttacksMinion, OmenTrigger::EnemyEndsTurn],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyPlaysMinion, RiteTrigger::EnemyAttacksMinion, RiteTrigger::EnemyEndsTurn],
+                effects: vec![Effect::Buff {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                    attack: 1,
+                    defence: 1,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
         // ── BLACK MINIONS ────────────────────────────────────────
@@ -508,6 +521,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: None,
             base_cost: 1,
             image_url: "Zoo.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![IncantationAttribute::Tradeable],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -533,6 +548,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: None,
             base_cost: 2,
             image_url: "".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -551,7 +568,7 @@ pub fn build_cards() -> Vec<Card> {
             is_token: false,
         }),
         // ── BLACK OMENS ──────────────────────────────────────────
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 22,
             color: Color::Black,
             name: "Pack Instinct".to_string(),
@@ -559,11 +576,16 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Nothing in the dark hunts alone.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
-            effects: vec![Effect::Summon {
-                summon_amount: 3,
-                minion_card_id: RAT_ID,
-            }],
-            triggers: [OmenTrigger::FriendlyMinionDies, OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysIncantation],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::FriendlyMinionDies, RiteTrigger::EnemyAttacksHero, RiteTrigger::EnemyPlaysIncantation],
+                effects: vec![Effect::Summon {
+                    summon_amount: 3,
+                    minion_card_id: RAT_ID,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
         // ── BLACK QUICKDRAW ──────────────────────────────────────
@@ -575,6 +597,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Fired before the drum roll finished.".to_string()),
             base_cost: 1,
             image_url: "Quick Shot.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![IncantationAttribute::Tradeable],
             abilities: vec![
                 Ability {
@@ -616,6 +640,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("The last act goes on first tonight.".to_string()),
             base_cost: 1,
             image_url: "".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -740,6 +766,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: None,
             base_cost: 2,
             image_url: "Hat Trick.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -763,6 +791,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("They never leave after one.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -779,7 +809,7 @@ pub fn build_cards() -> Vec<Card> {
             }],
             is_token: false,
         }),
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 34,
             color: Color::Black,
             name: "Safety Net".to_string(),
@@ -787,16 +817,21 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Strung up between the acts nobody survives.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
-            effects: vec![Effect::Heal {
-                target_spec: TargetSpec {
-                    target_mode: TargetMode::Auto,
-                    side: TargetSide::Friendly,
-                    entity_type: EntityType::Hero,
-                    filters: vec![],
-                },
-                heal: 8,
-            }],
-            triggers: [OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysIncantation, OmenTrigger::EnemyEndsTurn],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyAttacksHero, RiteTrigger::EnemyPlaysIncantation, RiteTrigger::EnemyEndsTurn],
+                effects: vec![Effect::Heal {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Hero,
+                        filters: vec![],
+                    },
+                    heal: 8,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
         Card::Minion(MinionCard {
@@ -893,6 +928,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Eleven in the air, and he is counting.".to_string()),
             base_cost: 4,
             image_url: "".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -944,6 +981,7 @@ pub fn build_cards() -> Vec<Card> {
             image_url: "".to_string(),
             races: vec![Race::Human],
             passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Friendly,
                 filters: vec![Condition::IsRace { race: Race::Beast }],
                 attack: 1,
                 defence: 1,
@@ -1137,6 +1175,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Six in, and the hand never looks down.".to_string()),
             base_cost: 3,
             image_url: "Reload.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -1280,7 +1320,7 @@ pub fn build_cards() -> Vec<Card> {
             is_token: false,
         }),
         // ── OMEN POOL ────────────────────────────────────────────
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 55,
             color: Color::Black,
             name: "Powder Trail".to_string(),
@@ -1288,20 +1328,25 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Laid at dawn, lit at noon.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
-            effects: vec![Effect::Damage {
-                target_spec: TargetSpec {
-                    target_mode: TargetMode::Auto,
-                    side: TargetSide::Enemy,
-                    entity_type: EntityType::Minion,
-                    filters: vec![],
-                },
-                damage: 2,
-                lifesteal: false,
-            }],
-            triggers: [OmenTrigger::EnemyPlaysMinion, OmenTrigger::EnemyBoardReachesThree, OmenTrigger::EnemyEndsTurn],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyPlaysMinion, RiteTrigger::EnemyBoardReachesThree, RiteTrigger::EnemyEndsTurn],
+                effects: vec![Effect::Damage {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Enemy,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                    damage: 2,
+                    lifesteal: false,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 56,
             color: Color::Black,
             name: "Dead Man's Hand".to_string(),
@@ -1309,12 +1354,17 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Aces and eights, and he never saw the door.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
-            effects: vec![Effect::Draw { draw_amount: 2, follow_up: None }],
-            triggers: [OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysIncantation, OmenTrigger::FriendlyMinionDies],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyAttacksHero, RiteTrigger::EnemyPlaysIncantation, RiteTrigger::FriendlyMinionDies],
+                effects: vec![Effect::Draw { draw_amount: 2, follow_up: None }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
         // ── GREEN OMENS ──────────────────────────────────────────
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 57,
             color: Color::Green,
             name: "Bramble Wall".to_string(),
@@ -1322,14 +1372,19 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("The road closed overnight.".to_string()),
             base_cost: 2,
             image_url: "".to_string(),
-            effects: vec![Effect::Summon {
-                summon_amount: 2,
-                minion_card_id: BRAMBLE_ID,
-            }],
-            triggers: [OmenTrigger::EnemyAttacksHero, OmenTrigger::EnemyPlaysMinion, OmenTrigger::EnemyBoardReachesThree],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyAttacksHero, RiteTrigger::EnemyPlaysMinion, RiteTrigger::EnemyBoardReachesThree],
+                effects: vec![Effect::Summon {
+                    summon_amount: 2,
+                    minion_card_id: BRAMBLE_ID,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
-        Card::Omen(OmenCard {
+        Card::Incantation(IncantationCard {
             id: 58,
             color: Color::Green,
             name: "Rut Season".to_string(),
@@ -1337,17 +1392,22 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("Every animal in the valley picks a fight.".to_string()),
             base_cost: 3,
             image_url: "".to_string(),
-            effects: vec![Effect::Buff {
-                target_spec: TargetSpec {
-                    target_mode: TargetMode::Auto,
-                    side: TargetSide::Friendly,
-                    entity_type: EntityType::Minion,
-                    filters: vec![Condition::IsRace { race: Race::Beast }],
-                },
-                attack: 2,
-                defence: 2,
-            }],
-            triggers: [OmenTrigger::EnemyEndsTurn, OmenTrigger::EnemyAttacksMinion, OmenTrigger::EnemyPlaysMinion],
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyEndsTurn, RiteTrigger::EnemyAttacksMinion, RiteTrigger::EnemyPlaysMinion],
+                effects: vec![Effect::Buff {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                        filters: vec![Condition::IsRace { race: Race::Beast }],
+                    },
+                    attack: 2,
+                    defence: 2,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
             is_token: false,
         }),
         Card::Incantation(IncantationCard {
@@ -1358,6 +1418,8 @@ pub fn build_cards() -> Vec<Card> {
             flavor_text: Some("The deck has two tops if you hold it right.".to_string()),
             base_cost: 2,
             image_url: "Card Shark.png".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
             attributes: vec![],
             abilities: vec![Ability {
                 trigger: Trigger::OnPlay,
@@ -1425,6 +1487,422 @@ pub fn build_cards() -> Vec<Card> {
                 }],
             }],
             cost_scaling: None,
+            is_token: false,
+        }),
+        // ── THORNWAKE (GREEN) ────────────────────────────────────
+        Card::Minion(MinionCard {
+            id: 62,
+            color: Color::Green,
+            name: "Briar Elf".to_string(),
+            description: Some("<strong>Tradeable</strong>".to_string()),
+            flavor_text: Some("Grew up in the hedge and never left it.".to_string()),
+            base_cost: 1,
+            image_url: "".to_string(),
+            races: vec![Race::Elf],
+            passives: vec![],
+            base_attack: 1,
+            base_defence: 2,
+            attributes: vec![MinionAttribute::Tradeable],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 63,
+            color: Color::Green,
+            name: "Grovewarden".to_string(),
+            description: Some("<strong>Guard</strong>".to_string()),
+            flavor_text: Some("Counts the rings and lets nobody past.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            races: vec![Race::Elf],
+            passives: vec![],
+            base_attack: 1,
+            base_defence: 3,
+            attributes: vec![MinionAttribute::Guard],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 64,
+            color: Color::Green,
+            name: "Thorn Dancer".to_string(),
+            description: Some("<strong>Blitz</strong>".to_string()),
+            flavor_text: Some("Barefoot, and the brambles move aside.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            races: vec![Race::Elf],
+            passives: vec![],
+            base_attack: 2,
+            base_defence: 2,
+            attributes: vec![MinionAttribute::Charge],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 65,
+            color: Color::Green,
+            name: "Thicket Nanny".to_string(),
+            description: Some("<strong>Fanfare:</strong> <strong>Summon</strong> a 0/3 bramble with <strong>Guard</strong>".to_string()),
+            flavor_text: Some("Raises them from cuttings and never asks whose.".to_string()),
+            base_cost: 3,
+            image_url: "".to_string(),
+            races: vec![Race::Elf],
+            passives: vec![],
+            base_attack: 2,
+            base_defence: 3,
+            attributes: vec![],
+            abilities: vec![Ability {
+                trigger: Trigger::OnPlay,
+                requirements: vec![],
+                effects: vec![Effect::Summon { summon_amount: 1, minion_card_id: BRAMBLE_ID }],
+            }],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 66,
+            color: Color::Green,
+            name: "Greenmantle".to_string(),
+            description: Some("Your elves have +1 +1".to_string()),
+            flavor_text: Some("Human, and they let her carry the banner anyway.".to_string()),
+            base_cost: 4,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Friendly,
+                filters: vec![Condition::IsRace { race: Race::Elf }],
+                attack: 1,
+                defence: 1,
+            }],
+            base_attack: 3,
+            base_defence: 3,
+            attributes: vec![],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 67,
+            color: Color::Green,
+            name: "Elder Oak".to_string(),
+            description: Some("<strong>Guard</strong>".to_string()),
+            flavor_text: Some("Older than the road, and in the way of it.".to_string()),
+            base_cost: 6,
+            image_url: "".to_string(),
+            races: vec![Race::Elf],
+            passives: vec![],
+            base_attack: 5,
+            base_defence: 7,
+            attributes: vec![MinionAttribute::Guard],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 68,
+            color: Color::Green,
+            name: "Quickening".to_string(),
+            description: Some("Give a friendly minion +2 +2".to_string()),
+            flavor_text: Some("One season's growth, spent in an afternoon.".to_string()),
+            base_cost: 1,
+            image_url: "".to_string(),
+            form: IncantationForm::Cast,
+            passives: vec![],
+            attributes: vec![],
+            abilities: vec![Ability {
+                trigger: Trigger::OnPlay,
+                requirements: vec![],
+                effects: vec![Effect::Buff {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                    attack: 2,
+                    defence: 2,
+                }],
+            }],
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 69,
+            color: Color::Green,
+            name: "Thornwatch".to_string(),
+            description: Some("<strong>Summon</strong> two 0/3 brambles with <strong>Guard</strong>".to_string()),
+            flavor_text: Some("The hedge was thinner yesterday.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyPlaysMinion, RiteTrigger::EnemyAttacksMinion, RiteTrigger::EnemyEndsTurn],
+                effects: vec![Effect::Summon { summon_amount: 2, minion_card_id: BRAMBLE_ID }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 70,
+            color: Color::Green,
+            name: "Hold the Grove".to_string(),
+            description: Some("<strong>Wager:</strong> if you cast an incantation this turn, I draw two cards".to_string()),
+            flavor_text: Some("Read it, then decide what your spell is worth.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            form: IncantationForm::Wager {
+                trigger: RiteTrigger::EnemyPlaysIncantation,
+                effects: vec![Effect::Draw { draw_amount: 2, follow_up: None }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 71,
+            color: Color::Green,
+            name: "Wildgrowth".to_string(),
+            description: Some("<strong>Aura:</strong> your minions have +1 +1".to_string()),
+            flavor_text: Some("Three turns of summer, and the hedge remembers none of it.".to_string()),
+            base_cost: 3,
+            image_url: "".to_string(),
+            form: IncantationForm::Aura { turns: 3 },
+            abilities: vec![],
+            passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Friendly,
+                filters: vec![],
+                attack: 1,
+                defence: 1,
+            }],
+            attributes: vec![],
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 72,
+            color: Color::Green,
+            name: "Greenwake".to_string(),
+            description: Some("<strong>Fanfare:</strong> give a friendly elf +2 +2<br><strong>Aura:</strong> your elves have +2 +2".to_string()),
+            flavor_text: Some("What the wood gives back, it gives to one of you for good.".to_string()),
+            base_cost: 4,
+            image_url: "".to_string(),
+            form: IncantationForm::Aura { turns: 3 },
+            abilities: vec![Ability {
+                trigger: Trigger::OnPlay,
+                requirements: vec![],
+                effects: vec![Effect::Buff {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Targeted,
+                        side: TargetSide::Friendly,
+                        entity_type: EntityType::Minion,
+                        filters: vec![Condition::IsRace { race: Race::Elf }],
+                    },
+                    attack: 2,
+                    defence: 2,
+                }],
+            }],
+            passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Friendly,
+                filters: vec![Condition::IsRace { race: Race::Elf }],
+                attack: 2,
+                defence: 2,
+            }],
+            attributes: vec![],
+            is_token: false,
+        }),
+        // ── TOLLGATE (BLACK) ─────────────────────────────────────
+        Card::Minion(MinionCard {
+            id: 73,
+            color: Color::Black,
+            name: "Coinbiter".to_string(),
+            description: Some("<strong>Tradeable</strong>".to_string()),
+            flavor_text: Some("Tests every coin, and keeps the ones that bend.".to_string()),
+            base_cost: 1,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![],
+            base_attack: 1,
+            base_defence: 2,
+            attributes: vec![MinionAttribute::Tradeable],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 74,
+            color: Color::Black,
+            name: "Gatewatch".to_string(),
+            description: Some("<strong>Guard</strong>".to_string()),
+            flavor_text: Some("Not paid to win, only to still be standing.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![],
+            base_attack: 1,
+            base_defence: 4,
+            attributes: vec![MinionAttribute::Guard],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 75,
+            color: Color::Black,
+            name: "The Toll".to_string(),
+            description: Some("<strong>Wager:</strong> if you attack my hero this turn, deal 2 damage to all your minions".to_string()),
+            flavor_text: Some("The gate is open. The price is printed on it.".to_string()),
+            base_cost: 2,
+            image_url: "".to_string(),
+            form: IncantationForm::Wager {
+                trigger: RiteTrigger::EnemyAttacksHero,
+                effects: vec![Effect::Damage {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Enemy,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                    damage: 2,
+                    lifesteal: false,
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 76,
+            color: Color::Black,
+            name: "Tithe Collector".to_string(),
+            description: Some("<strong>Fanfare:</strong> Deal 1 damage to all enemy minions".to_string()),
+            flavor_text: Some("Takes a tenth of everything, starting with the small ones.".to_string()),
+            base_cost: 3,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![],
+            base_attack: 3,
+            base_defence: 3,
+            attributes: vec![],
+            abilities: vec![Ability {
+                trigger: Trigger::OnPlay,
+                requirements: vec![],
+                effects: vec![Effect::Damage {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Auto,
+                        side: TargetSide::Enemy,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                    damage: 1,
+                    lifesteal: false,
+                }],
+            }],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 77,
+            color: Color::Black,
+            name: "Hollowing".to_string(),
+            description: Some("<strong>Aura:</strong> enemy minions have -1 attack".to_string()),
+            flavor_text: Some("Nothing is taken. It simply weighs less.".to_string()),
+            base_cost: 3,
+            image_url: "".to_string(),
+            form: IncantationForm::Aura { turns: 3 },
+            abilities: vec![],
+            passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Enemy,
+                filters: vec![],
+                attack: -1,
+                defence: 0,
+            }],
+            attributes: vec![],
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 78,
+            color: Color::Black,
+            name: "The Assessor".to_string(),
+            description: Some("Enemy minions have -1 attack".to_string()),
+            flavor_text: Some("Writes a number beside your name and never says it.".to_string()),
+            base_cost: 4,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Enemy,
+                filters: vec![],
+                attack: -1,
+                defence: 0,
+            }],
+            base_attack: 2,
+            base_defence: 5,
+            attributes: vec![],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 79,
+            color: Color::Black,
+            name: "Foreclosure".to_string(),
+            description: Some("Take control of the rightmost enemy minion".to_string()),
+            flavor_text: Some("Signed in advance, for whatever you put down last.".to_string()),
+            base_cost: 4,
+            image_url: "".to_string(),
+            form: IncantationForm::Omen {
+                triggers: [RiteTrigger::EnemyPlaysMinion, RiteTrigger::EnemyBoardReachesThree, RiteTrigger::EnemyAttacksHero],
+                effects: vec![Effect::TakeControl {
+                    target_spec: TargetSpec {
+                        target_mode: TargetMode::Rightmost,
+                        side: TargetSide::Enemy,
+                        entity_type: EntityType::Minion,
+                        filters: vec![],
+                    },
+                }],
+            },
+            abilities: vec![],
+            passives: vec![],
+            attributes: vec![],
+            is_token: false,
+        }),
+        Card::Minion(MinionCard {
+            id: 80,
+            color: Color::Black,
+            name: "Pillarman".to_string(),
+            description: Some("<strong>Guard</strong>".to_string()),
+            flavor_text: Some("Has not moved since the gate was built around him.".to_string()),
+            base_cost: 5,
+            image_url: "".to_string(),
+            races: vec![Race::Human],
+            passives: vec![],
+            base_attack: 4,
+            base_defence: 6,
+            attributes: vec![MinionAttribute::Guard],
+            abilities: vec![],
+            cost_scaling: None,
+            is_token: false,
+        }),
+        Card::Incantation(IncantationCard {
+            id: 81,
+            color: Color::Black,
+            name: "The Long Winter".to_string(),
+            description: Some("<strong>Aura:</strong> enemy minions have -2 attack".to_string()),
+            flavor_text: Some("They are all still there in the spring. None of them fought.".to_string()),
+            base_cost: 5,
+            image_url: "".to_string(),
+            form: IncantationForm::Aura { turns: 3 },
+            abilities: vec![],
+            passives: vec![PassiveEffect::Aura {
+                side: TargetSide::Enemy,
+                filters: vec![],
+                attack: -2,
+                defence: 0,
+            }],
+            attributes: vec![],
             is_token: false,
         }),
         // ── TOKENS ───────────────────────────────────────────────
@@ -1534,6 +2012,15 @@ pub fn build_cards() -> Vec<Card> {
             base_hp: 30,
         }),
         Card::Hero(HeroCard {
+            id: 106,
+            name: "The Empress".to_string(),
+            description: None,
+            flavor_text: Some("Everything in the garden answers to her, briefly.".to_string()),
+            color: Color::Green,
+            image_url: "".to_string(),
+            base_hp: 30,
+        }),
+        Card::Hero(HeroCard {
             id: 105,
             name: "Clown Snake".to_string(),
             description: None,
@@ -1552,13 +2039,23 @@ mod tests {
     #[test]
     fn default_hero_resolves() {
         assert_eq!(hero_or_default(0).id, DEFAULT_HERO_ID);
-        assert_eq!(get_heroes().len(), 5);
+        assert_eq!(get_heroes().len(), 6);
     }
 
     #[test]
     fn heroes_are_not_deck_cards() {
         assert!(get_collectible_cards().iter().all(|c| !matches!(c, Card::Hero(_))));
         assert!(get_heroes().iter().all(|h| h.id >= DEFAULT_HERO_ID));
+    }
+
+    /// The catalogue is a map keyed by id, so a duplicate does not clash, it silently wins.
+    #[test]
+    fn every_card_id_is_unique() {
+        let built = build_cards();
+        let mut ids: Vec<u32> = built.iter().map(|c| c.id()).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), built.len());
     }
 
     #[test]

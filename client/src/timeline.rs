@@ -7,12 +7,13 @@
 
 use std::collections::VecDeque;
 
-use shared::types::{Board, CardEntity, GameEvent, GameStateClient, MinionEntity, OmenEntity, StateUpdate};
+use shared::types::{Board, CardEntity, GameEvent, GameStateClient, IncantationEntity, MinionEntity, StateUpdate};
 
 /// How long an event holds the board before the next one starts.
 pub fn duration(event: &GameEvent) -> f32 {
     match event {
-        GameEvent::OmenFired { .. } => 0.45,
+        GameEvent::RiteFired { .. } => 0.45,
+        GameEvent::RiteExpired { .. } => 0.25,
         // both fly a card across the board, so they get the time that takes to read
         GameEvent::CardPlayed { .. } => 0.40,
         GameEvent::CardDrawn { .. } => 0.32,
@@ -164,10 +165,10 @@ fn find_card(state: &GameStateClient, id: u32) -> Option<(Half, &CardEntity)> {
     None
 }
 
-fn find_omen(state: &GameStateClient, id: u32) -> Option<(Half, &OmenEntity)> {
+fn find_rite(state: &GameStateClient, id: u32) -> Option<(Half, &IncantationEntity)> {
     for (half, board) in [(Half::Own, &state.self_board), (Half::Enemy, &state.enemy_board)] {
-        if let Some(o) = board.omens.iter().find(|o| o.entity_id == id) {
-            return Some((half, o));
+        if let Some(r) = board.rites.iter().find(|r| r.entity_id == id) {
+            return Some((half, r));
         }
     }
     None
@@ -240,9 +241,9 @@ fn apply(visual: &mut GameStateClient, target: &GameStateClient, event: &GameEve
             if let Some((half, minion)) = find_minion(target, *entity_id) {
                 let minion = minion.clone();
                 place_as_in_truth(visual, target, half, minion);
-            } else if let Some((half, omen)) = find_omen(target, *entity_id) {
-                let omen = omen.clone();
-                board(visual, half).omens.push(omen);
+            } else if let Some((half, rite)) = find_rite(target, *entity_id) {
+                let rite = rite.clone();
+                board(visual, half).rites.push(rite);
             }
         }
         GameEvent::MinionSummoned { entity_id } => {
@@ -313,9 +314,9 @@ fn apply(visual: &mut GameStateClient, target: &GameStateClient, event: &GameEve
                 board(visual, half).deck.push(card);
             }
         }
-        GameEvent::OmenFired { entity_id } => {
+        GameEvent::RiteFired { entity_id } | GameEvent::RiteExpired { entity_id } => {
             for half in [Half::Own, Half::Enemy] {
-                board(visual, half).omens.retain(|o| o.entity_id != *entity_id);
+                board(visual, half).rites.retain(|r| r.entity_id != *entity_id);
             }
         }
         GameEvent::CardReplayed { .. } | GameEvent::TriggerFired { .. } | GameEvent::TurnEnded => {}
@@ -335,7 +336,7 @@ mod tests {
             hand: vec![],
             graveyard: vec![],
             battlefield: vec![],
-            omens: vec![],
+            rites: vec![],
             hero: Hero { entity_id: hero_id, card, base_hp: hp, damage: 0, buff: Buff::default(), stats: Stats::new(0, hp) },
             base_mana: 1,
             mana: 1,

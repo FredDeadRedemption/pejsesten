@@ -165,7 +165,7 @@ fn from_catalogue(card_id: u32, entity_id: u32) -> Option<CardEntity> {
     match shared::cards::get_card_by_id(card_id)? {
         Card::Minion(c) => Some(CardEntity::Minion(shared::cards::instantiate_minion(c, entity_id))),
         Card::Incantation(c) => Some(CardEntity::Incantation(shared::cards::instantiate_incantation(c, entity_id))),
-        Card::Omen(_) | Card::Hero(_) => None,
+        Card::Hero(_) => None,
     }
 }
 
@@ -207,7 +207,7 @@ mod tests {
             hand: vec![],
             graveyard: vec![],
             battlefield: vec![],
-            omens: vec![],
+            rites: vec![],
             hero: Hero { entity_id: 99, card, base_hp: hp, damage: 0, buff: Buff::default(), stats: Stats::new(0, hp) },
             base_mana: 1,
             mana: 1,

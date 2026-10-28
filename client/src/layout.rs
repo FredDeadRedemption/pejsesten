@@ -8,11 +8,13 @@ pub const MINION_H: f32 = 145.0;
 pub const MINION_GAP: f32 = 8.0;
 
 // a stack of three has to fit between the divider and the mana readout
-pub const OMEN_W: f32 = 56.0;
-pub const OMEN_H: f32 = 80.0;
-pub const OMEN_GAP: f32 = 8.0;
-/// Gap between the left column and the omen stacks.
-const OMEN_MARGIN: f32 = 12.0;
+pub const RITE_W: f32 = 56.0;
+pub const RITE_H: f32 = 80.0;
+pub const RITE_GAP: f32 = 8.0;
+/// Gap between the left column and the rite stacks.
+const RITE_MARGIN: f32 = 12.0;
+/// The row of six is drawn as two columns of three, so it never reaches the minion row.
+const RITES_PER_COLUMN: usize = 3;
 
 pub const HERO_W: f32 = 92.0;
 pub const HERO_H: f32 = 134.0;
@@ -69,7 +71,7 @@ pub fn board_center_x(w: f32) -> f32 {
 
 /// Mana and ember readouts, clear of the left column.
 pub fn readout_x() -> f32 {
-    SIDEBAR_W + OMEN_MARGIN
+    SIDEBAR_W + RITE_MARGIN
 }
 
 /// Dead zone — dropping a card here cancels the play. Extends well above the actual cards.
@@ -183,18 +185,21 @@ pub fn enemy_minion_rects(count: usize, w: f32, h: f32) -> Vec<Rect> {
     centered_rects(count, MINION_W, MINION_H, MINION_GAP, board_center_x(w), y)
 }
 
-/// Omens stack away from the divider at the board's left edge, where no minion row reaches.
-pub fn self_omen_rects(count: usize, h: f32) -> Vec<Rect> {
-    omen_rects(count, |i| h / 2.0 + 12.0 + i * (OMEN_H + OMEN_GAP))
+/// Rites stack away from the divider at the board's left edge, where no minion row reaches.
+pub fn self_rite_rects(count: usize, h: f32) -> Vec<Rect> {
+    rite_rects(count, |i| h / 2.0 + 12.0 + i * (RITE_H + RITE_GAP))
 }
 
-pub fn enemy_omen_rects(count: usize, h: f32) -> Vec<Rect> {
-    omen_rects(count, |i| h / 2.0 - 12.0 - OMEN_H - i * (OMEN_H + OMEN_GAP))
+pub fn enemy_rite_rects(count: usize, h: f32) -> Vec<Rect> {
+    rite_rects(count, |i| h / 2.0 - 12.0 - RITE_H - i * (RITE_H + RITE_GAP))
 }
 
-fn omen_rects(count: usize, y: impl Fn(f32) -> f32) -> Vec<Rect> {
+fn rite_rects(count: usize, y: impl Fn(f32) -> f32) -> Vec<Rect> {
     (0..count)
-        .map(|i| Rect::new(SIDEBAR_W + OMEN_MARGIN, y(i as f32), OMEN_W, OMEN_H))
+        .map(|i| {
+            let x = SIDEBAR_W + RITE_MARGIN + (i / RITES_PER_COLUMN) as f32 * (RITE_W + RITE_GAP);
+            Rect::new(x, y((i % RITES_PER_COLUMN) as f32), RITE_W, RITE_H)
+        })
         .collect()
 }
 

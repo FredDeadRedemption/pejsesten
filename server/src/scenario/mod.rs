@@ -12,7 +12,7 @@ pub mod runner;
 #[cfg(test)]
 mod tests;
 
-use crate::engine::{Game, IdGenerator, instantiate_hero, instantiate_omen};
+use crate::engine::{Game, IdGenerator, instantiate_hero};
 use shared::cards::{instantiate_incantation, instantiate_minion};
 use crate::settings;
 use serde::Serialize;
@@ -85,7 +85,7 @@ impl Setup {
             hand: vec![],
             graveyard: vec![],
             battlefield: vec![],
-            omens: vec![],
+            rites: vec![],
             hero: instantiate_hero(default_hero(), ids.next_id()),
             // cases that care about mana set it explicitly; the rest should not have to
             base_mana: settings::MAX_MANA,
@@ -135,14 +135,6 @@ impl Setup {
         let id = self.ids.next_id();
         let board = self.board_mut(side);
         board.hand.push(CardEntity::Incantation(instantiate_incantation(&card, id)));
-        board.hand.len() - 1
-    }
-
-    /// Adds an omen to hand. Returns its hand index.
-    pub fn omen_in_hand(&mut self, side: Side, card: OmenCard) -> usize {
-        let id = self.ids.next_id();
-        let board = self.board_mut(side);
-        board.hand.push(CardEntity::Omen(instantiate_omen(&card, id)));
         board.hand.len() - 1
     }
 
@@ -288,10 +280,10 @@ impl Scenario {
         ok
     }
 
-    /// Plays an omen from hand, arming the trigger at `trigger` in its printed list.
+    /// Plays a rite from hand, arming the trigger at `trigger` in its printed list.
     pub fn play_omen(&mut self, index: usize, trigger: usize) -> bool {
         let ok = self.game.play_card(index, None, Some(trigger), None);
-        self.record(FrameKind::Action, format!("play omen hand[{index}] trigger {trigger} -> {ok}"), true);
+        self.record(FrameKind::Action, format!("play rite hand[{index}] trigger {trigger} -> {ok}"), true);
         ok
     }
 
@@ -444,20 +436,25 @@ impl Scenario {
         self.board(side).deck.len()
     }
 
-    pub fn omens_len(&self, side: Side) -> usize {
-        self.board(side).omens.len()
+    pub fn rites_len(&self, side: Side) -> usize {
+        self.board(side).rites.len()
     }
 
-    /// What an omen is actually watching, as the server sees it.
-    pub fn armed_trigger(&self, side: Side, index: usize) -> Option<OmenTrigger> {
-        self.board(side).omens.get(index).and_then(|o| o.armed_trigger)
+    /// What a rite is actually watching, as the server sees it.
+    pub fn armed_trigger(&self, side: Side, index: usize) -> Option<RiteTrigger> {
+        self.board(side).rites.get(index).and_then(|r| r.armed_trigger)
     }
 
     /// The armed trigger as the opposing client would receive it.
-    pub fn armed_trigger_seen_by_enemy(&self, side: Side, index: usize) -> Option<OmenTrigger> {
+    pub fn armed_trigger_seen_by_enemy(&self, side: Side, index: usize) -> Option<RiteTrigger> {
         let for_white = side == Side::Black;
         let state = self.game.parse_client_state(for_white);
-        state.enemy_board.omens.get(index).and_then(|o| o.armed_trigger)
+        state.enemy_board.rites.get(index).and_then(|r| r.armed_trigger)
+    }
+
+    /// Turns an aura has left, as the server sees it.
+    pub fn turns_left(&self, side: Side, index: usize) -> Option<u32> {
+        self.board(side).rites.get(index).and_then(|r| r.turns_left)
     }
 
     /// The glow affordance a hand card ships with, as the owning client would receive it.
