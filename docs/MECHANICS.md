@@ -47,7 +47,8 @@ Zones per player: `deck`, `hand`, `battlefield`, `rites`, `graveyard`, plus the 
 The rites row holds omens, wagers and auras together.
 Nothing is ever exiled; destroyed minions go to the graveyard.
 
-Colours are `White`, `Black`, `Green`, deck identity only, no rules attached yet.
+Colours are `White`, `Black`, `Green`, deck identity only, no rules attached yet. Nothing in
+the pool is White today, so the deckbuilder's White filter is empty.
 Races are `Human`, `Elf`, `Beast`, used by condition filters and auras.
 
 ---

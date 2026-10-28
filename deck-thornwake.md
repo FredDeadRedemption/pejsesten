@@ -68,10 +68,10 @@ sees one about 90% of the time.
 
 ## Tuning notes
 
-- Wildgrowth at 3 is the number least sure of itself. Zoo costs 1 for a permanent +1 +1 to
-  your Beasts, which makes a three-turn version at 3 look expensive. The defence is that
-  Wildgrowth also lifts everything played during the window, brambles included, and cannot
-  be answered. If it keeps rotting in hand, drop it to 2.
+- Wildgrowth at 3 is the number least sure of itself. A three-turn board-wide +1 +1 with no
+  body to kill is a lot for 3, and the defence is only that it lapses. It also lifts
+  everything played during the window, brambles included. If it keeps rotting in hand, drop
+  it to 2; if it wins every game it lands in, it is a 4.
 - Eleven minions across the whole list and five of them brambles means the board cap of 7
   is reachable. Count before a Thicket Nanny.
 - Greenwake's Fanfare is the pattern the set should hold to: an aura Fanfare is the aura's

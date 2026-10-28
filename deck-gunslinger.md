@@ -65,5 +65,6 @@ Throw back Gazelle, Bear and The Dentist. Rat Cage is fine to keep against a fas
 - Eight one-drops is deliberate. A trade costs 1, so the deck wants a spare mana most turns.
 - Nine Beasts is flavour, not a plan. Fox Courier is the only payoff and that is on purpose:
   a real beast package would compete with the Quickdraw plan for the same 25 slots.
-- Toad pulls from every omen in the pool, white and green included. Keep that pool small and
-  good or it turns into a random-value card instead of a cheap body with a tail.
+- Toad pulls from every omen in the pool, which is now Thornwatch and Foreclosure only. At
+  two cards it is closer to a tutor than a random-value card, and Foreclosure off a 1-drop
+  is a real swing. Watch it as the pool grows back.
