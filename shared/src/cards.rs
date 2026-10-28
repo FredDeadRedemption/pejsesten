@@ -987,9 +987,9 @@ pub fn build_cards() -> Vec<Card> {
         Card::Minion(MinionCard {
             id: 61,
             color: Color::Black,
-            name: "Talent Scout".to_string(),
+            name: "Sylvanas".to_string(),
             description: Some("<strong>Deathwish:</strong> Take control of the rightmost enemy minion".to_string()),
-            flavor_text: Some("Dies owed a finder's fee, and collects it anyway.".to_string()),
+            flavor_text: Some("Takes one of yours on the way out.".to_string()),
             base_cost: 6,
             image_url: "".to_string(),
             races: vec![Race::Human],

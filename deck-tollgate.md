@@ -26,7 +26,7 @@ is attacking.
 | 1 | Knife Juggle | 4 | — | Deal 2 damage to all minions |
 | 2 | Pillarman | 5 | 4/6 Human | Guard |
 | 2 | The Long Winter | 5 | aura | Enemy minions have -2 attack |
-| 2 | Talent Scout | 6 | 5/5 Human | Deathwish: take control of the rightmost enemy minion |
+| 2 | Sylvanas | 6 | 5/5 Human | Deathwish: take control of the rightmost enemy minion |
 
 Curve: 2 at one, 7 at two, 5 at three, 5 at four, 4 at five, 2 at six.
 
@@ -68,7 +68,7 @@ you for arming the trigger they are not watching for.
 ## Keeps
 
 Keep Gatewatch, Coinbiter, Blood Rite. Keep Hollowing against a wide deck and throw it back
-against a tall one. Throw back Pillarman, The Long Winter and Talent Scout always.
+against a tall one. Throw back Pillarman, The Long Winter and Sylvanas always.
 Foreclosure is a keep only on the draw.
 
 ## Tuning notes
@@ -81,7 +81,7 @@ Foreclosure is a keep only on the draw.
   to look at if the deck is winning too flatly. Against a board of 2/2s it is a sweeper that
   leaves the bodies standing and useless, which is more demoralising than killing them.
 - Only one Knife Juggle. A second makes the deck a control deck, which is not what this is.
-- Two Talent Scouts is the top end and the reason the deck is happy to be attacked: the
+- Two Sylvanas is the top end and the reason the deck is happy to be attacked: the
   Deathwish means killing the 5/5 hands you a minion. Against a deck that cannot attack
   around it, it is better than a 7 drop.
 - Twelve distinct cards over 25 slots is the most singleton-ish list in the set. If the
