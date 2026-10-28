@@ -57,18 +57,6 @@ Watch Draw. It is card advantage wearing a deck control costume. Keep it at 3 an
 
 ---
 
-## Wager
-
-A card played face up that names something the opponent must not do, and what it costs them if they do it.
-
-> **Wager:** If you attack my hero this turn, draw 2 and your opponent discards 1.
-
-Everything is public: the trigger, the effect, the price. Where a Secret hides the trigger and an Omen hides which trigger was chosen, a Wager hides nothing at all. The opponent is not guessing, they are choosing, and the card wins either way — they either pay the effect or they give up the line they wanted.
-
-The whole skill is pricing. Too cheap to avoid and the card does nothing; too painful and they simply eat it. The interesting band is where the answer is genuinely hard.
-
-Needs no response step in the engine: it resolves on the active player's own action, so it fits the current turn model as it stands.
-
 ## Sigils
 
 A quest archetype. Three or four sigil cards that are played face up and stay on the board; when the last one lands, a large payoff fires.

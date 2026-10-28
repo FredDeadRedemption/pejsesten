@@ -12,4 +12,4 @@ Deck size also carries the Crucible roster and the Escalate and Triad payoffs: d
 
 Status: the builder caps a deck at 50 cards (`MAX_DECK_CARDS`) and does not limit copies yet, so the 25 and 3 above are the rule, not the code.
 
-The decks that exist today are written up in `deck-dawnguard.md`, `deck-gunslinger.md` and `deck-kennel.md`.
+The decks that exist today are written up in `deck-gunslinger.md`, `deck-thornwake.md` and `deck-tollgate.md`.

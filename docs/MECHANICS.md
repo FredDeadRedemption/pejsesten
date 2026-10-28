@@ -21,14 +21,30 @@ Built behaviour is read from `shared/src/types.rs`, `server/src/engine.rs` and
 | | Name | Equivalent | Code | What it is |
 |---|---|---|---|---|
 | ✅ | Minion | Minion, Creature | `Card::Minion` | Body with attack and defence, sits on the battlefield, can attack |
-| ✅ | Incantation | Spell, Instant/Sorcery | `Card::Incantation` | Resolves on play, goes nowhere afterwards |
-| ✅ | Omen | Secret, Trap | `Card::Omen` | Played face up with a hidden armed trigger, fires on the opponent's turn |
+| ✅ | Incantation | Spell, Instant/Sorcery | `Card::Incantation` | Every non-minion card. Its **form** says how it is delivered |
 | ✅ | Hero | Hero | `Card::Hero` | Picked at deckbuild, never drawn, only holds hp. No hero power |
 | ✅ | Token | Token | `is_token: true` | Summoned only, never in a deck list |
 | ⬜ | Secret | Secret | - | Card and trigger both hidden. An omen hides only which of three triggers was armed |
 | ❌ | Location | Location | - | No location type, so Reopen has nothing to refresh |
 
-Zones per player: `deck`, `hand`, `battlefield`, `omens`, `graveyard`, plus the hero slot.
+### Incantation forms
+
+`IncantationForm`. One card type, four deliveries. The hidden/public line falls on the
+trigger count: an omen prints three because hiding needs something to hide among, a wager
+prints the one it is openly offering.
+
+| | Name | Equivalent | Code | What it does |
+|---|---|---|---|---|
+| ✅ | Cast | Sorcery | `Cast` | Resolves on play and goes nowhere. What an incantation used to be |
+| ✅ | Omen | Secret, Trap | `Omen` | Three printed triggers, one armed at play time and hidden. Fires once, then leaves |
+| ✅ | Wager | - | `Wager` | One printed trigger, fully public. Fires once, then leaves |
+| ✅ | Aura | Enchantment | `Aura` | No trigger. Its passives are live while a public clock runs, then it leaves |
+
+Because all four are incantations, anything watching an incantation play watches all of
+them, and a counter written as a wager would catch an aura too.
+
+Zones per player: `deck`, `hand`, `battlefield`, `rites`, `graveyard`, plus the hero slot.
+The rites row holds omens, wagers and auras together.
 Nothing is ever exiled; destroyed minions go to the graveyard.
 
 Colours are `White`, `Black`, `Green`, deck identity only, no rules attached yet.
@@ -47,7 +63,7 @@ Prod values, with the dev profile in brackets where it differs (`server/src/sett
 | ⬜ | Actions | 1 to 3 embers each | The menu embers are meant to pay for. See Concepts |
 | ✅ | Hand | start 3 (dev 7), cap 9 | Second player gets one extra card instead of a coin. Cards that arrive at a full hand are dropped, not sent to the graveyard |
 | ✅ | Board | cap 7 minions | Playing over the cap is rejected, a summon over the cap is skipped |
-| ✅ | Omens | cap 3 armed | Playing over the cap is rejected |
+| ✅ | Rites | cap 6 | Omens, wagers and auras share the row. Playing over the cap is rejected |
 | ✅ | Mulligan | on | Replacements are drawn before the returned cards are shuffled back |
 | ⬜ | Corpse | - | Second resource gained when your own minions die, spent alongside mana |
 
@@ -94,7 +110,7 @@ Prod values, with the dev profile in brackets where it differs (`server/src/sett
 | ✅ | Fanfare | Battlecry, ETB | `OnPlay` | The card is played from hand, after the body lands. Also fires on a replay |
 | ✅ | Deathwish | Deathrattle, Dies trigger | `OnDeath` | The minion leaves the battlefield for the graveyard. Queued and resolved before the next death check |
 | ✅ | Quickdraw watcher | "Whenever you cast a spell", Magecraft | `OnQuickdraw` | Once per card played that fired a Quickdraw, on the friendly board |
-| ✅ | Omen watcher | Secret payoff | `OnOmenFired` | After one of your omens resolves. Checked on both boards, whoever owned the omen |
+| ✅ | Rite watcher | Secret payoff | `OnRiteFired` | After one of your omens or wagers resolves. Checked on both boards, whoever owned it |
 | ⬜ | Start of game | Start of Game | - | Before the first turn |
 | ⬜ | Finale | Finale | - | The card is played with no mana left over |
 | ❓ | Spellburst | Spellburst | - | One shot, the first time you play an incantation |
@@ -152,6 +168,7 @@ target can still aim.
 | ✅ | Generate omen | "add a random Secret" | `AddRandomOmen` | Adds a random collectible omen to your hand |
 | ✅ | Replay | Tess Greymane | `ReplayQuickdraws` | Recasts every Quickdraw card you landed this game, free, from nowhere. Targets are rolled at random, the one place random targeting is allowed. A replayed minion with no board room still fires its ability |
 | ⬜ | Silence | Silence | - | Wipes a minion's text and buffs |
+| ⬜ | Targets on a late trigger | - | - | A deathwish or watcher is queued with `target_id: None`, so a `Targeted` spec resolves to nothing. Needs a deferred choice step or an auto rule |
 | ⬜ | Discover | Discover | - | Pick one of three offered cards |
 | ⬜ | Choose one | Choose One | - | Pick one of the card's modes on play |
 | ⬜ | Choose multiple | - | - | Pick more than one mode, presumably for a price |
@@ -205,12 +222,12 @@ Follow-ups on a draw (`FollowUpEffect`), filtered by `card_must_match`:
 
 ## Passives and auras
 
-`PassiveEffect`. A passive is live while a minion carrying it is on the board; it never
-resolves on its own and has no trigger.
+`PassiveEffect`. A passive is live while its source is in play: a minion while it stands, an aura while its
+clock runs. It never resolves on its own and has no trigger.
 
 | | Name | Equivalent | Code | Effect |
 |---|---|---|---|---|
-| ✅ | Aura | Lord / anthem, "Your other X have +1/+1" | `Aura { filters, attack, defence }` | Adds stats to every friendly minion matching the filters, itself included if it matches. Recomputed, never stored, so it vanishes with the source |
+| ✅ | Aura | Lord / anthem, "Your other X have +1/+1" | `Aura { side, filters, attack, defence }` | Changes the stats of every minion on `side` matching the filters, the source included if it matches. Negative numbers are legal, and a minion at 0 attack cannot attack or retaliate |
 | ✅ | Quickdraw doubling | Brann Bronzebeard | `QuickdrawTriggersTwice` | Quickdraw abilities resolve twice. The tally still counts one |
 
 Derived stats are rebuilt from base plus buffs plus auras minus damage, in `refresh_stats`,
@@ -231,13 +248,26 @@ whenever the hand or a scale moves.
 
 ---
 
-## Omens
+## Rites
 
-An omen is played face up for its cost, and the player picks one of its three printed
+A rite is an incantation that stays on the board after it is played: an omen, a wager or an
+aura. All three share one row, capped at 6.
+
+An **omen** is played face up for its cost, and the player picks one of its three printed
 triggers. The opponent sees the card and its effect, never which trigger was armed
-(`hide_armed_triggers`). It fires at most once and is consumed. Every omen effect must be
-auto-targeted, because it resolves on the opponent's turn with nobody to pick a target.
-An omen firing cannot arm or fire another omen, so death cascades cannot chain the zone.
+(`hide_omen_triggers`). A **wager** prints one trigger and hides nothing, so the opponent is
+choosing rather than guessing. Both fire at most once and are consumed, and both must be
+auto-targeted, because they resolve on the opponent's turn with nobody to pick a target. A
+firing rite cannot arm or fire another, so death cascades cannot chain the row.
+
+An **aura** watches nothing. It carries passives that are live from the moment it lands, and
+a public counter that drops at the start of its owner's turn; at zero it leaves with nothing
+resolving. A 3 turn aura therefore covers three of its owner's turns and the enemy turns
+between and after them. An aura may also carry a Fanfare, which fires on play like a
+minion's.
+
+Nothing can attack or remove the row, which is why an aura has a clock at all: waiting it
+out is the answer a body would otherwise be.
 
 | Trigger | Fires when |
 |---|---|
@@ -285,7 +315,6 @@ Larger designs, none of them built. Written up in [CONCEPTS.md](CONCEPTS.md).
 | | Name | Equivalent | Effect |
 |---|---|---|---|
 | ⬜ | Actions and embers | - | A free Bury plus two chosen actions per deck, 1 to 3 embers each, allowed to touch decks, hands and graveyards only, never the board or health. Pool: Bury, Swap, Foresee, Seal, Sift, Unearth, Reclaim, Draw, Exile, Snuff, Pry |
-| ⬜ | Wager | - | Face up card naming something the opponent must not do, and the price if they do it. Nothing hidden: they choose, and the card pays either way |
 | ⬜ | Sigils | Quest / Questline | Three or four face-up cards that assemble on the board for a large payoff. Fetched with actions, not drawn |
 | ⬜ | Escalate | - | Each copy of the card you play this game is stronger than the last |
 | ⬜ | Fuse | Saga, Countdown | A minion with a public countdown that drops each of your turns and fires at zero |

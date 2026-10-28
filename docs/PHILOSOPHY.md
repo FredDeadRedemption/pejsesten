@@ -36,7 +36,12 @@ Sort by **who owns the decision**, never by what the card does.
 |---|---|---|---|---|
 | **Omen** | trigger hidden | one shot | the opponent guesses | value |
 | **Wager** | fully public | one shot | the opponent chooses | denial |
-| **Aura on a minion** | public | standing | nobody, it just fires | taxes |
+| **Aura on a minion** | public | standing | kill the body | taxes |
+| **Aura on a rite** | public | three turns | wait it out, or race it | taxes |
+
+The first three are forms of one card type, the incantation; the fourth is a minion. One
+card type for everything that is not a body means a card watching incantations watches all
+of them, and a counter written as a wager would catch an aura too.
 
 **Omens** hide which of three triggers was armed. The opponent sees the card and plays
 around it or walks into it. Because they cannot be certain, an omen must leave them their
@@ -49,9 +54,19 @@ card pays either way: they drop the play, or they pay for it. Anything that stop
 opponent doing something goes here, because a denial they cannot see is the *I act and you
 watch* failure in miniature.
 
-**Auras** fire every single time and offer no decision at all, so they must sit on a body.
-The answer to a tax is killing the thing levying it. A standing effect with no body is an
-unanswerable permanent, which is the same shape as an uninteractable win condition.
+**Auras** fire every single time and offer no decision at all, so the defender's choice has
+to come from somewhere else: either the aura sits on a body and the answer is killing it, or
+it sits in the rites row with a public clock and the answer is outlasting it. What is ruled
+out is the third case, a standing effect with neither a body nor a clock, which is an
+unanswerable permanent and the same shape as an uninteractable win condition.
+
+The clock also decides what the two kinds of aura are for. The one on a body never lapses
+but dies to removal; the one on a rite cannot be touched but runs out. Printing both in a
+colour gives the deckbuilder a real question and the player a real sequencing problem.
+
+A **negative aura takes attack, never defence.** Board-wide minus defence kills every small
+minion the moment it lands, with no body to answer and no time to play around it, which is
+unconditional removal wearing an aura costume.
 
 ## What follows
 

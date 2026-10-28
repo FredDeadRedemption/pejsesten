@@ -14,7 +14,7 @@ Two players, one hero each, 25 card decks. Mana buys the board, embers buy infor
 - No random targets unless spell is being **replayed**.
 - Discourage RnG - encourage **disruption** and **hard counters**.
 - Nobody acts on the opponent's turn, so the defender must be given a **choice** instead.
-- Denial is public (Wager), value may be hidden (Omen), a standing effect needs a body.
+- Denial is public (Wager), value may be hidden (Omen), a standing effect needs a body or a clock.
 - No Secrets: hiding the card as well leaves nothing to play around.
 
 The reasoning behind the last three, and what it means for removal and win conditions, is in
@@ -32,7 +32,7 @@ The reasoning behind the last three, and what it means for removal and win condi
 | [docs/GAMEMODES.md](docs/GAMEMODES.md) | Single Match and the Crucible roster format |
 | [docs/DECKBUILDING.md](docs/DECKBUILDING.md) | Deck size, copy limits, and why they are what they are |
 | [architecture.md](architecture.md) | Workspace layout, how the Rust client runs native and in the browser, build and deploy |
-| `deck-*.md` | The decks that exist today: Dawnguard, Gunslinger, Kennel |
+| `deck-*.md` | The decks that exist today: Gunslinger, Thornwake, Tollgate |
 
 ---
 
